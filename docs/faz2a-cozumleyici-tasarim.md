@@ -19,6 +19,21 @@ değerleri (çözümleme/parse). Kullanıcı kararları:
 **Başarı ölçütü (2a):** üretecin ürettiği her biçim geri çözülür (recall, yapısal) ve
 hiçbir çözüm üretecin üretmeyeceği bir (lemma, kwargs) değildir (form-precision, yapısal).
 
+### 0.1 Kapsanan paradigma envanteri ("üretecin dili" = şu beş giriş noktası)
+
+| `kind` | Üreteç fonksiyonu | Eksen uzayı | 2a |
+|--------|-------------------|-------------|-----|
+| `conjugate` | `morphology.conjugate` | 11 kip × 6 kişi × olumsuz × yeterlik × soru × 4 aux × 6 tasvir × 24 çatı | ✅ (en büyük grid) |
+| `decline` | `morphology_noun.decline` | durum(7) × iyelik(7) × sayı(2) | ✅ |
+| `copula` | `morphology_noun.copula` | 4 birleşik × 6 kişi × durum × soru | ✅ |
+| `converb` | `nonfinite.converb` | 8 ulaç tipi | ✅ (küçük grid) |
+| `participle` | `nonfinite.participle` | 5 tip × iyelik(7) × durum(7) | ✅ |
+
+`predicative`/`with_ki`/`equative` `decline`+`copula` yüzeyinin alt-kümeleri olarak
+kapsanır (paradigm_noun anahtarları emsal). `derivation.py` KAPSAM DIŞI (§3).
+Round-trip iddiası bu beş envanterin TAMAMI üzerinden geçerlidir; her `kind`'ın kendi
+(küçük) grid'i §1.2 mekanizmasıyla enumerate edilir.
+
 ## 1. Mimari — "önek-tabanlı aday + ses-filtreli enumerasyon + üreteç oracle"
 
 Yeni modül `turkgram/analysis.py`. Boru hattı:
@@ -66,7 +81,8 @@ yüzey izi** yüzeyde varsa denenir:
 
 ### 1.3 Oracle doğrulama
 - Dedup **doğrulamadan önce**, kanonik kwargs anahtarıyla (M-01): default eksenler atılır
-  (`negative=False`, `aspect=None`… kwargs'ta YER ALMAZ); eşitlik `(lemma, pos, kanonik kwargs)`.
+  (`negative=False`, `aspect=None`… kwargs'ta YER ALMAZ); eşitlik `(lemma, pos, kind,
+  kanonik kwargs)`.
 - Her aday: üreteç çağrısı `try/except ValueError`; `None` dönüş = red; `çıktı == yüzey`
   ⇔ KABUL. Üreteç tek doğruluk kaynağı → analizör dili ⊆ üreteç dili.
 - `functools.lru_cache` üreteç çağrılarında (saf fonksiyonlar); sözcük başına üreteç-çağrı
@@ -96,6 +112,8 @@ class Segment:
 class Analysis:
     lemma: str                    # "okumak"
     pos: str                      # "verb" | "noun"
+    kind: str                     # yeniden-üretim giriş noktası (§0.1):
+                                  # "conjugate"|"decline"|"copula"|"converb"|"participle"
     kwargs: Mapping[str, Any]     # KANONİK (default eksen yok)
     segments: tuple[Segment, ...]
     hypothetical: bool            # True = kök hiçbir roots filtresinden geçmedi
@@ -110,9 +128,17 @@ def analyze(surface: str, pos: str | None = None,
 - `roots` (lemma kümesi, ör. dict-db kökleri): kümede olmayan lemma elenir, kalanlar
   `hypothetical=False`; verilmezse hepsi `hypothetical=True` (kritik C-03 — sahte-kök
   form-analizi açıkça işaretli; "masa"→mas-A çözümü hypothetical olarak meşru).
-- **Deterministik toplam sıralama:** (morfem sayısı ↑, çatısız < çatılı, lemma alfabetik,
-  kanonik kwargs serileştirmesi). Golden tam liste sırasını sabitler.
-- Yüzey-özdeş, kwargs-farklı çözümler AYRI (geldik: past-1pl ≠ part_dik okuması).
+- **Deterministik toplam sıralama:** (morfem sayısı ↑, çatısız < çatılı, `kind` sabit
+  sırası [conjugate, decline, copula, converb, participle], lemma alfabetik, kanonik
+  kwargs serileştirmesi) — `kind` eşitlik-bozucu olarak dahil, sıralama yapısal olarak
+  toplam. Golden tam liste sırasını sabitler.
+- `KIND_FUNCS`: `analysis.py`'de modül-düzeyi ÖZEL sabit (`_KIND_FUNCS`); dışa açılmaz
+  (tüketici `kind` string'ini görür, fonksiyon haritası iç detay).
+- Yüzey-özdeş, kwargs-farklı çözümler AYRI (geldik: conjugate/past-1pl ≠ participle/DIk
+  okuması). Dedup anahtarına `kind` dahildir: `(lemma, pos, kind, kanonik kwargs)`.
+- **Yeniden-üretim sözleşmesi:** her `Analysis` için
+  `KIND_FUNCS[a.kind](a.lemma, **a.kwargs) == yüzey` tutar — round-trip'in çekirdek
+  assert'i; `kind` alanı bu eşlemeyi örtük çıkarımsız, doğrudan taşır.
 - 2b rezervi: `score` alanı İLERİDE default'lu eklenir (kırıcı değil; şimdi YOK — YAGNI).
 - `__init__.py`: `analyze`, `Analysis`, `Segment` dışa açılır; `parse_verb` (üreteç
   gövde-hazırlığı) ↔ `analyze` (yüzey çözümleme) ayrımı docstring'de tek cümle.
@@ -127,7 +153,9 @@ def çözümle(yüzey, tür=None, *, kökler=None) -> list[Analysis]
 - Dönen `Analysis.kwargs` **kanonik Türkçe** değere çevrilir: `_KIP`/`_KISI`/`_DURUM`/
   `_TASVIR`/`_CATI` sözlüklerinin ters haritası; alias çakışmasında kanonik akademik
   temsilci (`past→görülen_geçmiş`, `loc→bulunma`, `caus→ettirgen`) — `_ANAHTAR` emsali.
-- Türkçe round-trip sözleşmesi: `tr.çekimle(a.lemma, **a.kwargs_türkçe) == yüzey`.
+- Türkçe round-trip sözleşmesi `kind`'a göre eşlenen tr fonksiyonuyla tutar:
+  `conjugate→tr.çekimle`, `decline→tr.ad_çekimle`, `copula→tr.ekfiil`,
+  `converb→tr.ulaç`, `participle→tr.fiilimsi`.
 - Segment etiketleri Türkçe yüzde Türkçeleşir (`DIk→ortaç`, `Iyor→şimdiki`) — küçük harita.
 - Test = çeviri denkliği (CLAUDE.md #4); biçim doğruluğu çekirdek golden'da.
 
@@ -146,8 +174,9 @@ def çözümle(yüzey, tür=None, *, kökler=None) -> list[Analysis]
 
 1. **Round-trip tam süpürme (recall kanıtı):** morfofonolojik sınıf başına sabit lemma
    seti (düz ünsüz/ünlü-final; yumuşayan git/et; ye_de; aorist-Ir; birleşik "aday olmak";
-   arka/ön × düz/yuvarlak; isimde genç-tipi) × üretecin TAM kwargs çarpımı (geçersiz
-   kesişim atlanır): `analyze(conjugate(L,**kw))` sonucu `(L, kanonik kw)` içermeli.
+   arka/ön × düz/yuvarlak; isimde genç-tipi) × §0.1'deki **beş `kind`'ın her birinin**
+   TAM kwargs çarpımı (geçersiz kesişim atlanır): `analyze(KIND_FUNCS[k](L,**kw))`
+   sonucu `(L, k, kanonik kw)` içermeli.
    Elle seçilmiş pil DEĞİL (kritik: seçilmiş pil kapsamayı kapatamaz). CI'da `-m slow`;
    commit'te hızlı alt-küme.
 2. **Precision golden (BAĞIMSIZ, CLAUDE.md §2):** ~40 yüzey için elle-doğrulanmış TAM
@@ -166,7 +195,9 @@ def çözümle(yüzey, tür=None, *, kökler=None) -> list[Analysis]
 ## 5. İş akışı ve dosyalar (CLAUDE.md §2 değişmez)
 
 1. **SPEC** `spec/analysis-spec.md` (ana oturum): ses-filtresi önermeleri, ters-mutasyon
-   envanteri, segmentasyon kesim politikası, kanonik kwargs tanımı.
+   envanteri, segmentasyon kesim politikası, kanonik kwargs tanımı. Ayrıca tek-seferlik
+   kontrol: `paradigm_noun`'un predicative/with_ki/equative anahtarlarının her biri beş
+   `kind`'dan biriyle yeniden-üretilebilir olmalı (değilse §0.1 envanterine eklenir).
 2. **Golden'lar** (bağımsız): `tests/golden_analysis.py` (precision),
    `tests/golden_segments.py` (segmentasyon).
 3. **Motor:** `turkgram/analysis.py`; `tr.py`'ye `çözümle`; `__init__.py` dışa açma.
