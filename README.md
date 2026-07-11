@@ -9,24 +9,32 @@ saf-Python, bağımlılıksız bir kütüphane.
 > (telifsiz) koda çevirir; düzyazı ve örnek cümleler alınmaz. İstisnalar küçük kapalı
 > tablolarda tutulur, düzenli biçimler runtime **üretilir** (saklanmaz).
 
-## Kapsam (v0.1 — Faz 0)
-
-Şu an yalnız **çekim/türetme ÜRETİMİ** (encode):
+## Kapsam (encode/üretim)
 
 | Alan | Modül | Başlıca API |
 |------|-------|-------------|
 | Fiil çekimi | `turkgram.morphology` | `conjugate`, `paradigm`, `parse_verb`, `inflect_last_token` |
-| İsim çekimi | `turkgram.morphology_noun` | `decline`, `paradigm_noun`, `parse_noun`, `predicative`, `with_ki`, `equative` |
+| İsim çekimi | `turkgram.morphology_noun` | `decline`, `paradigm_noun`, `predicative`, **`copula`**, `with_ki`, `equative` |
+| Fiilimsi | `turkgram.nonfinite` | **`converb`** (ulaç), **`participle`** (sıfat-fiil/ad-fiil + iyelik/durum) |
 | Yapım eki (türetme) | `turkgram.derivation` | `derivations` |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `türet` |
 
-Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (ek-fiil hikâye/rivayet/şart) +
-soru boyutu + olumsuz + yeterlik. İsim: durum × iyelik × çokluk + ekfiil/-ki/-CA
-katmanları, pronominal -n-, yumuşama/ünlü-düşmesi kuralı + istisna tablosu.
+Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman + soru + olumsuz + yeterlik +
+**tasvir** (tezlik/sürerlik). İsim: durum × iyelik × çokluk + ekfiil/-ki/-CA, pronominal
+-n-, **nominal ek-fiil kopula** (öğrenciydim). Fiilimsi: **8 ulaç** + **sıfat-fiil/ad-fiil
++ iyelik/durum istifi** (okuduğum/gitmesini).
 
-### Sonraki fazlar
-- **Faz 1** — çekim derinleştirme (Korkmaz boşluk analizi: çatı, birleşik fiil, istisnalar)
-- **Faz 2** — **çözümleme/analiz** (parse: biçim → kök + ekler; en büyük yeni bileşen)
-- **Faz 3** — türetme genişletme · **Faz 4** — sözdizimi/cümle bilgisi
+## Durum / Yol haritası
+
+- **Faz 0 ✅** — bağımsız paket, motor + testler taşındı, Türkçe API (`tr.py`).
+- **Faz 1** (fiil çekim derinleştirme — `docs/faz1-implementation-plan.md`):
+  ✅ A4 nominal ek-fiil · ✅ A5+A6 ulaç envanteri + aorist doğrulama · ✅ A2 tasvir
+  fiilleri · ✅ A3 fiilimsi+iyelik/durum istifi · ⏳ **A1 çatı** (ettirgen/edilgen/
+  dönüşlü/işteş entegre çekim + yığılma — kalan, en zor).
+- **Faz 2** — çözümleme/analiz (parse); **Faz 3/4** — türetme genişletme, sıfat/zamir,
+  sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
+
+Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
 ## Kurulum
 

@@ -26,6 +26,18 @@ gövde → çatı zinciri → çekim. Motor biçim SAKLAMAZ (#5), üretir.
 
 ---
 
+## DURUM (2026-07-11)
+
+- ✅ **A4** nominal ek-fiil — `morphology_noun.copula` (commit `9996dbd`)
+- ✅ **A5 + A6** ulaç envanteri + aorist doğrulama — `nonfinite.converb` (commit `5787ce8`)
+- ✅ **A2** tasvir fiilleri — `conjugate(aspect=)` + `VerbStem.aorist_forced` (commit `29247f0`)
+- ✅ **A3** fiilimsi + iyelik/durum istifi — `nonfinite.participle` (commit `a79429e`)
+- ⏳ **A1** çatı entegre çekim + yığılma — KALAN, en zor (aşağıdaki Task A1)
+- Ek: Türkçe API `tr.py` (commit `d31c869`).
+
+Her task #5 akışıyla (elle SPEC → bağımsız golden → motor → korpus taraması) tamamlandı;
+son ölçüm 1896 test yeşil. Alt-adım checkbox'ları aşağıda tarihsel kayıt olarak durur.
+
 ## Dosya yapısı (oluşturulacak / değişecek)
 
 | Dosya | Sorumluluk | Faz 1'de |
