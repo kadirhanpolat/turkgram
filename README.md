@@ -47,6 +47,24 @@ tg.derivations("göz", "noun")                  # [-lIk, -CI, -lI, ... türevler
 tg.paradigm("okumak")                          # tam çekim tablosu (dict)
 ```
 
+## Türkçe API (`turkgram.tr`)
+
+Türkçe adlı paralel katman — içeride aynı çekirdeği çağırır (`docs/tr-api-tasarim.md`).
+Terimler karma: kanonik akademik + tanıdık alias (`görülen_geçmiş` ≡ `dili_geçmiş`).
+
+```python
+import turkgram.tr as tr
+tr.çekimle("gelmek", "şimdiki", "1tekil")                       # geliyorum
+tr.çekimle("gitmek", "görülen_geçmiş", "3tekil", olumsuz=True)  # gitmedi
+tr.ad_çekimle("ev", iyelik="3tekil", durum="bulunma")           # evinde
+tr.ekfiil("öğrenci", "hikaye", "1tekil")                        # öğrenciydim
+tr.türet("göz", "isim")                                         # -lIk/-CI… türevleri
+```
+
+Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
+`ekfiil`/`yüklem`/`ki_ekle`/`eşitlik` · `türet`. Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/
+`soru`/`birleşik` · `durum`/`iyelik`/`sayı`.
+
 ## Testler
 
 ```bash

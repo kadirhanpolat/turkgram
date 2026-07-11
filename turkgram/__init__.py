@@ -20,7 +20,7 @@ Alt modüllere de doğrudan erişilebilir:
 """
 from __future__ import annotations
 
-from . import morphology, morphology_noun, derivation
+from . import morphology, morphology_noun, derivation, tr
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
 from .morphology import (
@@ -64,6 +64,6 @@ __all__ = [
     # türetme
     "derivations",
     # alt modüller
-    "morphology", "morphology_noun", "derivation",
+    "morphology", "morphology_noun", "derivation", "tr",
     "__version__",
 ]
