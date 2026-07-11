@@ -262,3 +262,156 @@ def fiilimsi(fiil, tür, *, iyelik=None, durum=None):
 def türet(kelime, tür):
     """derivations — yapım eki (türetme) mekanik üretici. tür ∈ {isim, fiil, ...}."""
     return _d.derivations(kelime, _map(_TUR, tür, "tür"))
+
+
+# ── Ters dönüşüm sözlükleri (İngilizce çekirdek → kanonik Türkçe) ─────────
+_TERS_KIP = {
+    "pres": "şimdiki", "past": "görülen_geçmiş", "fut": "gelecek",
+    "aorist": "geniş", "evid": "öğrenilen_geçmiş", "cond": "şart",
+    "necess": "gereklilik", "opt": "istek", "imp": "emir",
+}
+_TERS_KISI = {
+    "1sg": "1tekil", "2sg": "2tekil", "3sg": "3tekil",
+    "1pl": "1çoğul", "2pl": "2çoğul", "3pl": "3çoğul",
+}
+_TERS_DURUM = {
+    "nom": "yalın", "acc": "belirtme", "dat": "yönelme",
+    "loc": "bulunma", "abl": "ayrılma", "gen": "tamlayan", "ins": "vasıta",
+}
+_TERS_SAYI = {"sg": "tekil", "pl": "çoğul"}
+_TERS_BIRLESIK = {"hikaye": "hikaye", "rivayet": "rivayet", "sart": "şart"}
+_TERS_TASVIR = {
+    "iver": "tezlik", "adur": "sürerlik", "agel": "agel",
+    "akal": "kalma", "ayaz": "yaklaşma",
+}
+_TERS_CATI = {
+    "caus": "ettirgen", "pass": "edilgen", "refl": "dönüşlü", "recip": "işteş",
+}
+
+# Segment etiket çevirisi (çekirdek kanonik → Türkçe kanonik)
+# Not: mA = olumsuz işaretleyici (DIk türünden farklı; ptype segmenti kendi etiketiyle
+# görünür: DIk→ortaç, acak/mAk/is passthrough; mA burada olumsuz olarak çevrilir).
+_TERS_ETIKET = {
+    # tense
+    "DI": "görülen_geçmiş", "Iyor": "şimdiki", "AcAk": "gelecek",
+    "Ir": "geniş", "mIş": "öğrenilen_geçmiş", "sA": "şart",
+    "mAlI": "gereklilik", "A": "istek", "imp": "emir",
+    # participle type
+    "DIk": "ortaç",
+    # modifiers
+    "mA": "olumsuz", "Abil": "yeterlik", "AmA": "olumsuz_yeterlik",
+    # voice
+    "caus": "ettirgen", "pass": "edilgen", "refl": "dönüşlü", "recip": "işteş",
+    # aux
+    "hikaye": "hikaye", "rivayet": "rivayet", "sart": "şart",
+    # decline
+    "lAr": "çoğul",
+    "acc": "belirtme", "dat": "yönelme", "loc": "bulunma",
+    "abl": "ayrılma", "gen": "tamlayan", "ins": "vasıta",
+    # person / possessive
+    "1sg": "1tekil", "2sg": "2tekil", "3sg": "3tekil",
+    "1pl": "1çoğul", "2pl": "2çoğul", "3pl": "3çoğul",
+    # root stays
+    "KÖK": "KÖK",
+    # converb kinds (passthrough — zaten Türkçe)
+    "arak": "arak", "ip": "ip", "inca": "inca", "madan": "madan",
+    "dikce": "dikce", "meksizin": "meksizin", "eli": "eli", "esiye": "esiye",
+}
+
+
+def _çevir_etiket(label: str) -> str:
+    """Segment etiketini Türkçeleştir. Bilinmeyen etiket aynen korunur."""
+    return _TERS_ETIKET.get(label, label)
+
+
+def _çevir_kwargs(kind: str, kwargs) -> dict:
+    """Analysis.kwargs (İngilizce çekirdek) → Türkçe parametre adı + değer."""
+    out: dict = {}
+    if kind == "conjugate":
+        if "tense" in kwargs:
+            out["kip"] = _TERS_KIP.get(kwargs["tense"], kwargs["tense"])
+        if "person" in kwargs:
+            out["kişi"] = _TERS_KISI.get(kwargs["person"], kwargs["person"])
+        if "negative" in kwargs:
+            out["olumsuz"] = kwargs["negative"]
+        if "ability" in kwargs:
+            out["yeterlik"] = kwargs["ability"]
+        if "question" in kwargs:
+            out["soru"] = kwargs["question"]
+        if "aux" in kwargs:
+            out["birleşik"] = _TERS_BIRLESIK.get(kwargs["aux"], kwargs["aux"])
+        if "aspect" in kwargs:
+            out["tasvir"] = _TERS_TASVIR.get(kwargs["aspect"], kwargs["aspect"])
+        if "voice_chain" in kwargs:
+            vc = kwargs["voice_chain"]
+            if vc:
+                out["çatı"] = [_TERS_CATI.get(v, v) for v in vc]
+    elif kind == "decline":
+        if "number" in kwargs:
+            out["sayı"] = _TERS_SAYI.get(kwargs["number"], kwargs["number"])
+        if "possessive" in kwargs:
+            out["iyelik"] = _TERS_KISI.get(kwargs["possessive"], kwargs["possessive"])
+        if "case" in kwargs:
+            out["durum"] = _TERS_DURUM.get(kwargs["case"], kwargs["case"])
+    elif kind == "copula":
+        if "aux" in kwargs:
+            out["birleşik"] = _TERS_BIRLESIK.get(kwargs["aux"], kwargs["aux"])
+        if "person" in kwargs:
+            out["kişi"] = _TERS_KISI.get(kwargs["person"], kwargs["person"])
+        if "case" in kwargs:
+            out["durum"] = _TERS_DURUM.get(kwargs["case"], kwargs["case"])
+        if "possessive" in kwargs:
+            out["iyelik"] = _TERS_KISI.get(kwargs["possessive"], kwargs["possessive"])
+        if "number" in kwargs:
+            out["sayı"] = _TERS_SAYI.get(kwargs["number"], kwargs["number"])
+        if "question" in kwargs:
+            out["soru"] = kwargs["question"]
+    elif kind == "converb":
+        if "kind" in kwargs:
+            out["tür"] = kwargs["kind"]  # passthrough
+    elif kind == "participle":
+        if "ptype" in kwargs:
+            out["tür"] = kwargs["ptype"]  # passthrough
+        if "possessive" in kwargs:
+            out["iyelik"] = _TERS_KISI.get(kwargs["possessive"], kwargs["possessive"])
+        if "case" in kwargs:
+            out["durum"] = _TERS_DURUM.get(kwargs["case"], kwargs["case"])
+    return out
+
+
+def çözümle(yüzey: str, tür: str | None = None, *,
+            kökler=None):
+    """analyze — yüzey biçim → Analysis listesi (Türkçe kwargs + etiketler).
+
+    Args:
+        yüzey: Çözümlenecek biçim (tek ya da çok-token).
+        tür:   "fiil" | "isim" | None (ikisi de). Bilinmeyen değer → ValueError.
+        kökler: Lemma kümesi. Verilmişse yalnız bu kümeden kök döner.
+
+    Returns:
+        list[Analysis] — kwargs ve segment etiketleri Türkçe, sıra korunur.
+
+    Raises:
+        ValueError: Boş yüzey, bilinmeyen tür.
+    """
+    from . import analysis as _ana  # lazy import — döngü tuzağını önler
+
+    pos = _map(_TUR, tür, "tür") if tür is not None else None
+    sonuçlar = _ana.analyze(yüzey, pos, roots=kökler)
+
+    çevrilmiş = []
+    for a in sonuçlar:
+        tr_kwargs = _çevir_kwargs(a.kind, a.kwargs)
+        tr_segs = tuple(
+            _ana.Segment(surface=s.surface, label=_çevir_etiket(s.label), span=s.span)
+            for s in a.segments
+        )
+        çevrilmiş.append(_ana.Analysis(
+            lemma=a.lemma,
+            pos=a.pos,
+            kind=a.kind,
+            kwargs=tr_kwargs,
+            segments=tr_segs,
+            hypothetical=a.hypothetical,
+        ))
+    return çevrilmiş

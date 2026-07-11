@@ -158,3 +158,35 @@ def test_bilinmeyen_deger():
         tr.ad_çekimle("ev", durum="olmayan")
     with pytest.raises(ValueError, match="kişi"):
         tr.çekimle("gelmek", "şimdiki", "5tekil")
+
+
+# ── çözümle — Türkçe çözümleme yüzü ─────────────────────────────────────
+def test_cozumle_denklik():
+    # conjugate round-trip: okuyor → şimdiki / 3tekil
+    a = next(x for x in tr.çözümle("okuyor", tür="fiil")
+             if x.kwargs.get("kip") == "şimdiki" and x.kwargs.get("kişi") == "3tekil")
+    assert tr.çekimle(a.lemma, **a.kwargs) == "okuyor"
+
+    # decline round-trip: evlerde → çoğul + bulunma
+    b = [x for x in tr.çözümle("evlerde", tür="isim") if x.kwargs.get("durum") == "bulunma"][0]
+    assert tr.ad_çekimle(b.lemma, **b.kwargs) == "evlerde"
+
+    # voice çatı yığılması
+    c = next(x for x in tr.çözümle("dövüştürüldü", tür="fiil")
+             if x.kwargs.get("çatı") == ["işteş", "ettirgen", "edilgen"])
+    assert tr.çekimle(c.lemma, **c.kwargs) == "dövüştürüldü"
+
+    # converb / ulaç round-trip
+    d = next(x for x in tr.çözümle("giderek", tür="fiil") if x.kind == "converb")
+    assert tr.ulaç(d.lemma, d.kwargs["tür"]) == "giderek"
+
+
+def test_cozumle_bilinmeyen_tur():
+    with pytest.raises(ValueError, match="tür"):
+        tr.çözümle("okuyor", tür="olmayan")
+
+
+def test_cozumle_segment_turkce():
+    a = tr.çözümle("okuduğum", tür="fiil", kökler={"okumak"})[0]
+    labels = [s.label for s in a.segments]
+    assert "ortaç" in labels  # DIk → ortaç
