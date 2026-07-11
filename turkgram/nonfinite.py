@@ -18,6 +18,7 @@ from .morphology import (
     parse_verb, _stem_before_suffix,
     low_vowel, high_vowel, ends_in_vowel, hardens,
 )
+from .morphology_noun import decline
 
 # Ünlü-başlı ulaçlar (yumuşama/ye_de tetikler); ünsüz-başlılar aşağıda.
 _VOWEL_INITIAL = frozenset({"arak", "ip", "inca", "eli", "esiye"})
@@ -60,3 +61,51 @@ def converb(lemma: str, kind: str) -> str:
     # -mAksIzIn: -mAk sonrası YÜKSEK-DÜZ
     iyi = "i" if a == "e" else "ı"
     return stem + "m" + a + "ks" + iyi + "z" + iyi + "n"
+
+
+# ---------------------------------------------------------------------------
+# Fiilimsi (sıfat-fiil / ad-fiil) + iyelik/durum istifi — A3 (participle-spec.md)
+# Bare fiilimsi gövde fiil primitifleriyle kurulur, sonra İSİM motoruna (decline)
+# beslenir: iyelik/durum, k→ğ yumuşaması, pronominal -n- oradan gelir.
+# ---------------------------------------------------------------------------
+PARTICIPLES = frozenset({"dik", "acak", "ma", "mak", "is"})
+
+
+def _participle_bare(vs, kind: str) -> str:
+    """Bare fiilimsi gövdesi (iyelik/durum eklenmemiş)."""
+    if kind in ("acak", "is"):                      # ünlü-başlı (yumuşama/ye_de)
+        stem = _stem_before_suffix(vs, True)
+        y = "y" if ends_in_vowel(stem) else ""
+        if kind == "acak":                          # -AcAk
+            a = low_vowel(stem)
+            return stem + y + a + "c" + a + "k"
+        return stem + y + high_vowel(stem) + "ş"     # -Iş (4'lü)
+    # ünsüz-başlı: çıplak kök (yumuşama/ye_de YOK)
+    stem = _stem_before_suffix(vs, False)
+    a = low_vowel(stem)
+    if kind == "dik":                               # -DIk (D sertleşme + 4'lü)
+        d = "t" if hardens(stem) else "d"
+        return stem + d + high_vowel(stem) + "k"
+    if kind == "ma":                                # -mA
+        return stem + "m" + a
+    return stem + "m" + a + "k"                       # -mAk (mastar)
+
+
+def participle(lemma: str, kind: str, *, possessive: str | None = None,
+               case: str | None = None) -> str:
+    """Fiilimsi (sıfat-fiil dik/acak, ad-fiil ma/mak/is) + iyelik/durum. İyelik/durum
+    verilmezse bare fiilimsi döner. İstif İSİM motoruna (decline) delege edilir."""
+    if kind not in PARTICIPLES:
+        raise ValueError(
+            f"bilinmeyen fiilimsi: {kind!r}. Geçerli: {', '.join(sorted(PARTICIPLES))}"
+        )
+    vs = parse_verb(lemma)
+    bare = _participle_bare(vs, kind)
+    if possessive is None and case is None:
+        return vs.prefix + bare
+    kw: dict = {}
+    if possessive is not None:
+        kw["possessive"] = possessive
+    if case is not None:
+        kw["case"] = case
+    return vs.prefix + decline(bare, **kw)

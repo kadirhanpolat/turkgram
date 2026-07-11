@@ -75,6 +75,13 @@ _ULAC = {
     "meksizin": "meksizin", "maksızın": "meksizin", "-meksizin": "meksizin",
     "esiye": "esiye", "asıya": "esiye", "-esiye": "esiye",
 }
+_FIILIMSI = {
+    "dik": "dik", "dık": "dik", "diğ": "dik", "-dik": "dik",
+    "acak": "acak", "ecek": "acak", "-acak": "acak", "-ecek": "acak",
+    "ma": "ma", "me": "ma", "-ma": "ma", "-me": "ma",
+    "mak": "mak", "mek": "mak", "mastar": "mak", "-mak": "mak",
+    "is": "is", "iş": "is", "-iş": "is", "uş": "is",
+}
 _TASVIR = {
     "iver": "iver", "tezlik": "iver", "-iver": "iver",
     "adur": "adur", "sürerlik": "adur", "surerlik": "adur", "-adur": "adur",
@@ -192,6 +199,14 @@ def ulaç(fiil, tür):
     """converb — fiilden zarf-fiil (ulaç). tür ∈ {arak, ip, ince, meden, eli,
     dikçe, meksizin, esiye}."""
     return _nf.converb(fiil, _map(_ULAC, tür, "ulaç tür"))
+
+
+def fiilimsi(fiil, tür, *, iyelik=None, durum=None):
+    """participle — sıfat-fiil (dik/acak) veya ad-fiil (ma/mak/is) + iyelik/durum.
+    Adlaşmış yan cümle: okuduğum, gitmesini, geleceğini."""
+    return _nf.participle(fiil, _map(_FIILIMSI, tür, "fiilimsi tür"),
+                          possessive=_map(_KISI, iyelik, "iyelik"),
+                          case=_map(_DURUM, durum, "durum"))
 
 
 # ── Türetme ─────────────────────────────────────────────────────────────

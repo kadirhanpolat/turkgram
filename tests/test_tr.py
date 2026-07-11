@@ -79,6 +79,15 @@ def test_ulac_denklik():
     assert tr.ulaç("gitmek", "dikçe") == nf.converb("gitmek", "dikce") # gittikçe
 
 
+def test_fiilimsi_denklik():
+    assert tr.fiilimsi("okumak", "dik", iyelik="1tekil") == \
+        nf.participle("okumak", "dik", possessive="1sg")            # okuduğum
+    assert tr.fiilimsi("gitmek", "ma", iyelik="3tekil", durum="belirtme") == \
+        nf.participle("gitmek", "ma", possessive="3sg", case="acc") # gitmesini
+    assert tr.fiilimsi("gelmek", "ecek", iyelik="3tekil", durum="belirtme") == \
+        nf.participle("gelmek", "acak", possessive="3sg", case="acc")  # geleceğini (ecek→acak alias)
+
+
 def test_tablo_ve_coz_denklik():
     assert tr.çekim_tablosu("okumak") == m.paradigm("okumak")
     assert tr.ad_çekim_tablosu("kitap") == n.paradigm_noun("kitap")

@@ -61,6 +61,7 @@ tr.ekfiil("öğrenci", "hikaye", "1tekil")                        # öğrenciydi
 tr.türet("göz", "isim")                                         # -lIk/-CI… türevleri
 tr.ulaç("gitmek", "arak")                                       # giderek
 tr.çekimle("yapmak", "görülen_geçmiş", "3tekil", tasvir="tezlik") # yapıverdi
+tr.fiilimsi("gitmek", "ma", iyelik="3tekil", durum="belirtme")   # gitmesini
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·

@@ -49,8 +49,8 @@ from .morphology_noun import (
     NounStem,
 )
 
-# ── Fiilimsi (zarf-fiil / ulaç) ──────────────────────────────────────────
-from .nonfinite import converb
+# ── Fiilimsi (zarf-fiil / ulaç + sıfat-fiil/ad-fiil) ─────────────────────
+from .nonfinite import converb, participle
 
 # ── Yapım eki (türetme) ──────────────────────────────────────────────────
 from .derivation import derivations
@@ -65,7 +65,7 @@ __all__ = [
     "decline", "paradigm_noun", "parse_noun", "predicative", "copula",
     "with_ki", "equative", "NounStem",
     # fiilimsi
-    "converb",
+    "converb", "participle",
     # türetme
     "derivations",
     # alt modüller
