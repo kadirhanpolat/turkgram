@@ -20,9 +20,15 @@ import re
 from dataclasses import dataclass
 from typing import Any, Collection, Mapping
 
-from .morphology import conjugate, TENSES as _MORPH_TENSES
+from .morphology import conjugate
 from .morphology_noun import decline, copula
-from .nonfinite import converb, participle, CONVERBS, PARTICIPLES
+from .nonfinite import converb, participle
+from .analysis_candidates import (
+    _VOICE_CHAINS,
+    _root_candidates,
+    _enumerate_conjugate, _enumerate_decline, _enumerate_copula,
+    _enumerate_converb, _enumerate_participle,
+)
 
 # ---------------------------------------------------------------------------
 # _tr_lower — YEREL kopya (tr.py'den import ETME: döngü tuzağı)
@@ -54,28 +60,10 @@ class Analysis:
 
 
 # ---------------------------------------------------------------------------
-# Sabitler
+# Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
 _POS = ("verb", "noun")
 _KINDS = ("conjugate", "decline", "copula", "converb", "participle")
-
-# 9 finite tense (conv_arak / part_dik ÇIKARILIR — SPEC §1)
-_FINITE_TENSES = ("pres", "past", "fut", "aorist", "evid", "cond", "necess", "opt", "imp")
-_PERSONS = ("1sg", "2sg", "3sg", "1pl", "2pl", "3pl")
-_CASES = ("nom", "acc", "dat", "loc", "abl", "gen", "ins")
-_POSSESSIVES = ("1sg", "2sg", "3sg", "1pl", "2pl", "3pl")
-_COPULA_AUX = (None, "hikaye", "rivayet", "sart")
-_CONJ_AUX = (None, "hikaye", "rivayet", "sart")
-_ASPECTS = (None, "iver", "adur", "agel", "akal", "ayaz")
-
-# 24 çatı zinciri (SPEC §5): (refl|recip ≤1) × (caus 0-3) × (pass 0-1)
-_VOICE_CHAINS: list[tuple[str, ...]] = []
-for _vc_base in ((), ("refl",), ("recip",)):
-    for _vc_caus_n in range(4):
-        for _vc_pass in ((), ("pass",)):
-            _VOICE_CHAINS.append(_vc_base + ("caus",) * _vc_caus_n + _vc_pass)
-
-assert len(_VOICE_CHAINS) == 24
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -85,58 +73,6 @@ _KIND_FUNCS: dict[str, Any] = {
     "converb": converb,
     "participle": participle,
 }
-
-# Ünlüler (Türkçe) — 8 temel + uzun varyantlar; ö DAHIL
-_VOWELS = "aeıioöuüâîû"
-
-
-# ---------------------------------------------------------------------------
-# Ses filtreleri (SPEC §3) — her filtre: (eksen, değer) → zorunlu regex
-# Filtre yalnız gereklilik → hiçbir zaman recall kırmaz.
-# ---------------------------------------------------------------------------
-_FILTERS: dict[tuple[str, Any], re.Pattern[str]] = {
-    # conjugate tense
-    ("tense", "pres"):   re.compile(r"yor"),
-    ("tense", "fut"):    re.compile(r"c[ae]"),
-    ("tense", "evid"):   re.compile(r"m[ıiuü]ş"),
-    ("tense", "necess"): re.compile(r"m[ae]l[ıi]"),
-    ("tense", "cond"):   re.compile(r"s[ae]"),
-    ("tense", "past"):   re.compile(r"[dt][ıiuü]"),
-    # kesişen eksenler
-    ("question", True):  re.compile(r" m[ıiuü]"),
-    ("aux", "hikaye"):   re.compile(r"[dt][ıiuü]"),
-    ("aux", "rivayet"):  re.compile(r"m[ıiuü]ş"),
-    ("aux", "sart"):     re.compile(r"s[ae]"),
-    ("aspect", "iver"):  re.compile(r"ver"),
-    ("aspect", "adur"):  re.compile(r"dur"),
-    ("aspect", "agel"):  re.compile(r"gel"),
-    ("aspect", "akal"):  re.compile(r"kal"),
-    ("aspect", "ayaz"):  re.compile(r"yaz"),
-    ("negative", True):  re.compile(r"m[ae]"),
-    ("ability", True):   re.compile(r"[ae]bil|[ae]m[ae]"),
-    # copula
-    ("copula_aux", "rivayet"): re.compile(r"m[ıiuü]ş"),
-    # converb
-    ("converb_kind", "dikce"): re.compile(r"[kc][cç]"),
-    # participle
-    ("participle_is",):  re.compile(r"ş"),
-}
-
-
-def _cell_allowed(surface: str, axis: str, value: Any) -> bool:
-    """Filtre geçerse True (enumerate devam), aksi halde atla."""
-    key = (axis, value)
-    pat = _FILTERS.get(key)
-    if pat is None:
-        return True
-    return bool(pat.search(surface))
-
-
-# ---------------------------------------------------------------------------
-# Ünlü sayısı yardımcıları
-# ---------------------------------------------------------------------------
-def _count_vowels(s: str) -> int:
-    return sum(1 for ch in s if ch in _VOWELS)
 
 
 # ---------------------------------------------------------------------------
@@ -224,245 +160,6 @@ def _canonicalize(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     if kind == "participle":
         return _canon_participle(kwargs)
     return dict(kwargs)
-
-
-# ---------------------------------------------------------------------------
-# Ters-mutasyon envanteri (SPEC §4) — kök adayları
-# ---------------------------------------------------------------------------
-def _reverse_mutations(prefix: str) -> list[str]:
-    """Verilen öneke ters-mutasyon uygula → ek aday kök listesi."""
-    candidates = []
-    if not prefix:
-        return candidates
-    last = prefix[-1]
-    init = prefix[:-1]
-
-    # d → t (git→gid, isim t→d yumuşama)
-    if last == "d":
-        candidates.append(init + "t")
-    # ğ → k (çok-heceli k→ğ)
-    if last == "ğ":
-        candidates.append(init + "k")
-    # b → p (kitap→kitab)
-    if last == "b":
-        candidates.append(init + "p")
-    # c → ç (amaç→amac)
-    if last == "c":
-        candidates.append(init + "ç")
-    # g → k (nk→ng bağlamı: renk→reng)
-    if last == "g" and len(init) >= 1 and init[-1] == "n":
-        candidates.append(init + "k")
-    # ye_de: i/ı → e (yi→ye, di→de — sadece ünlüyle biten, son ünlü i/ı)
-    if last in "iı":
-        candidates.append(init + "e")
-    # Düşen ünlü: ikiz-ünsüz tekleştir (hakk→hak, redd→ret)
-    if len(prefix) >= 2 and prefix[-1] == prefix[-2]:
-        candidates.append(prefix[:-1])
-    # Düşen ünlü geri-ekle: son hece ünsüz-ünsüz bitiyor, son ünlüden harmoni
-    # (burn→burun, ağzı→ağız). Basit buluşsal: son 2 harf ünsüz mü?
-    if len(prefix) >= 2 and prefix[-1] not in _VOWELS and prefix[-2] not in _VOWELS:
-        # Son ünlüyü bul
-        last_v_idx = max((i for i, c in enumerate(prefix) if c in _VOWELS), default=-1)
-        if last_v_idx >= 0:
-            last_v = prefix[last_v_idx]
-            # Harmoni uyumlu yüksek ünlü
-            if last_v in "aıou":
-                insert = "ı" if last_v in "aı" else "u"
-            else:
-                insert = "i" if last_v in "ei" else "ü"
-            candidates.append(prefix[:-1] + insert + prefix[-1])
-
-    return candidates
-
-
-def _root_candidates(surface_token: str) -> dict[str, list[str]]:
-    """
-    Yüzey token'ının öneklerinden kök adayları üret.
-    Dönüş: {kök_str: [kind_hint, ...]} — kind_hint "verb"|"noun"|"any"
-    Her önek için:
-      - Fiil lemma = önek + "mak"/"mek" (harmoni)
-      - İsim lemma = önek (direkt)
-      - Ters-mutasyon çeşitleri
-    """
-    result: dict[str, list[str]] = {}
-
-    def _add(cand: str, kind: str) -> None:
-        if cand not in result:
-            result[cand] = []
-        if kind not in result[cand]:
-            result[cand].append(kind)
-
-    n = len(surface_token)
-    # En az 1 harf önek (boş önek = yüzeyin kendisi fiilimsi kök değil)
-    for end in range(1, n + 1):
-        prefix = surface_token[:end]
-        # Yalnız ünlü içeren önekler (SPEC §Adım 1)
-        if not any(c in _VOWELS for c in prefix):
-            continue
-
-        # İsim kökü: doğrudan
-        _add(prefix, "noun")
-
-        # Fiil kökü: mastar eki (harmoni: son ünlüye göre)
-        last_v = next((c for c in reversed(prefix) if c in _VOWELS), None)
-        # Türkçe ünlü harmoni: ön-ünlü → mek, arka → mak
-        if last_v in ("e", "i", "ü", "ö"):
-            suffix = "mek"
-        else:
-            suffix = "mak"
-        _add(prefix + suffix, "verb")
-
-        # Ters-mutasyonlar
-        for mutated in _reverse_mutations(prefix):
-            if not any(c in _VOWELS for c in mutated):
-                continue
-            _add(mutated, "noun")
-            last_mv = next((c for c in reversed(mutated) if c in _VOWELS), None)
-            if last_mv in ("e", "i", "ü", "ö"):
-                msuffix = "mek"
-            else:
-                msuffix = "mak"
-            _add(mutated + msuffix, "verb")
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Grid enumerasyon — her kind için hipotez kümesi
-# ---------------------------------------------------------------------------
-def _vowel_budget(surface_token: str, prefix_len: int) -> int:
-    """Suffix bölgesindeki ünlü sayısı (kanonik guard sınırı)."""
-    return _count_vowels(surface_token[prefix_len:])
-
-
-def _enumerate_conjugate(surface: str, stem: str, lemma: str) -> list[dict]:
-    """Conjugate hipotezleri; ses filtreleri + ünlü-yuvası guard."""
-    budget = _count_vowels(surface) - _count_vowels(stem)
-    if budget < 0:
-        budget = 0
-    hyps = []
-
-    for tense in _FINITE_TENSES:
-        if not _cell_allowed(surface, "tense", tense):
-            continue
-        for person in _PERSONS:
-            for neg in (False, True):
-                if neg and not _cell_allowed(surface, "negative", True):
-                    continue
-                for abil in (False, True):
-                    if abil and not _cell_allowed(surface, "ability", True):
-                        continue
-                    for quest in (False, True):
-                        if quest and not _cell_allowed(surface, "question", True):
-                            continue
-                        # Soru multi-token gerektiriyor — yalnız multi-token surface'de dene
-                        if quest and " " not in surface:
-                            continue
-                        for aux in _CONJ_AUX:
-                            if aux and not _cell_allowed(surface, "aux", aux):
-                                continue
-                            for asp in _ASPECTS:
-                                if asp and not _cell_allowed(surface, "aspect", asp):
-                                    continue
-                                # Ünlü-yuvası bütçe tahmini (kaba — oracle kesin)
-                                n_morphs = 1  # tense
-                                if neg:
-                                    n_morphs += 1
-                                if abil:
-                                    n_morphs += 1
-                                if aux:
-                                    n_morphs += 1
-                                if asp:
-                                    n_morphs += 2  # aspect aux = 2+ ünlü
-                                if n_morphs > budget + 2:  # +2 tolerans (kişi eki vs.)
-                                    continue
-                                for vc in _VOICE_CHAINS:
-                                    if len(vc) > 0:
-                                        # Çatı ekleri de ünlü tüketir
-                                        if n_morphs + len(vc) > budget + 3:
-                                            continue
-                                    # voice_chain: tuple (hashable) veya None
-                                    raw_kwargs: dict[str, Any] = {
-                                        "tense": tense,
-                                        "person": person,
-                                        "negative": neg,
-                                        "ability": abil,
-                                        "question": quest,
-                                        "aux": aux,
-                                        "aspect": asp,
-                                        "voice_chain": vc if vc else None,
-                                    }
-                                    hyps.append(raw_kwargs)
-    return hyps
-
-
-def _enumerate_decline(surface: str, stem: str) -> list[dict]:
-    budget = _count_vowels(surface) - _count_vowels(stem)
-    hyps = []
-    for number in ("sg", "pl"):
-        if number == "pl" and budget < 1:
-            continue
-        for poss in (None,) + tuple(_POSSESSIVES):
-            poss_cost = 0 if poss is None else 1
-            for case in _CASES:
-                case_cost = 0 if case == "nom" else 1
-                total = (1 if number == "pl" else 0) + poss_cost + case_cost
-                if total > budget + 1:
-                    continue
-                hyps.append({"number": number, "possessive": poss, "case": case})
-    return hyps
-
-
-def _enumerate_copula(surface: str, stem: str) -> list[dict]:
-    budget = _count_vowels(surface) - _count_vowels(stem)
-    hyps = []
-    for aux in _COPULA_AUX:
-        if aux and not _cell_allowed(surface, "copula_aux", aux):
-            continue
-        aux_cost = 1 if aux else 0
-        for person in _PERSONS:
-            for number in ("sg", "pl"):
-                for poss in (None,) + tuple(_POSSESSIVES):
-                    poss_cost = 0 if poss is None else 1
-                    for case in (None,) + tuple(_CASES):
-                        case_cost = 0 if case is None else 1
-                        for question in (False, True):
-                            if question and " " not in surface:
-                                continue
-                            total = aux_cost + poss_cost + case_cost
-                            if total > budget + 2:
-                                continue
-                            hyps.append({
-                                "aux": aux, "person": person,
-                                "number": number, "possessive": poss,
-                                "case": case, "question": question,
-                            })
-    return hyps
-
-
-def _enumerate_converb(surface: str, stem: str) -> list[dict]:
-    hyps = []
-    for kind in CONVERBS:
-        if kind == "dikce" and not _cell_allowed(surface, "converb_kind", "dikce"):
-            continue
-        hyps.append({"kind": kind})
-    return hyps
-
-
-def _enumerate_participle(surface: str, stem: str) -> list[dict]:
-    budget = _count_vowels(surface) - _count_vowels(stem)
-    hyps = []
-    for ptype in PARTICIPLES:
-        if ptype == "is" and not _cell_allowed(surface, "participle_is", None):
-            continue
-        for poss in (None,) + tuple(_POSSESSIVES):
-            poss_cost = 0 if poss is None else 1
-            for case in (None,) + tuple(_CASES):
-                case_cost = 0 if case is None else 1
-                if poss_cost + case_cost > budget + 1:
-                    continue
-                hyps.append({"ptype": ptype, "possessive": poss, "case": case})
-    return hyps
 
 
 # ---------------------------------------------------------------------------
@@ -632,6 +329,86 @@ def _segs_to_tuple(segs_in_order: list[tuple[str, str]]) -> tuple[Segment, ...]:
     return tuple(result)
 
 
+def _seg_voice(
+    lemma: str, surface: str, vc: tuple[str, ...],
+    stem_len: int, asp_kw: dict[str, Any],
+) -> tuple[list[tuple[str, str]], int]:
+    """Ses zinciri segmentleri + voiced_end döndür."""
+    vc_segs: list[tuple[str, str]] = []
+    prev_len = stem_len
+    for i, voice_elem in enumerate(vc):
+        voiced = _imp2sg(lemma, voice_chain=list(vc[:i + 1]), **asp_kw)
+        if voiced is None:
+            break
+        seg_surf = surface[prev_len:len(voiced)]
+        vc_segs.append((seg_surf, voice_elem))
+        prev_len = len(voiced)
+    return vc_segs, prev_len
+
+
+def _seg_mod(
+    lemma: str, surface: str, vc: tuple[str, ...],
+    voiced_end: int, negative: bool, ability: bool, asp_kw: dict[str, Any],
+) -> tuple[list[tuple[str, str]], int]:
+    """Abil/neg/AmA segmentleri + mod_end döndür."""
+    mod_segs: list[tuple[str, str]] = []
+    mod_end = voiced_end
+    vc_kw: dict[str, Any] = {"voice_chain": list(vc)} if vc else {}
+    if ability and negative:
+        ama_form = _imp2sg(lemma, negative=True, ability=True, **vc_kw, **asp_kw)
+        if ama_form is not None:
+            mod_segs.append((surface[voiced_end:len(ama_form)], "AmA"))
+            mod_end = len(ama_form)
+    elif ability:
+        abil_form = _imp2sg(lemma, ability=True, **vc_kw, **asp_kw)
+        if abil_form is not None:
+            mod_segs.append((surface[voiced_end:len(abil_form)], "Abil"))
+            mod_end = len(abil_form)
+    elif negative:
+        neg_form = _imp2sg(lemma, negative=True, **vc_kw, **asp_kw)
+        if neg_form is not None:
+            mod_segs.append((surface[voiced_end:len(neg_form)], "mA"))
+            mod_end = len(neg_form)
+    return mod_segs, mod_end
+
+
+def _seg_tense_aux(
+    lemma: str, surface: str, tense: str, aux: Any,
+    vc: tuple[str, ...], mod_end: int,
+    negative: bool, ability: bool, aspect: Any,
+) -> tuple[list[tuple[str, str]], list[tuple[str, str]], int]:
+    """Tense + aux segmentleri + aux_end döndür."""
+    vc_list = list(vc) if vc else None
+    t3sg_no_aux = _gen_with_raw("conjugate", lemma, {
+        "tense": tense, "person": None,
+        "negative": negative, "ability": ability,
+        "question": False, "aux": None,
+        "aspect": aspect, "voice_chain": vc_list,
+    }) or surface
+
+    tense_segs: list[tuple[str, str]] = []
+    tense_surf = surface[mod_end:len(t3sg_no_aux)]
+    if tense_surf:
+        tense_segs.append((tense_surf, _get_label("tense", tense)))
+
+    aux_segs: list[tuple[str, str]] = []
+    aux_end = len(t3sg_no_aux)
+    if aux:
+        t3sg_with_aux = _gen_with_raw("conjugate", lemma, {
+            "tense": tense, "person": None,
+            "negative": negative, "ability": ability,
+            "question": False, "aux": aux,
+            "aspect": aspect, "voice_chain": vc_list,
+        })
+        if t3sg_with_aux is not None:
+            aux_surf = surface[aux_end:len(t3sg_with_aux)]
+            if aux_surf:
+                aux_segs.append((aux_surf, _get_label("aux", aux)))
+            aux_end = len(t3sg_with_aux)
+
+    return tense_segs, aux_segs, aux_end
+
+
 def _segment_conjugate(lemma: str, canon: dict[str, Any],
                        surface: str) -> tuple[Segment, ...]:
     """
@@ -647,95 +424,23 @@ def _segment_conjugate(lemma: str, canon: dict[str, Any],
     aux = canon.get("aux", None)
     aspect = canon.get("aspect", None)
     voice_chain = canon.get("voice_chain", None)
-    vc: tuple = tuple(voice_chain) if voice_chain else ()
+    vc: tuple[str, ...] = tuple(voice_chain) if voice_chain else ()
+    asp_kw: dict[str, Any] = {"aspect": aspect} if aspect else {}
 
-    # aspect kw eklemek için yardımcı
-    asp_kw: dict[str, Any] = {}
-    if aspect:
-        asp_kw["aspect"] = aspect
-
-    # 1. Bare stem (tüm zincirler olmadan)
+    # 1. Bare stem
     bare = _imp2sg(lemma, **asp_kw)
-    if bare is None:
-        bare = surface
-    stem_len = len(bare)
+    stem_len = len(bare) if bare is not None else len(surface)
 
-    # 2. Ses zinciri: her adım için imp-2sg ile progressif uzunluk
-    vc_segs: list[tuple[str, str]] = []
-    prev_len = stem_len
-    for i, voice_elem in enumerate(vc):
-        voiced = _imp2sg(lemma, voice_chain=list(vc[:i + 1]), **asp_kw)
-        if voiced is None:
-            break
-        seg_surf = surface[prev_len:len(voiced)]
-        vc_segs.append((seg_surf, voice_elem))
-        prev_len = len(voiced)
-    voiced_end = prev_len  # imp-2sg + full voice chain uzunluğu
+    # 2. Ses zinciri
+    vc_segs, voiced_end = _seg_voice(lemma, surface, vc, stem_len, asp_kw)
 
-    # 3. Ability / negative / combined (AmA)
-    mod_segs: list[tuple[str, str]] = []
-    mod_end = voiced_end
-    if ability and negative:
-        # AmA = ability+negative combined; ama_form (hem negative hem ability) uzunluğu pivot
-        vc_kw = {"voice_chain": list(vc)} if vc else {}
-        ama_form = _imp2sg(lemma, negative=True, ability=True, **vc_kw, **asp_kw)
-        if ama_form is not None:
-            ama_surf = surface[voiced_end:len(ama_form)]
-            mod_segs.append((ama_surf, "AmA"))
-            mod_end = len(ama_form)
-    elif ability:
-        vc_kw = {"voice_chain": list(vc)} if vc else {}
-        abil_form = _imp2sg(lemma, ability=True, **vc_kw, **asp_kw)
-        if abil_form is not None:
-            abil_surf = surface[voiced_end:len(abil_form)]
-            mod_segs.append((abil_surf, "Abil"))
-            mod_end = len(abil_form)
-    elif negative:
-        vc_kw = {"voice_chain": list(vc)} if vc else {}
-        neg_form = _imp2sg(lemma, negative=True, **vc_kw, **asp_kw)
-        if neg_form is not None:
-            neg_surf = surface[voiced_end:len(neg_form)]
-            mod_segs.append((neg_surf, "mA"))
-            mod_end = len(neg_form)
+    # 3. Ability / negative modifiers
+    mod_segs, mod_end = _seg_mod(lemma, surface, vc, voiced_end, negative, ability, asp_kw)
 
-    # 4. Tense: conjugate(tense, None, mod_flags, no_aux)
-    vc_kw2 = {"voice_chain": list(vc)} if vc else {}
-    mod_kw: dict[str, Any] = {}
-    if negative:
-        mod_kw["negative"] = True
-    if ability:
-        mod_kw["ability"] = True
-    t3sg_no_aux = _gen_with_raw("conjugate", lemma, {
-        "tense": tense, "person": None,
-        "negative": mod_kw.get("negative", False),
-        "ability": mod_kw.get("ability", False),
-        "question": False, "aux": None,
-        "aspect": aspect, "voice_chain": list(vc) if vc else None,
-    })
-    if t3sg_no_aux is None:
-        t3sg_no_aux = surface  # fallback
-
-    tense_surf = surface[mod_end:len(t3sg_no_aux)]
-    tense_segs: list[tuple[str, str]] = []
-    if tense_surf:
-        tense_segs.append((tense_surf, _get_label("tense", tense)))
-
-    # 5. Aux (hikaye/rivayet/sart): 3sg + aux
-    aux_segs: list[tuple[str, str]] = []
-    aux_end = len(t3sg_no_aux)
-    if aux:
-        t3sg_with_aux = _gen_with_raw("conjugate", lemma, {
-            "tense": tense, "person": None,
-            "negative": mod_kw.get("negative", False),
-            "ability": mod_kw.get("ability", False),
-            "question": False, "aux": aux,
-            "aspect": aspect, "voice_chain": list(vc) if vc else None,
-        })
-        if t3sg_with_aux is not None:
-            aux_surf = surface[aux_end:len(t3sg_with_aux)]
-            if aux_surf:
-                aux_segs.append((aux_surf, _get_label("aux", aux)))
-            aux_end = len(t3sg_with_aux)
+    # 4+5. Tense + aux
+    tense_segs, aux_segs, aux_end = _seg_tense_aux(
+        lemma, surface, tense, aux, vc, mod_end, negative, ability, aspect,
+    )
 
     # 6. Person suffix
     person_surf = surface[aux_end:]
@@ -1060,96 +765,53 @@ def analyze(surface: str, pos: str | None = None,
     return analyses
 
 
+_ENUMERATE_FN: dict[str, Any] = {
+    "conjugate": lambda surface, stem, lemma: _enumerate_conjugate(surface, stem, lemma),
+    "converb":   lambda surface, stem, lemma: _enumerate_converb(surface, stem),
+    "participle": lambda surface, stem, lemma: _enumerate_participle(surface, stem),
+    "decline":   lambda surface, stem, lemma: _enumerate_decline(surface, stem),
+    "copula":    lambda surface, stem, lemma: _enumerate_copula(surface, stem),
+}
+
+
+def _process_kind(
+    kind: str, pos: str, surface: str, lemma: str, stem: str,
+    analyses: list[Analysis], seen: set[tuple], hyp: bool,
+) -> None:
+    """Tek kind için: enumerate → canon → dedup → verify → segment → Analysis ekle."""
+    enum_fn = _ENUMERATE_FN[kind]
+    for raw_kwargs in enum_fn(surface, stem, lemma):
+        canon = _canonicalize(kind, raw_kwargs)
+        key = (kind, lemma, _kwargs_key(canon))
+        if key in seen:
+            continue
+        seen.add(key)
+        raw = _raw_from_canon(kind, canon) if kind != "converb" else dict(canon)
+        if _verify(kind, lemma, raw, surface):
+            segs = _segment(kind, lemma, canon, surface)
+            analyses.append(Analysis(
+                lemma=lemma, pos=pos, kind=kind,
+                kwargs=canon, segments=segs, hypothetical=hyp,
+            ))
+
+
 def _try_verb(surface: str, lemma: str, stem: str,
               analyses: list[Analysis], seen: set[tuple],
               roots: Collection[str] | None) -> None:
     """Fiil hipotezlerini üret, doğrula, ekle."""
-    # roots verilmişse yalnız roots'taki lemmaları işle
     if roots is not None and lemma not in roots:
         return
-    hyp = roots is None  # roots=None → hepsi hypothetical; roots verilmiş → lemma roots'ta → False
-
-    hyp_list = _enumerate_conjugate(surface, stem, lemma)
-    for raw_kwargs in hyp_list:
-        canon = _canonicalize("conjugate", raw_kwargs)
-        key = ("conjugate", lemma, _kwargs_key(canon))
-        if key in seen:
-            continue
-        seen.add(key)
-        raw = _raw_from_canon("conjugate", canon)
-        if _verify("conjugate", lemma, raw, surface):
-            segs = _segment("conjugate", lemma, canon, surface)
-            analyses.append(Analysis(
-                lemma=lemma, pos="verb", kind="conjugate",
-                kwargs=canon, segments=segs, hypothetical=hyp,
-            ))
-
-    # converb (fiil → zarf-fiil)
-    for raw_kwargs in _enumerate_converb(surface, stem):
-        canon = _canonicalize("converb", raw_kwargs)
-        key = ("converb", lemma, _kwargs_key(canon))
-        if key in seen:
-            continue
-        seen.add(key)
-        raw = dict(canon)
-        if _verify("converb", lemma, raw, surface):
-            segs = _segment("converb", lemma, canon, surface)
-            analyses.append(Analysis(
-                lemma=lemma, pos="verb", kind="converb",
-                kwargs=canon, segments=segs, hypothetical=hyp,
-            ))
-
-    # participle (fiil → fiilimsi)
-    for raw_kwargs in _enumerate_participle(surface, stem):
-        canon = _canonicalize("participle", raw_kwargs)
-        key = ("participle", lemma, _kwargs_key(canon))
-        if key in seen:
-            continue
-        seen.add(key)
-        raw = _raw_from_canon("participle", canon)
-        if _verify("participle", lemma, raw, surface):
-            segs = _segment("participle", lemma, canon, surface)
-            analyses.append(Analysis(
-                lemma=lemma, pos="verb", kind="participle",
-                kwargs=canon, segments=segs, hypothetical=hyp,
-            ))
+    hyp = roots is None
+    for kind in ("conjugate", "converb", "participle"):
+        _process_kind(kind, "verb", surface, lemma, stem, analyses, seen, hyp)
 
 
 def _try_noun(surface: str, lemma: str, stem: str,
               analyses: list[Analysis], seen: set[tuple],
               roots: Collection[str] | None) -> None:
     """İsim hipotezlerini üret, doğrula, ekle."""
-    # roots verilmişse yalnız roots'taki lemmaları işle
     if roots is not None and lemma not in roots:
         return
     hyp = roots is None
-
-    # decline
-    for raw_kwargs in _enumerate_decline(surface, stem):
-        canon = _canonicalize("decline", raw_kwargs)
-        key = ("decline", lemma, _kwargs_key(canon))
-        if key in seen:
-            continue
-        seen.add(key)
-        raw = _raw_from_canon("decline", canon)
-        if _verify("decline", lemma, raw, surface):
-            segs = _segment("decline", lemma, canon, surface)
-            analyses.append(Analysis(
-                lemma=lemma, pos="noun", kind="decline",
-                kwargs=canon, segments=segs, hypothetical=hyp,
-            ))
-
-    # copula
-    for raw_kwargs in _enumerate_copula(surface, stem):
-        canon = _canonicalize("copula", raw_kwargs)
-        key = ("copula", lemma, _kwargs_key(canon))
-        if key in seen:
-            continue
-        seen.add(key)
-        raw = _raw_from_canon("copula", canon)
-        if _verify("copula", lemma, raw, surface):
-            segs = _segment("copula", lemma, canon, surface)
-            analyses.append(Analysis(
-                lemma=lemma, pos="noun", kind="copula",
-                kwargs=canon, segments=segs, hypothetical=hyp,
-            ))
+    for kind in ("decline", "copula"):
+        _process_kind(kind, "noun", surface, lemma, stem, analyses, seen, hyp)
