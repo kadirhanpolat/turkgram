@@ -75,7 +75,7 @@ SOFTEN_NO: set[str] = {
 SOFTEN_YES: set[str] = {
     "dip", "uç", "kap", "but", "kurt", "yurt", "cilt", "renk", "denk",
     "çelenk", "gök", "kürk", "kayıp", "araç", "amaç", "borç", "burç",
-    "güç", "hesap", "kalp", "kürsü", "harç", "ilaç", "kanat",
+    "güç", "hesap", "kalp", "kürsü", "harç", "ilaç", "kanat", "genç",
 }
 
 # §3.3 — ünlü düşmesi (drops_vowel) TAMAMEN leksik. Çoğu 2 heceli, son hece dar.
@@ -506,17 +506,85 @@ def predicative(headword: str, *, person: str = "3sg", **core) -> str:
     a = _low(stem, front)
     if person == "3sg":
         return stem + _dt(stem) + i + "r"                  # ev-dir, kitap-tır
-    # kişi ekleri (ek-eylem); ünlü-final gövdede kaynaştırma y
-    vfin = ends_in_vowel(stem)
+    # 1sg/1pl kişi eki (-Im/-Iz) ÜNLÜ-BAŞLI → yalın ünsüz-final gövdede YUMUŞAMA
+    # (genç→gencim, kitap→kitabım); 2sg/2pl (-sIn) ünsüz-başlı, yumuşama YOK (gençsin).
+    v_stem = stem
+    if not core and person in ("1sg", "1pl") and not ends_in_vowel(stem):
+        v_stem = root_variant(parse_noun(headword), True)
+    vfin = ends_in_vowel(v_stem)
     y = "y" if vfin else ""
+    vi = _high(v_stem, front)
     endings = {
-        "1sg": y + i + "m",                                 # evim / öğrenciyim
-        "2sg": "s" + i + "n",
-        "1pl": y + i + "z",
-        "2pl": "s" + i + "n" + i + "z",
-        "3pl": _dt(stem) + i + "rl" + a + "r",              # -DIrlAr
+        "1sg": v_stem + y + vi + "m",                       # gencim / öğrenciyim
+        "2sg": stem + "s" + i + "n",
+        "1pl": v_stem + y + vi + "z",
+        "2pl": stem + "s" + i + "n" + i + "z",
+        "3pl": stem + _dt(stem) + i + "rl" + a + "r",       # -DIrlAr
     }
-    return stem + endings[person]
+    return endings[person]
+
+
+# ---------------------------------------------------------------------------
+# Nominal ek-fiil (kopula) — Faz 1 / A4 (spec/copula-spec.md)
+# Ad soylu yüklemi çekimler: hikaye -(y)DI, rivayet -(y)mIş, şart -(y)sA + soru.
+# Fiil _ekfiil emsali; noun-domain harmoni (diakritik-normalize) kullanır.
+# ---------------------------------------------------------------------------
+def _copula_suffix(stem: str, aux: str, person: str) -> str:
+    """Ek-fiil (i-di/i-miş/i-se) + kişi ekini `stem`'e ekler. Ünlü-final gövdede
+    kaynaştırma -y-; -DI sertleşmesi (sert-final → -tI); noun-domain harmoni."""
+    vf = ends_in_vowel(stem)
+    y = "y" if vf else ""
+    i = high_vowel(stem)
+    a = low_vowel(stem)
+    _k = {"1sg": "m", "2sg": "n", "3sg": "",
+          "1pl": "k", "2pl": "n" + i + "z", "3pl": "l" + a + "r"}   # k-tipi
+    if aux == "hikaye":                                   # -(y)DI + k-tipi
+        d = "t" if (not vf and hardens(stem)) else "d"
+        return stem + y + d + i + _k[person]
+    if aux == "rivayet":                                  # -(y)mIş + z-tipi
+        base = stem + y + "m" + i + "ş"
+        _z = {"1sg": i + "m", "2sg": "s" + i + "n", "3sg": "",
+              "1pl": i + "z", "2pl": "s" + i + "n" + i + "z", "3pl": "l" + a + "r"}
+        return base + _z[person]
+    if aux == "sart":                                     # -(y)sA + k-tipi
+        return stem + y + "s" + a + _k[person]
+    raise ValueError(f"bilinmeyen aux: {aux}")
+
+
+def _pres_question(stem: str, person: str) -> str:
+    """Geniş copula soru: gövde + mI + z-tipi kişi (mI'ye biner). 3pl: çoğul + mI."""
+    a = low_vowel(stem)
+    if person == "3pl":                                   # öğrenciler mi
+        return f"{stem}l{a}r m{high_vowel(stem)}"
+    mi = "m" + high_vowel(stem)
+    j = high_vowel(mi)
+    _z = {"1sg": "y" + j + "m", "2sg": "s" + j + "n", "3sg": "",
+          "1pl": "y" + j + "z", "2pl": "s" + j + "n" + j + "z"}
+    return f"{stem} {mi}{_z[person]}"
+
+
+def copula(headword: str, aux: str | None = None, person: str = "3sg", *,
+           case: str | None = None, possessive: str | None = None,
+           number: str = "sg", question: bool = False) -> str:
+    """Nominal ek-fiil (kopula). aux ∈ {None(geniş), 'hikaye', 'rivayet', 'sart'};
+    gövde `decline(headword, ...)` ile kurulur, ek-fiil son sese göre biner."""
+    if person not in PERSONS:
+        raise ValueError(f"bilinmeyen person: {person}")
+    core: dict = {}
+    if case is not None:
+        core["case"] = case
+    if possessive is not None:
+        core["possessive"] = possessive
+    if number != "sg":
+        core["number"] = number
+    if aux is None:                                       # geniş / bildirme
+        if question:
+            return _pres_question(decline(headword, **core), person)
+        return predicative(headword, person=person, **core)
+    stem = decline(headword, **core)
+    if question:                                          # mI gövde ile ek-fiil arasına
+        return f"{stem} {_copula_suffix('m' + high_vowel(stem), aux, person)}"
+    return _copula_suffix(stem, aux, person)
 
 
 def with_ki(headword: str, *, case: str = "loc", **core) -> str:

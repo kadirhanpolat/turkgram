@@ -43,6 +43,7 @@ from .morphology_noun import (
     paradigm_noun,
     parse_noun,
     predicative,
+    copula,
     with_ki,
     equative,
     NounStem,
@@ -58,8 +59,8 @@ __all__ = [
     "conjugate", "paradigm", "parse_verb", "inflect_last_token", "VerbStem",
     "last_vowel", "low_vowel", "high_vowel", "ends_in_vowel", "hardens",
     # isim
-    "decline", "paradigm_noun", "parse_noun", "predicative", "with_ki",
-    "equative", "NounStem",
+    "decline", "paradigm_noun", "parse_noun", "predicative", "copula",
+    "with_ki", "equative", "NounStem",
     # türetme
     "derivations",
     # alt modüller
