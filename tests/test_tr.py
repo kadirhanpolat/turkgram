@@ -112,8 +112,22 @@ def test_fiilimsi_denklik():
 
 
 def test_tablo_ve_coz_denklik():
-    assert tr.çekim_tablosu("okumak") == m.paradigm("okumak")
-    assert tr.ad_çekim_tablosu("kitap") == n.paradigm_noun("kitap")
+    # çekim_tablosu/ad_çekim_tablosu: anahtar Türkçeleşir, değerler AYNI kalır.
+    çv = tr.çekim_tablosu("okumak")
+    çekirdek_v = m.paradigm("okumak")
+    assert len(çv) == len(çekirdek_v)
+    assert list(çv.values()) == list(çekirdek_v.values())         # sıra + değer korunur
+    assert çv["şimdiki.3tekil"] == çekirdek_v["pres.3sg"]         # okuyor
+    assert çv["olumsuz.görülen_geçmiş.1tekil"] == çekirdek_v["neg.past.1sg"]
+    assert çv["ulaç"] == çekirdek_v["conv_arak"]                  # kişisiz (segment tek)
+
+    çn = tr.ad_çekim_tablosu("kitap")
+    çekirdek_n = n.paradigm_noun("kitap")
+    assert list(çn.values()) == list(çekirdek_n.values())
+    assert çn["belirtme"] == çekirdek_n["acc"]
+    assert çn["çoğul.bulunma"] == çekirdek_n["pl.loc"]
+    assert çn["iyelik.1tekil.yönelme"] == çekirdek_n["poss.1sg.dat"]
+
     assert tr.fiil_çöz("gitmek") == m.parse_verb("gitmek")
     assert tr.ad_çöz("kitap") == n.parse_noun("kitap")
 

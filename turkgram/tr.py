@@ -99,6 +99,34 @@ _CATI = {
 }
 
 
+# ── Çekim tablosu anahtarı: çekirdek segment → Türkçe (kanonik) ──────────
+# paradigm/paradigm_noun anahtarları nokta-ayrık segment ('neg.pres.1sg',
+# 'pl.poss.1pl.abl'). Her segment tek tek çevrilir → tüm kombinasyonlar kapsanır.
+_ANAHTAR = {
+    # işaretleyiciler
+    "neg": "olumsuz", "ability": "yeterlik",
+    # kip / zaman
+    "pres": "şimdiki", "past": "görülen_geçmiş", "fut": "gelecek",
+    "aorist": "geniş", "evid": "öğrenilen_geçmiş", "cond": "şart",
+    "necess": "gereklilik", "opt": "istek", "imp": "emir",
+    "conv_arak": "ulaç", "part_dik": "ortaç",
+    # kişi (fiil çekimi + isim iyelik kişisi)
+    "1sg": "1tekil", "2sg": "2tekil", "3sg": "3tekil",
+    "1pl": "1çoğul", "2pl": "2çoğul", "3pl": "3çoğul",
+    # isim: sayı / iyelik / durum / ek katmanlar
+    "pl": "çoğul", "poss": "iyelik",
+    "nom": "yalın", "acc": "belirtme", "dat": "yönelme", "loc": "bulunma",
+    "abl": "ayrılma", "gen": "tamlayan", "ins": "vasıta",
+    "pred": "yüklem", "ki": "ki", "ca": "eşitlik",
+}
+
+
+def _türkçe_anahtar(key: str) -> str:
+    """Çekirdek tablo anahtarını Türkçeleştir (segment-segment). Bilinmeyen segment
+    aynen korunur (savunmacı — yeni eksen eklenince çökmez)."""
+    return ".".join(_ANAHTAR.get(seg, seg) for seg in key.split("."))
+
+
 def _map(table: dict, value, param: str):
     """Türkçe değeri çekirdek anahtarına çevir. None → None (kişisiz/varsayılan)."""
     if value is None:
@@ -156,8 +184,9 @@ def son_kelimeyi_çek(fiil, kip, kişi=None, *, olumsuz=False, yeterlik=False,
 
 
 def çekim_tablosu(fiil):
-    """paradigm — tam fiil çekim tablosu (dict; anahtarlar İngilizce, değerler Türkçe)."""
-    return _m.paradigm(fiil)
+    """paradigm — tam fiil çekim tablosu (dict; anahtar VE değer Türkçe).
+    Anahtar biçimi: 'şimdiki.3tekil', 'olumsuz.görülen_geçmiş.1tekil', 'ulaç'."""
+    return {_türkçe_anahtar(k): v for k, v in _m.paradigm(fiil).items()}
 
 
 def fiil_çöz(fiil):
@@ -174,8 +203,9 @@ def ad_çekimle(ad, *, sayı="tekil", iyelik=None, durum="yalın"):
 
 
 def ad_çekim_tablosu(ad):
-    """paradigm_noun — tam isim çekim tablosu (dict)."""
-    return _n.paradigm_noun(ad)
+    """paradigm_noun — tam isim çekim tablosu (dict; anahtar VE değer Türkçe).
+    Anahtar biçimi: 'belirtme', 'çoğul.bulunma', 'iyelik.1tekil.yönelme'."""
+    return {_türkçe_anahtar(k): v for k, v in _n.paradigm_noun(ad).items()}
 
 
 def ad_çöz(ad):
