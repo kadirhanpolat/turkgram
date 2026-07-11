@@ -11,3 +11,6 @@ venv/
 # Telifli referans kaynakları — ASLA commit'lenmez (CLAUDE.md #3, MIT dağıtım).
 # Kurallar OLGUdur; kitap düzyazısı/örneği repoya girmez.
 books/
+
+# Yerel ajan/oturum durumu — commit'lenmez.
+.claude/
