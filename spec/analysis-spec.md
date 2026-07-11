@@ -154,6 +154,10 @@ zinciri zaten () veya tek-morfeme indirir.
     `question=False`. Kalan zorunlu: `person`. (Geniş bildirme "evdir" = person=3sg.)
   - `converb`: `kind` zorunlu (tek eksen).
   - `participle`: `ptype` zorunlu; atılan `possessive=None`, `case=None`.
+- **`case='nom'` ≡ case YOK:** hiçbir kind'da `case='nom'` EMİT EDİLMEZ; "üstü örtük durum"
+  okuması case-absent'tir. Enumerasyonda 'nom' ve None aynı kabul edilip atılır (yoksa
+  `{ptype:ma}` ile `{ptype:ma,case:nom}` sahte-çift olur). Aynı şekilde `number='sg'`,
+  `possessive=None`, `aux=None`, `question=False`, `voice_chain=()` daima atılır.
 - Eşitlik/dedup anahtarı: `(lemma, pos, kind, frozenset(kanonik kwargs.items()))`.
 - **Türkçe kwargs (tr.çözümle):** aynı kanonik yapı, değerler Türkçe kanonik temsilci
   (past→görülen_geçmiş, loc→bulunma, caus→ettirgen); voice_chain listesi Türkçe
@@ -200,6 +204,19 @@ talimatı).
   repr(sorted kwargs)). `hypothetical` sıralamada rol almaz.
 - `roots` (lemma kümesi) verilmişse lemma∉roots elenir, kalan `hypothetical=False`; aksi
   hepsi `hypothetical=True`.
+
+### 8.1 Çıplak-önek gürültüsü ve `roots` (kritik — golden test kararı)
+Leksikonsuz analizör, yüzeyin KENDİSİNİ ve her önekini çıplak-isim kökü olarak önerir
+(üreteç doğrular): `decline("okuyor")="okuyor"`, `decline("evler",case="loc")="evlerde"`,
+`decline("evlerde")="evlerde"` — hepsi üreteç-geçerli form-analizi (`hypothetical=True`),
+ama gürültü. Bu, leksikonsuz analysis-by-generation'ın DOĞASIDIR (tasarım C-03).
+- **Gerçek tüketici `roots` verir** (dict-db) → gürültü elenir, "ev" kalır "evler" düşer.
+- **Precision golden testi `roots=LEKSIKON` ile koşulur** (küratörlü gerçek lemma kümesi);
+  golden = roots-filtreli TAM küme. Filtresiz (`roots=None`) çıktı gürültü içerir → yalnız
+  "her hypothetical, en az bir gerçek okuma ⊆ çıktı" gibi hafif testlerle sınanır, tam-küme
+  DEĞİL.
+- Round-trip süpürmesi (§ test) `roots`=süpürme lemma-seti ile ya da İÇERME (tam-küme değil)
+  ile sınar; gürültü membership'i bozmaz.
 
 ---
 
