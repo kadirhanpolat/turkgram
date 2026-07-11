@@ -7,6 +7,7 @@ golden'larında garanti). Ayrıca alias, _tr_lower ve bilinmeyen-değer hatası.
 import pytest
 from turkgram import tr
 from turkgram import morphology as m, morphology_noun as n, derivation as d
+from turkgram import nonfinite as nf
 
 
 # ── Çeviri denkliği (Türkçe == çekirdek) ─────────────────────────────────
@@ -60,6 +61,13 @@ def test_yuklem_denklik():
 def test_turet_denklik():
     assert tr.türet("göz", "isim") == d.derivations("göz", "noun")
     assert tr.türet("gelmek", "fiil") == d.derivations("gelmek", "verb")
+
+
+def test_ulac_denklik():
+    assert tr.ulaç("gitmek", "arak") == nf.converb("gitmek", "arak")   # giderek
+    assert tr.ulaç("okumak", "ince") == nf.converb("okumak", "inca")   # okuyunca (alias ince→inca)
+    assert tr.ulaç("yapmak", "meden") == nf.converb("yapmak", "madan") # yapmadan (alias)
+    assert tr.ulaç("gitmek", "dikçe") == nf.converb("gitmek", "dikce") # gittikçe
 
 
 def test_tablo_ve_coz_denklik():

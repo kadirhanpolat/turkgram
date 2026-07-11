@@ -20,7 +20,7 @@ Alt modüllere de doğrudan erişilebilir:
 """
 from __future__ import annotations
 
-from . import morphology, morphology_noun, derivation, tr
+from . import morphology, morphology_noun, derivation, nonfinite, tr
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
 from .morphology import (
@@ -49,6 +49,9 @@ from .morphology_noun import (
     NounStem,
 )
 
+# ── Fiilimsi (zarf-fiil / ulaç) ──────────────────────────────────────────
+from .nonfinite import converb
+
 # ── Yapım eki (türetme) ──────────────────────────────────────────────────
 from .derivation import derivations
 
@@ -61,9 +64,11 @@ __all__ = [
     # isim
     "decline", "paradigm_noun", "parse_noun", "predicative", "copula",
     "with_ki", "equative", "NounStem",
+    # fiilimsi
+    "converb",
     # türetme
     "derivations",
     # alt modüller
-    "morphology", "morphology_noun", "derivation", "tr",
+    "morphology", "morphology_noun", "derivation", "nonfinite", "tr",
     "__version__",
 ]

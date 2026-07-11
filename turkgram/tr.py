@@ -16,6 +16,7 @@ normalize edilir; bilinmeyen değer geçerli seçenekleri sıralayan ``ValueErro
 from __future__ import annotations
 
 from . import morphology as _m, morphology_noun as _n, derivation as _d
+from . import nonfinite as _nf
 
 
 # ── Türkçe-duyarlı küçük harf (#10: İ→i, I→ı) ────────────────────────────
@@ -63,6 +64,16 @@ _TUR = {
     "isim": "noun", "fiil": "verb",
     "birleşik_fiil": "compound_verb", "birlesik_fiil": "compound_verb",
     "birleşik_isim": "compound_noun", "birlesik_isim": "compound_noun",
+}
+_ULAC = {
+    "arak": "arak", "-arak": "arak",
+    "ip": "ip", "-ip": "ip",
+    "inca": "inca", "ince": "inca", "-ince": "inca", "ınca": "inca",
+    "madan": "madan", "meden": "madan", "-meden": "madan", "-madan": "madan",
+    "eli": "eli", "-eli": "eli", "alı": "eli", "-alı": "eli",
+    "dikce": "dikce", "dikçe": "dikce", "-dikçe": "dikce", "tıkça": "dikce",
+    "meksizin": "meksizin", "maksızın": "meksizin", "-meksizin": "meksizin",
+    "esiye": "esiye", "asıya": "esiye", "-esiye": "esiye",
 }
 
 
@@ -166,6 +177,13 @@ def ki_ekle(ad, *, durum="bulunma", iyelik=None, sayı="tekil"):
 def eşitlik(ad):
     """equative — eşitlik -CA."""
     return _n.equative(ad)
+
+
+# ── Fiilimsi (zarf-fiil / ulaç) ──────────────────────────────────────────
+def ulaç(fiil, tür):
+    """converb — fiilden zarf-fiil (ulaç). tür ∈ {arak, ip, ince, meden, eli,
+    dikçe, meksizin, esiye}."""
+    return _nf.converb(fiil, _map(_ULAC, tür, "ulaç tür"))
 
 
 # ── Türetme ─────────────────────────────────────────────────────────────

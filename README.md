@@ -59,6 +59,7 @@ tr.çekimle("gitmek", "görülen_geçmiş", "3tekil", olumsuz=True)  # gitmedi
 tr.ad_çekimle("ev", iyelik="3tekil", durum="bulunma")           # evinde
 tr.ekfiil("öğrenci", "hikaye", "1tekil")                        # öğrenciydim
 tr.türet("göz", "isim")                                         # -lIk/-CI… türevleri
+tr.ulaç("gitmek", "arak")                                       # giderek
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
