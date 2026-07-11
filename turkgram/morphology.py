@@ -267,13 +267,16 @@ def _aspect_stem(vs: VerbStem, aspect: str) -> VerbStem:
 def conjugate(lemma: str, tense: str, person: str | None = None,
               *, negative: bool = False, ability: bool = False,
               question: bool = False, aux: str | None = None,
-              aspect: str | None = None) -> str | None:
+              aspect: str | None = None,
+              voice_chain: list[str] | None = None) -> str | None:
     """Tek biçim üret. Türkçede olmayan hücrede (emir 1sg/1pl, soru-imp) None
     döner (paradigm bunları atlar); geçersiz tense/person/aux/aspect ValueError.
 
     aux (birleşik zaman): 'hikaye'|'rivayet'|'sart' → basit gövde + ek-fiil.
     aspect (tasvir): 'iver'|'adur'|'agel'|'akal'|'ayaz' → gövde tasvir fiiline
     dönüşür, sonra tense/olumsuz/soru/aux ona işler (yapıverdi, gidedururyor).
+    voice_chain (çatı): ['caus'|'pass'|'refl'|'recip', …] → gövde çatılı gövdeye
+    dönüşür (yığılma sırayla, dövüştürüldü), sonra tüm çekim ona biner (voice.py).
     question ile birleşince mI gövde-ekfiil arasına girer (geliyor muydum)."""
     vs = parse_verb(lemma)
     if tense not in TENSES:
@@ -282,6 +285,10 @@ def conjugate(lemma: str, tense: str, person: str | None = None,
         raise ValueError(f"bilinmeyen person: {person}")
     if aux is not None and aux not in AUX:
         raise ValueError(f"bilinmeyen aux: {aux}")
+    if voice_chain:
+        # lazy import: voice.py bu modülden import eder → üst-seviye import döngü kurar.
+        from .voice import apply_voice
+        vs = apply_voice(vs, voice_chain)
     if aspect is not None:
         if aspect not in _ASPECT:
             raise ValueError(f"bilinmeyen aspect: {aspect}")

@@ -89,6 +89,14 @@ _TASVIR = {
     "akal": "akal", "kalma": "akal", "-akal": "akal",
     "ayaz": "ayaz", "yaklaşma": "ayaz", "yaklasma": "ayaz", "-ayaz": "ayaz",
 }
+_CATI = {
+    "ettirgen": "caus", "ettirgenlik": "caus", "oldurgan": "caus",
+    "edilgen": "pass", "edilgenlik": "pass", "pasif": "pass",
+    "meçhul": "pass", "mechul": "pass",
+    "dönüşlü": "refl", "donuslu": "refl", "dönüşlülük": "refl",
+    "işteş": "recip", "istes": "recip", "işteşlik": "recip",
+    "karşılıklı": "recip", "karsilikli": "recip",
+}
 
 
 def _map(table: dict, value, param: str):
@@ -119,13 +127,24 @@ def _core(sayı, iyelik, durum) -> dict:
 
 
 # ── Fiil ────────────────────────────────────────────────────────────────
+def _çatı_zincir(çatı):
+    """Türkçe çatı adı/adları → çekirdek voice_chain (['caus', ...]). None → None."""
+    if çatı is None:
+        return None
+    değerler = [çatı] if isinstance(çatı, str) else list(çatı)
+    return [_map(_CATI, c, "çatı") for c in değerler]
+
+
 def çekimle(fiil, kip, kişi=None, *, olumsuz=False, yeterlik=False,
-            soru=False, birleşik=None, tasvir=None):
-    """conjugate — fiil çekimi (bir biçim). tasvir: iver/adur/agel/akal/ayaz."""
+            soru=False, birleşik=None, tasvir=None, çatı=None):
+    """conjugate — fiil çekimi (bir biçim). tasvir: iver/adur/agel/akal/ayaz.
+    çatı: ettirgen/edilgen/dönüşlü/işteş (tekil ya da liste → yığılma,
+    ör. çatı=['işteş','ettirgen','edilgen'] → dövüştürüldü)."""
     return _m.conjugate(fiil, _map(_KIP, kip, "kip"), _map(_KISI, kişi, "kişi"),
                         negative=olumsuz, ability=yeterlik, question=soru,
                         aux=_map(_BIRLESIK, birleşik, "birleşik"),
-                        aspect=_map(_TASVIR, tasvir, "tasvir"))
+                        aspect=_map(_TASVIR, tasvir, "tasvir"),
+                        voice_chain=_çatı_zincir(çatı))
 
 
 def son_kelimeyi_çek(fiil, kip, kişi=None, *, olumsuz=False, yeterlik=False,

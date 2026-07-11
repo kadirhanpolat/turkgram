@@ -101,6 +101,14 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   istifleme işleri de bu deseni kullanmalı.
 - **genç istisnası:** tek-heceli-yumuşayan (genci/gence) → `SOFTEN_YES`. Benzer
   monosyllabik-softening eksikler çıkarsa oraya ekle.
+- **A1 çatı (`voice.py`) DELEGASYON:** çatı zinciri köke sırayla uygulanır, türetilmiş
+  gövde `VerbStem`'e sarılır → NORMAL çekilir (aorist -Ir hece sayımından; softens/ye_de
+  yalnız İLK ekte, orijinal köke). İki TUZAK (golden+adversarial yakaladı):
+  (a) **ettirgen ünlü-final -t YALNIZ çok-heceli** (oku→okut) — tek-heceli ünlü-final
+  -DIr (de→dedir, ye→yedir; "det" DEĞİL); tek-heceli -l/-r de -DIr (gör→gördür, "gört" DEĞİL).
+  (b) **edilgen/dönüşlü -n (ünlü-final) ye_de'yi TETİKLEMEZ** (de→den, "din" DEĞİL): -n
+  ünsüz-başlı, allomorf başına ünlü-başlılık ayrımı şart. Ettirgen leksik -Ir/-Ar/-It kapalı
+  küme (`CAUSATIVE_LEXICAL`); yeni leksik ettirgen çıkarsa oraya ekle.
 
 ---
 
@@ -112,11 +120,10 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - ✅ **A5 + A6** ulaç envanteri (`nonfinite.converb`, 8 ek) + aorist -Ir listesi doğrulandı.
   - ✅ **A2** tasvir fiilleri (`conjugate(aspect=)`): tezlik/sürerlik/kalma/yaklaşma.
   - ✅ **A3** fiilimsi + iyelik/durum istifi (`nonfinite.participle`): okuduğum/gitmesini.
-  - ⏳ **A1** çatı entegre çekim + yığılma (ettirgen/edilgen/dönüşlü/işteş → dövüştürüldü).
-    **KALAN, EN ZOR** — yeni morfotaktik katman (`voice.py`); allomorf seçimi + yığılma
-    sırası en hataya-açık; SPEC + çok-oy adversarial verify.
+  - ✅ **A1** çatı entegre çekim + yığılma (`voice.py::apply_voice`, `conjugate(voice_chain=)`):
+    ettirgen/edilgen/dönüşlü/işteş → dövüştürüldü. **Faz 1 fiil çekimi TAMAMLANDI.**
 - **Faz 2** — ÇÖZÜMLEME/analiz (parse: biçim → kök+ekler). En büyük yeni bileşen; dik
   eksen. FST araçları (Zemberek/TRmorph/Google turkish-morphology) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **1896 test yeşil**. Her commit'te regresyonsuz + korpus 0 çökme.
+Test durumu: son ölçüm **2005 test yeşil**. Her commit'te regresyonsuz + korpus 0 çökme.

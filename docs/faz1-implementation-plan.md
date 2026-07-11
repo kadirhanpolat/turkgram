@@ -32,7 +32,7 @@ gövde → çatı zinciri → çekim. Motor biçim SAKLAMAZ (#5), üretir.
 - ✅ **A5 + A6** ulaç envanteri + aorist doğrulama — `nonfinite.converb` (commit `5787ce8`)
 - ✅ **A2** tasvir fiilleri — `conjugate(aspect=)` + `VerbStem.aorist_forced` (commit `29247f0`)
 - ✅ **A3** fiilimsi + iyelik/durum istifi — `nonfinite.participle` (commit `a79429e`)
-- ⏳ **A1** çatı entegre çekim + yığılma — KALAN, en zor (aşağıdaki Task A1)
+- ✅ **A1** çatı entegre çekim + yığılma — TAMAMLANDI (`voice.py`; aşağıdaki Task A1)
 - Ek: Türkçe API `tr.py` (commit `d31c869`).
 
 Her task #5 akışıyla (elle SPEC → bağımsız golden → motor → korpus taraması) tamamlandı;
@@ -210,12 +210,12 @@ yaptırıldı; işteş+ettirgen+edilgen: dövüştürüldü) × birkaç çekim. 
 yığılma harmonisi. ~150 hücre. Bağımsız golden ŞART (yığılma hataları çok ince).
 
 **Steps:**
-- [ ] **1. SPEC** `spec/voice-spec.md` (ana oturum — allomorf ölçütü + yığılma sırası en kritik; Korkmaz §498–499 + §488).
-- [ ] **2. Golden** `tests/golden_voice.py` (bağımsız; yığınlar dahil).
-- [ ] **3. Failing test** → FAIL.
-- [ ] **4. Motor** `voice.py::apply_voice(vs, chain) -> VerbStem'` — her adımda ek + morfofonoloji, güncel gövde döndür; `conjugate` çatılı gövdeyle çekim yapar.
-- [ ] **5. Test yeşil** + korpus taraması (çekirdek fiiller × çatı zincirleri 0 çökme).
-- [ ] **6. Hakem + code-review** (python-reviewer) — allomorf/yığılma en hataya açık; iki bağımsız denetim.
+- [x] **1. SPEC** `spec/voice-spec.md` (ana oturum; Korkmaz §484–499 karşı doğrulandı).
+- [x] **2. Golden** `tests/golden_voice.py` (İKİ bağımsız türetme %100 uyum; yığınlar dahil).
+- [x] **3. Failing test** → 107 FAIL (TypeError).
+- [x] **4. Motor** `voice.py::apply_voice(vs, chain) -> VerbStem`; `conjugate(voice_chain=)` + `tr.çekimle(çatı=)`.
+- [x] **5. Test yeşil** (2005) + korpus taraması (4013 fiil × 8 zincir, 2.3M hücre, 0 çökme).
+- [x] **6. Hakem + code-review** — python-reviewer (1 HIGH lemma bug düzeltildi) + dilbilgisel adversarial (68+ form, 0 hata).
 - [ ] **7. Commit** `feat(voice): çatı entegre çekim + yığılma (ettirgen/edilgen/dönüşlü/işteş)`
 
 ---

@@ -72,6 +72,29 @@ def test_tasvir_denklik():
         m.conjugate("gitmek", "pres", "3sg", aspect="adur")          # gideduruyor
 
 
+def test_cati_denklik():
+    # tekil çatı
+    assert tr.çekimle("yapmak", "görülen_geçmiş", "3tekil", çatı="ettirgen") == \
+        m.conjugate("yapmak", "past", "3sg", voice_chain=["caus"])       # yaptırdı
+    assert tr.çekimle("okumak", "geçmiş", "3tekil", çatı="edilgen") == \
+        m.conjugate("okumak", "past", "3sg", voice_chain=["pass"])       # okundu
+    # yığılma (liste → zincir)
+    assert tr.çekimle("dövmek", "geçmiş", "3tekil",
+                      çatı=["işteş", "ettirgen", "edilgen"]) == \
+        m.conjugate("dövmek", "past", "3sg",
+                    voice_chain=["recip", "caus", "pass"])               # dövüştürüldü
+    # alias eşdeğerliği (pasif≡edilgen, karşılıklı≡işteş)
+    assert tr.çekimle("yapmak", "geçmiş", "3tekil", çatı="pasif") == \
+        tr.çekimle("yapmak", "geçmiş", "3tekil", çatı="edilgen")
+    assert tr.çekimle("bakmak", "geçmiş", "3tekil", çatı="karşılıklı") == \
+        tr.çekimle("bakmak", "geçmiş", "3tekil", çatı="işteş")
+
+
+def test_bilinmeyen_cati():
+    with pytest.raises(ValueError, match="çatı"):
+        tr.çekimle("yapmak", "geçmiş", "3tekil", çatı="olmayan")
+
+
 def test_ulac_denklik():
     assert tr.ulaç("gitmek", "arak") == nf.converb("gitmek", "arak")   # giderek
     assert tr.ulaç("okumak", "ince") == nf.converb("okumak", "inca")   # okuyunca (alias ince→inca)

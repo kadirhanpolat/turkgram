@@ -20,7 +20,7 @@ Alt modüllere de doğrudan erişilebilir:
 """
 from __future__ import annotations
 
-from . import morphology, morphology_noun, derivation, nonfinite, tr
+from . import morphology, morphology_noun, derivation, nonfinite, voice, tr
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
 from .morphology import (
@@ -52,6 +52,9 @@ from .morphology_noun import (
 # ── Fiilimsi (zarf-fiil / ulaç + sıfat-fiil/ad-fiil) ─────────────────────
 from .nonfinite import converb, participle
 
+# ── Çatı (voice: ettirgen/edilgen/dönüşlü/işteş + yığılma) ───────────────
+from .voice import apply_voice
+
 # ── Yapım eki (türetme) ──────────────────────────────────────────────────
 from .derivation import derivations
 
@@ -66,9 +69,11 @@ __all__ = [
     "with_ki", "equative", "NounStem",
     # fiilimsi
     "converb", "participle",
+    # çatı
+    "apply_voice",
     # türetme
     "derivations",
     # alt modüller
-    "morphology", "morphology_noun", "derivation", "nonfinite", "tr",
+    "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "__version__",
 ]
