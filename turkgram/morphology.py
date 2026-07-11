@@ -94,6 +94,7 @@ class VerbStem:
     aorist_ir: bool      # aorist -Ir/-Ur mu (leksik)
     softens: bool        # git→gid gibi t→d yumuşaması
     special: str | None  # 'ye_de' | None
+    aorist_forced: str | None = None  # tasvir gövdesinde aoristi yardımcı fiilden zorla ('Ir'/'Ar')
 
     def to_dict(self) -> dict:
         return {
@@ -233,13 +234,46 @@ def _pres_stem(base: str) -> str:
 AUX = ("hikaye", "rivayet", "sart")  # ek-fiil / birleşik zaman (SPEC §11)
 
 
+# ---------------------------------------------------------------------------
+# Tasvir fiilleri (aktionsart) — SPEC aspect-spec.md. Esas fiil + bağ ünlü +
+# yardımcı fiil (ver/dur/gel/kal/yaz); oluşan gövde NORMAL fiil gibi çekilir.
+# ---------------------------------------------------------------------------
+_ASPECT = {                       # aspect: (yardımcı_kök, bağ_ünlü_tipi, aorist_ir)
+    "iver": ("ver", "I", True),   # tezlik
+    "adur": ("dur", "A", True),   # sürerlik
+    "agel": ("gel", "A", True),
+    "akal": ("kal", "A", True),   # kalma
+    "ayaz": ("yaz", "A", False),  # yaklaşma (yaz düzenli -Ar)
+}
+ASPECTS = frozenset(_ASPECT)
+
+
+def _aspect_stem(vs: VerbStem, aspect: str) -> VerbStem:
+    """Esas fiili tasvir gövdesine dönüştür (gövde + bağ ünlü + yardımcı fiil).
+    Bağ ünlü ünlü-başlı → yumuşama/ye_de tetiklenir (git→gid, ye→yi); ünlü-final
+    kökte kaynaştırma -y-. Yardımcı fiil kendi aorist tipini (ver/dur/gel/kal -Ir,
+    yaz -Ar) taşır."""
+    aux_root, link, aor = _ASPECT[aspect]
+    stem = _stem_before_suffix(vs, vowel_initial=True)
+    y = "y" if ends_in_vowel(stem) else ""
+    lv = high_vowel(stem) if link == "I" else low_vowel(stem)
+    root = stem + y + lv + aux_root
+    # aorist: çok-heceli tasvir gövdesinde sezgi (-Ir) yaz'ı bozar → yardımcıdan zorla.
+    return VerbStem(lemma=root + "mek", prefix=vs.prefix, root=root,
+                    aorist_ir=aor, softens=False, special=None,
+                    aorist_forced=("Ir" if aor else "Ar"))
+
+
 def conjugate(lemma: str, tense: str, person: str | None = None,
               *, negative: bool = False, ability: bool = False,
-              question: bool = False, aux: str | None = None) -> str | None:
+              question: bool = False, aux: str | None = None,
+              aspect: str | None = None) -> str | None:
     """Tek biçim üret. Türkçede olmayan hücrede (emir 1sg/1pl, soru-imp) None
-    döner (paradigm bunları atlar); geçersiz tense/person/aux ValueError.
+    döner (paradigm bunları atlar); geçersiz tense/person/aux/aspect ValueError.
 
     aux (birleşik zaman): 'hikaye'|'rivayet'|'sart' → basit gövde + ek-fiil.
+    aspect (tasvir): 'iver'|'adur'|'agel'|'akal'|'ayaz' → gövde tasvir fiiline
+    dönüşür, sonra tense/olumsuz/soru/aux ona işler (yapıverdi, gidedururyor).
     question ile birleşince mI gövde-ekfiil arasına girer (geliyor muydum)."""
     vs = parse_verb(lemma)
     if tense not in TENSES:
@@ -248,6 +282,10 @@ def conjugate(lemma: str, tense: str, person: str | None = None,
         raise ValueError(f"bilinmeyen person: {person}")
     if aux is not None and aux not in AUX:
         raise ValueError(f"bilinmeyen aux: {aux}")
+    if aspect is not None:
+        if aspect not in _ASPECT:
+            raise ValueError(f"bilinmeyen aspect: {aspect}")
+        vs = _aspect_stem(vs, aspect)
 
     if aux is not None:
         return _conjugate_aux(vs, tense, person or "3sg", negative=negative,
@@ -492,6 +530,10 @@ def _aorist_positive_stem(vs: VerbStem, stem: str, ability: bool,
         return stem + "r"          # bekle-r, oku-r, -Abil değil (l ünsüz)
     if ability or is_negative:
         # -Abil (ünsüz l) çok-heceli → -Ir; negatif zaten özel kalıpta
+        return stem + high_vowel(stem) + "r"
+    if vs.aorist_forced == "Ar":                     # tasvir yaz → -Ar (çok-heceli olsa da)
+        return stem + low_vowel(stem) + "r"
+    if vs.aorist_forced == "Ir":                     # tasvir ver/dur/gel/kal → -Ir
         return stem + high_vowel(stem) + "r"
     # tek-heceli düz ünsüz-final: leksik bayrak
     syllables = sum(1 for ch in vs.root if ch in VOWELS)

@@ -63,6 +63,15 @@ def test_turet_denklik():
     assert tr.türet("gelmek", "fiil") == d.derivations("gelmek", "verb")
 
 
+def test_tasvir_denklik():
+    assert tr.çekimle("yapmak", "görülen_geçmiş", "3tekil", tasvir="tezlik") == \
+        m.conjugate("yapmak", "past", "3sg", aspect="iver")          # yapıverdi
+    assert tr.çekimle("bakmak", "geniş", "3tekil", tasvir="akal") == \
+        m.conjugate("bakmak", "aorist", "3sg", aspect="akal")        # bakakalır
+    assert tr.çekimle("gitmek", "şimdiki", "3tekil", tasvir="sürerlik") == \
+        m.conjugate("gitmek", "pres", "3sg", aspect="adur")          # gideduruyor
+
+
 def test_ulac_denklik():
     assert tr.ulaç("gitmek", "arak") == nf.converb("gitmek", "arak")   # giderek
     assert tr.ulaç("okumak", "ince") == nf.converb("okumak", "inca")   # okuyunca (alias ince→inca)

@@ -75,6 +75,13 @@ _ULAC = {
     "meksizin": "meksizin", "maksızın": "meksizin", "-meksizin": "meksizin",
     "esiye": "esiye", "asıya": "esiye", "-esiye": "esiye",
 }
+_TASVIR = {
+    "iver": "iver", "tezlik": "iver", "-iver": "iver",
+    "adur": "adur", "sürerlik": "adur", "surerlik": "adur", "-adur": "adur",
+    "agel": "agel", "-agel": "agel",
+    "akal": "akal", "kalma": "akal", "-akal": "akal",
+    "ayaz": "ayaz", "yaklaşma": "ayaz", "yaklasma": "ayaz", "-ayaz": "ayaz",
+}
 
 
 def _map(table: dict, value, param: str):
@@ -106,11 +113,12 @@ def _core(sayı, iyelik, durum) -> dict:
 
 # ── Fiil ────────────────────────────────────────────────────────────────
 def çekimle(fiil, kip, kişi=None, *, olumsuz=False, yeterlik=False,
-            soru=False, birleşik=None):
-    """conjugate — fiil çekimi (bir biçim)."""
+            soru=False, birleşik=None, tasvir=None):
+    """conjugate — fiil çekimi (bir biçim). tasvir: iver/adur/agel/akal/ayaz."""
     return _m.conjugate(fiil, _map(_KIP, kip, "kip"), _map(_KISI, kişi, "kişi"),
                         negative=olumsuz, ability=yeterlik, question=soru,
-                        aux=_map(_BIRLESIK, birleşik, "birleşik"))
+                        aux=_map(_BIRLESIK, birleşik, "birleşik"),
+                        aspect=_map(_TASVIR, tasvir, "tasvir"))
 
 
 def son_kelimeyi_çek(fiil, kip, kişi=None, *, olumsuz=False, yeterlik=False,
