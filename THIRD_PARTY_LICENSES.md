@@ -66,10 +66,10 @@ olgularını içerir.
 
 ### Yapılan değişiklik beyanı
 
-Orijinal yüzey-frekans listesi (`content/2018/tr/tr_full.txt`) turkgram'ın KENDİ analizör +
-gömülü leksikonuyla işlendi (`tools/build_lemma_freq.py`): en sık N yüzey biçimi çözümlenip
-sayımları çözülen lemma(lar)a dağıtıldı (belirsiz yüzey → distinct lemmalara eşit bölünerek),
-lemma bazında toplandı. Ham liste KOPYALANMADI; yalnız türetilmiş lemma-sayımı gömülüdür.
+Orijinal yüzey-frekans listesi (`content/2018/tr/tr_full.txt`) turkgram'ın KENDİ motoru +
+gömülü leksikonuyla işlendi (`tools/build_surface_freq.py`): her lemma için motor tüm yüzey
+biçimlerini üretir, listede aranır, bulunan sayımlar lemma bazında toplanır (belirsiz yüzeyde
+pay distinct lemmalara bölünür). Ham liste KOPYALANMADI; yalnız türetilmiş lemma-sayımı gömülüdür.
 Frekans OLGUsu telif konusu değildir (CLAUDE.md §3); bu türetme turkgram'ın MIT dağıtımına
 dâhil edilebilir. MIT gereği bu atıf ve telif bildirimi korunur.
 
