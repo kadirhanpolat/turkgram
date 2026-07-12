@@ -60,8 +60,10 @@ _FILTERS: dict[tuple[str, Any], re.Pattern[str]] = {
     ("aspect", "agel"):  re.compile(r"gel"),
     ("aspect", "akal"):  re.compile(r"kal"),
     ("aspect", "ayaz"):  re.compile(r"yaz"),
-    ("negative", True):  re.compile(r"m[ae]"),
-    ("ability", True):   re.compile(r"[ae]bil|[ae]m[ae]"),
+    # -mA olumsuzu -Iyor önünde yükselir (yapmıyor, gülmüyor) → düz A dışında
+    # yüksek ünlüyü de kapsa. Gevşetme recall-güvenli (oracle precision'ı korur).
+    ("negative", True):  re.compile(r"m[aeıiuü]"),
+    ("ability", True):   re.compile(r"[ae]bil|[ae]m[aeıiuü]"),
     # copula
     ("copula_aux", "rivayet"): re.compile(r"m[ıiuü]ş"),
     # converb

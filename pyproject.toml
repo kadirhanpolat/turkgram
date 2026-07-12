@@ -32,3 +32,8 @@ packages = ["turkgram"]
 # `.` → `tests` paketini bulmak için (from tests.golden_verbs import ...)
 pythonpath = ["."]
 testpaths = ["tests"]
+# slow = kombinatoryal round-trip süpürme; varsayılan koşuda ATLA (elle -m slow ile koş).
+addopts = "-m 'not slow'"
+markers = [
+    "slow: kombinatoryal süpürme (round-trip recall + p95 çağrı bütçesi)",
+]
