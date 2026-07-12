@@ -14,25 +14,34 @@ saf-Python, bağımlılıksız bir kütüphane.
 | Alan | Modül | Başlıca API |
 |------|-------|-------------|
 | Fiil çekimi | `turkgram.morphology` | `conjugate`, `paradigm`, `parse_verb`, `inflect_last_token` |
+| Çatı (voice) | `turkgram.voice` | **`apply_voice`** (ettirgen/edilgen/dönüşlü/işteş + yığılma) |
 | İsim çekimi | `turkgram.morphology_noun` | `decline`, `paradigm_noun`, `predicative`, **`copula`**, `with_ki`, `equative` |
 | Fiilimsi | `turkgram.nonfinite` | **`converb`** (ulaç), **`participle`** (sıfat-fiil/ad-fiil + iyelik/durum) |
 | Yapım eki (türetme) | `turkgram.derivation` | `derivations` |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `türet` |
+| **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon) |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `türet`, **`çözümle`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman + soru + olumsuz + yeterlik +
-**tasvir** (tezlik/sürerlik). İsim: durum × iyelik × çokluk + ekfiil/-ki/-CA, pronominal
--n-, **nominal ek-fiil kopula** (öğrenciydim). Fiilimsi: **8 ulaç** + **sıfat-fiil/ad-fiil
-+ iyelik/durum istifi** (okuduğum/gitmesini).
+**tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/işteş, yığılabilir →
+dövüştürüldü). İsim: durum × iyelik × çokluk + ekfiil/-ki/-CA, pronominal -n-, **nominal
+ek-fiil kopula** (öğrenciydim). Fiilimsi: **8 ulaç** + **sıfat-fiil/ad-fiil + iyelik/durum
+istifi** (okuduğum/gitmesini).
+
+**Çözümleme (Faz 2a):** üretimin tersi — yüzey biçimden kök + eksen değerleri + pedagojik
+morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (analizör yalnız
+üretecin üretebildiği çözümleri döndürür → biçim-precision inşa gereği garanti).
 
 ## Durum / Yol haritası
 
 - **Faz 0 ✅** — bağımsız paket, motor + testler taşındı, Türkçe API (`tr.py`).
-- **Faz 1** (fiil çekim derinleştirme — `docs/faz1-implementation-plan.md`):
-  ✅ A4 nominal ek-fiil · ✅ A5+A6 ulaç envanteri + aorist doğrulama · ✅ A2 tasvir
-  fiilleri · ✅ A3 fiilimsi+iyelik/durum istifi · ⏳ **A1 çatı** (ettirgen/edilgen/
-  dönüşlü/işteş entegre çekim + yığılma — kalan, en zor).
-- **Faz 2** — çözümleme/analiz (parse); **Faz 3/4** — türetme genişletme, sıfat/zamir,
-  sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
+- **Faz 1 ✅** (fiil çekim derinleştirme — `docs/faz1-implementation-plan.md`):
+  A4 nominal ek-fiil · A5+A6 ulaç envanteri + aorist · A2 tasvir fiilleri · A3
+  fiilimsi+iyelik/durum istifi · **A1 çatı** (ettirgen/edilgen/dönüşlü/işteş + yığılma).
+- **Faz 2a ✅** — çözümleyici (`analysis.py`, `tr.çözümle`; `docs/faz2a-*`): yüzey →
+  kök+eksen + segmentasyon (beş kind). Round-trip sistematik sınıflarda doğrulandı, korpus
+  0 çökme. Bilinen 2b açıkları: tasarım §3.1.
+- **Faz 2b** — gerçek-metin sağlamlığı (leksikon + disambiguation). **Faz 3/4** — türetme
+  genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -53,6 +62,14 @@ tg.decline("kitap", case="dat")                # 'kitaba'
 tg.decline("ev", possessive="3sg", case="loc") # 'evinde'
 tg.derivations("göz", "noun")                  # [-lIk, -CI, -lI, ... türevleri]
 tg.paradigm("okumak")                          # tam çekim tablosu (dict)
+
+# Çatı (voice) — yığılabilir
+tg.conjugate("dövmek", "past", "3sg", voice_chain=["recip","caus","pass"])  # 'dövüştürüldü'
+
+# Çözümleme (parse) — yüzey → kök + eksen + segmentasyon
+tg.analyze("okuduğum", roots={"okumak"})       # [Analysis(lemma='okumak', kind='participle',
+                                               #   kwargs={'ptype':'dik','possessive':'1sg'},
+                                               #   segments=(oku|duğ[DIk]|um[Im]), ...)]
 ```
 
 ## Türkçe API (`turkgram.tr`)
@@ -69,12 +86,15 @@ tr.ekfiil("öğrenci", "hikaye", "1tekil")                        # öğrenciydi
 tr.türet("göz", "isim")                                         # -lIk/-CI… türevleri
 tr.ulaç("gitmek", "arak")                                       # giderek
 tr.çekimle("yapmak", "görülen_geçmiş", "3tekil", tasvir="tezlik") # yapıverdi
+tr.çekimle("dövmek", "geçmiş", "3tekil", çatı=["işteş","ettirgen","edilgen"]) # dövüştürüldü
 tr.fiilimsi("gitmek", "ma", iyelik="3tekil", durum="belirtme")   # gitmesini
+tr.çözümle("dövüştürüldü", kökler={"dövmek"})   # [Analysis(... çatı=[işteş,ettirgen,edilgen])]
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
-`ekfiil`/`yüklem`/`ki_ekle`/`eşitlik` · `türet`. Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/
-`soru`/`birleşik` · `durum`/`iyelik`/`sayı`.
+`ekfiil`/`yüklem`/`ki_ekle`/`eşitlik` · `türet` · **`çözümle`** (çözümleme; Türkçe eksen
+değerleri + segment). Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/`soru`/`birleşik`/**`çatı`** ·
+`durum`/`iyelik`/`sayı`. Çekim tablosu anahtarları da Türkçe (`şimdiki.3tekil`, `çoğul.bulunma`).
 
 ## Testler
 
@@ -83,9 +103,10 @@ pip install -e ".[test]"
 pytest
 ```
 
-Golden testler (`tests/golden_verbs.py`, `tests/golden_nouns.py`) motordan
-**bağımsız** olarak, elle-doğrulanmış biçimlerle kurulmuştur — motorun kendi
-çıktısıyla değil, dilbilgisiyle sınanır.
+Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı ve
+çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
+kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır. Round-trip tam
+süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 

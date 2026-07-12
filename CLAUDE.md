@@ -17,9 +17,11 @@ Motor biçimleri **RUNTIME ÜRETİR, SAKLAMAZ**. Kök + morfofonolojik sınıfta
 
 - **İngilizce çekirdek:** `morphology.py` (fiil çekimi), `morphology_noun.py` (isim
   çekimi + `copula`), `nonfinite.py` (ulaç `converb` + fiilimsi `participle`),
-  `derivation.py` (yapım eki). Genel API `__init__.py`.
+  `voice.py` (çatı `apply_voice`), `derivation.py` (yapım eki). Genel API `__init__.py`.
+- **Çözümleme (Faz 2a):** `analysis.py` (`analyze`: yüzey→kök+eksen+segment) +
+  `analysis_candidates.py` (öneri üretimi). Analysis-by-generation: üreteç oracle (bkz. #6).
 - **Türkçe yüz:** `tr.py` — Türkçe-karakterli sarmalayıcılar (`çekimle`/`ad_çekimle`/
-  `ekfiil`/`ulaç`/`fiilimsi`/`türet`), içeride İngilizce çekirdeği çağırır (bkz. #4).
+  `ekfiil`/`ulaç`/`fiilimsi`/`türet`/`çözümle`), içeride İngilizce çekirdeği çağırır (bkz. #4).
 
 ---
 
