@@ -109,10 +109,19 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   (b) **edilgen/dönüşlü -n (ünlü-final) ye_de'yi TETİKLEMEZ** (de→den, "din" DEĞİL): -n
   ünsüz-başlı, allomorf başına ünlü-başlılık ayrımı şart. Ettirgen leksik -Ir/-Ar/-It kapalı
   küme (`CAUSATIVE_LEXICAL`); yeni leksik ettirgen çıkarsa oraya ekle.
+- **Faz 2a çözümleyici (`analysis.py`+`analysis_candidates.py`) analysis-by-generation:**
+  yüzey → önek-tabanlı kök adayı (+ters-mutasyon) → ses-filtreli grid → ÜRETEÇ ORACLE doğrular
+  (`çıktı==yüzey`). **Precision inşa gereği** (analizör dili ⊆ üreteç dili); recall = önerici
+  kapsamı (round-trip süpürme + korpusla kapatılır). TUZAKLAR: (a) **precision golden `roots`
+  ile test edilir** — leksikonsuz her yüzey kendini çıplak-isim olarak çözer (gürültü,
+  `hypothetical=True`; SPEC §8.1). (b) **`-Iyor` gövde ünlüsünü düşürür** (oyna→oynuyor) → kök
+  yüzey öneki değil; `_root_candidates` -Iyor'da düşen-ünlü tabanını geri üretir. (c) golden
+  HİBRİT kurulur: üreteç-ground-truth (brute-force) + motor-körü audit (recall denetimi).
+  Ses filtreleri YALNIZ gereklilik önermesi (yanlış budayamaz → recall güvenli).
 
 ---
 
-## 7. Yol haritası ve DURUM (2026-07-11)
+## 7. Yol haritası ve DURUM (2026-07-12)
 
 - **Faz 0 ✅** — bağımsız paket + motor/testler taşındı + sözlük bağlandı. Türkçe API (`tr.py`).
 - **Faz 1** (fiil çekim derinleştirme, `docs/faz1-implementation-plan.md`):
@@ -122,8 +131,14 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - ✅ **A3** fiilimsi + iyelik/durum istifi (`nonfinite.participle`): okuduğum/gitmesini.
   - ✅ **A1** çatı entegre çekim + yığılma (`voice.py::apply_voice`, `conjugate(voice_chain=)`):
     ettirgen/edilgen/dönüşlü/işteş → dövüştürüldü. **Faz 1 fiil çekimi TAMAMLANDI.**
-- **Faz 2** — ÇÖZÜMLEME/analiz (parse: biçim → kök+ekler). En büyük yeni bileşen; dik
-  eksen. FST araçları (Zemberek/TRmorph/Google turkish-morphology) adopt-referans.
+- **Faz 2a çözümleyici ✅** (`analysis.py`, `tr.çözümle`; `docs/faz2a-*`): yüzey → kök+eksen
+  (analysis-by-generation, beş kind: conjugate/decline/copula/converb/participle) + pedagojik
+  segmentasyon. Round-trip sistematik sınıflarda doğrulandı; korpus 0 çökme. **Bilinen 2b
+  açıkları** (design §3.1): birleşik çok-token fiil, suppletif zamir eğik durumu, nominal
+  ekfiil soru grubu. `-Iyor` ünlü-düşmesi KAPATILDI.
+- **Faz 2b** — gerçek-metin sağlamlığı: geniş kök leksikonu, olasılıksal disambiguation,
+  motor-dışı biçimler, §3.1 açıkları. FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2005 test yeşil**. Her commit'te regresyonsuz + korpus 0 çökme.
+Test durumu: son ölçüm **2086 test yeşil** (+ round-trip süpürme `-m slow`). Her commit'te
+regresyonsuz + korpus 0 çökme.

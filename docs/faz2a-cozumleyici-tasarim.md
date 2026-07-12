@@ -1,8 +1,9 @@
 # Faz 2a — Çözümleyici (morphological analyzer) Tasarımı
 
-**Tarih:** 2026-07-12 · **Durum:** onaylı tasarım (brainstorm + 5-mercek adversarial kritik)
-· **Kritik sicili:** `docs/faz2a-mimari-kritik.md` (12 bulgu; C-05 mimari revizyonu bu
-dokümana işlenmiş hâlidir)
+**Tarih:** 2026-07-12 · **Durum:** ✅ UYGULANDI (`turkgram/analysis.py`+`analysis_candidates.py`,
+`tr.çözümle`; 2086 test yeşil, korpus 0 çökme). Tasarım: brainstorm + 5-mercek adversarial
+kritik · **Kritik sicili:** `docs/faz2a-mimari-kritik.md` (12 bulgu; C-05 mimari revizyonu bu
+dokümana işlenmiş hâlidir). Bilinen açıklar: §3.1.
 
 ## 0. Bağlam ve kapsam kararları
 
@@ -170,10 +171,20 @@ def çözümle(yüzey, tür=None, *, kökler=None) -> list[Analysis]
 - `lexicon=` gibi ileri-parametre YOK; `roots` basit `Collection[str]` (kritik YAGNI reddi
   sonrası sadeleşmiş hâl; 2b genişletmesi default'lu ek parametreyle kırılmadan yapılır).
 
-### 3.1 Bilinen recall açıkları (adversarial hakem 2026-07-12; 2b'ye ertelendi)
-Round-trip sistematik paradigma sınıflarında doğrulandı (Task 8 süpürmesi 8148 hücre,
-0 açık). Hakem şu ÜÇ dar açığı buldu — ikisi üreteç-üretilebilir (round-trip iddiasının
-belgelenmiş istisnası), biri üreteç dilinde bile yok:
+### 3.1 Bilinen recall açıkları (adversarial hakem + korpus taraması 2026-07-12)
+Round-trip sistematik paradigma sınıflarında doğrulandı (Task 8 süpürmesi 8148 hücre 0 açık;
+korpus taraması 800 fiil + 600 isim, 0 çökme, ort 16ms/p95 41ms).
+
+**KAPATILDI — `-Iyor` ünlü-düşmesi (sistematik, commit 425dc77):** ünlü-final fiillerin
+şimdiki zamanı gövde ünlüsünü düşürür (oyna→oynuyor), gerçek kök artık yüzey öneki değildi →
+korpusta 85 miss. `_root_candidates` -Iyor yüzeyinde düşen-ünlü tabanını geri üretecek şekilde
+genişletildi; korpus re-check 1200 analizde ~0 miss.
+
+**Birleşik çok-token fiiller (2b):** "göz ardı etmek", ikileme "katıla katıla gülmek" gibi
+3+ token lemmalar — çok-token yolu tek leading-önek + body varsayıyor; değişken-uzunluk önek /
+ikileme reconstruction 2b (gerçek-metin) işi. Korpusta ~69 miss (hepsi birleşik).
+
+**Kalan dar açıklar (2b'ye ertelendi; hakem buldu):**
 - **Suppletif zamir eğik durumları** (`bana`, `sana`): `ben→bana` biçimce türetilemez
   (suppletif); ters-mutasyon `ban`'dan `ben`'e ulaşamaz. Düzenli tabanlar (`beni`, `bende`)
   ÇÖZÜLÜR. Kapatma: `_root_candidates`'e `PRONOUN_FORMS` ters tablosu (küçük kapalı küme).
