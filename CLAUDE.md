@@ -12,17 +12,21 @@ Sözlük bu paketi `pip install -e ../turkgram` ile tüketir.
 
 ## 1. Ne ÜRETİR, ne SAKLAMAZ (çekirdek değişmez)
 
-Motor biçimleri **RUNTIME ÜRETİR, SAKLAMAZ**. Kök + morfofonolojik sınıftan
-üretir; kombinatoryal tabloları diske dizmez. (Sözlük projesi #5 emsali.)
+Motor **çekilmiş biçimleri** RUNTIME ÜRETİR, SAKLAMAZ. Kök + morfofonolojik sınıftan
+üretir; kombinatoryal çekim tablolarını diske dizmez. (Sözlük projesi #5 emsali.)
+**İSTİSNA — referans verisi (Faz 2b):** leksikon (`data/lexicon_tr.tsv`) ve lemma-frekans
+(`data/lemma_freq_tr.tsv`) gömülüdür. Bunlar çekilmiş biçim DEĞİL, **kök/olgu verisidir**
+(lemma listesi + POS + sayım) → değişmezi ihlal etmez. Üretilmiş çekim tablosu asla gömülmez.
 
 - **İngilizce çekirdek:** `morphology.py` (fiil çekimi), `morphology_noun.py` (isim
   çekimi + `copula`), `nonfinite.py` (ulaç `converb` + fiilimsi `participle`),
   `voice.py` (çatı `apply_voice`), `derivation.py` (yapım eki). Genel API `__init__.py`.
 - **Çözümleme (Faz 2a):** `analysis.py` (`analyze`: yüzey→kök+eksen+segment) +
   `analysis_candidates.py` (öneri üretimi). Analysis-by-generation: üreteç oracle (bkz. #6).
-- **Kök leksikonu (Faz 2b, opt-in):** `lexicon.py` — gömülü `data/lexicon_tr.tsv` (Zemberek
-  Apache-2.0'dan türetilmiş lemma+POS). `load()` → `analyze(roots=…)` için lemma kümesi;
-  gürültü eler. `analyze(roots=None)` DOKUNULMAZ (bkz. #7 Faz 2b).
+- **Kök leksikonu + frekans (Faz 2b, opt-in):** `lexicon.py` — gömülü `data/lexicon_tr.tsv`
+  (Zemberek Apache-2.0'dan lemma+POS) ve `data/lemma_freq_tr.tsv` (hermitdave MIT'ten türetilmiş
+  lemma-frekans). `load()` → `analyze(roots=…)` için lemma kümesi (gürültü eler); `load_freq()`
+  → `disambiguation.rank(freq=…)` için {lemma:sayım}. `analyze(roots=None)` DOKUNULMAZ (bkz. #7).
 - **Disambiguation (Faz 2b, opt-in):** `disambiguation.py` — `rank`/`disambiguate` aday
   sıralar + güven (olasılık). Dilbilimsel öncelik (sıklık>POS-tutarlılık>kind>morfem-ekonomisi)
   + opsiyonel `freq=`. `analyze` imzası/sırası DOKUNULMAZ (bkz. #7). SPEC: `disambiguation-spec.md`.
@@ -61,6 +65,11 @@ kaynak yapılabilir — **AMA Korkmaz'ın düzyazısı/örnek cümleleri pakete 
 `work/turkgram_faz1/korkmaz_toc.txt` gibi çıkarılmış PDF metni sözlük reposunun
 `work/`'ünde (gitignore) kalır, buraya kopyalanmaz. SPEC'ler yalnız § referansı +
 kendi analizini içerir.
+
+**Gömülü üçüncü-taraf veri (Faz 2b):** leksikon Zemberek'ten (Apache-2.0), lemma-frekans
+hermitdave'den (MIT) türetilir. İkisi de MIT-uyumlu + yalnız OLGU (lemma/POS/sayım) çıkarılır,
+kaynak kod/düzyazı KOPYALANMAZ → `THIRD_PARTY_LICENSES.md`'de atıf + değişiklik beyanı zorunlu.
+Yeni gömülü veri eklenirse: lisans MIT-uyumlu mu doğrula, olgu-çıkarımı yap, THIRD_PARTY güncelle.
 
 ---
 

@@ -19,6 +19,8 @@ saf-Python, bağımlılıksız bir kütüphane.
 | Fiilimsi | `turkgram.nonfinite` | **`converb`** (ulaç), **`participle`** (sıfat-fiil/ad-fiil + iyelik/durum) |
 | Yapım eki (türetme) | `turkgram.derivation` | `derivations` |
 | **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon) |
+| Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots), **`load_freq`**, `pos_map` (gömülü; opt-in) |
+| Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
 | Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `türet`, **`çözümle`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman + soru + olumsuz + yeterlik +
@@ -40,10 +42,18 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (an
 - **Faz 2a ✅** — çözümleyici (`analysis.py`, `tr.çözümle`; `docs/faz2a-*`): yüzey →
   kök+eksen + segmentasyon (beş kind). Round-trip sistematik sınıflarda doğrulandı, korpus
   0 çökme. `-Iyor` ünlü-düşmesi, suppletif zamir eğik durumu (`bana`/`sana`) ve nominal
-  ekfiil soru grubu (`evde miydi`) kapatıldı. Kalan 2b açığı: birleşik çok-token fiil
-  (`göz ardı etmek`); ayrıntı: tasarım §3.1.
-- **Faz 2b** — gerçek-metin sağlamlığı (leksikon + disambiguation). **Faz 3/4** — türetme
-  genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
+  ekfiil soru grubu (`evde miydi`) kapatıldı.
+- **Faz 2b ✅ (kısmen)** — gerçek-metin sağlamlığı:
+  - **Birleşik çok-token fiil** (`göz ardı etti`→`göz ardı etmek`) + **soru** (`göz ardı etti mi`)
+    — değişken-uzunluk nominal önek (SPEC §8.2).
+  - **Gömülü kök leksikonu** (`lexicon.load()`, Zemberek Apache-2.0, ~26k lemma) — çıplak-önek
+    gürültüsünü eler (opt-in; `analyze(roots=None)` değişmez).
+  - **Olasılıksal disambiguation** (`disambiguation.rank`/`disambiguate`) — dilbilimsel öncelik
+    + opsiyonel sıklık + güven (softmax).
+  - **Gömülü lemma-frekans** (`lexicon.load_freq()`, hermitdave MIT'ten türetilmiş) — sıklık
+    kancasını besler.
+  - Kalan: motor-dışı biçimler, cümle-bağlamı disambiguation, ikileme adverbial-kurulum.
+- **Faz 3/4** — türetme genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -132,6 +142,8 @@ süpürme `-m slow` ile: `pytest -m slow`.
 
 MIT. (Gramer kuralları olgudur; telifli metin içermez — bu yüzden dağıtılabilir.)
 
-Gömülü kök leksikonu (`turkgram/data/lexicon_tr.tsv`) **Zemberek-NLP** projesinin
-`master-dictionary` sözlüğünden türetilmiş lemma+POS olgularını içerir (Apache-2.0);
-atıf ve değişiklik beyanı [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+Gömülü referans verisi türetilmiş **olgu** içerir (ham kaynak kopyalanmaz):
+- Kök leksikonu (`data/lexicon_tr.tsv`) — **Zemberek-NLP** `master-dictionary`'den lemma+POS (Apache-2.0).
+- Lemma-frekans (`data/lemma_freq_tr.tsv`) — **hermitdave/FrequencyWords** (OpenSubtitles TR) yüzey-frekansından türetilmiş lemma-sayımı (MIT).
+
+Atıf ve değişiklik beyanı: [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
