@@ -117,3 +117,29 @@ Not: gelmiş sert-final (ş) → D=t (gelmiş**t**i).
 ## Golden zorunlu kapsam
 En az 5 tam paradigma (6 kişi) farklı taban×ek-fiil'den + 2. fiil (yapmak) + 4 olumsuz.
 Her paradigmada 3pl satırı ZORUNLU (en kritik hücre). Elle-doğrulanmış, motora bakmadan.
+
+---
+
+# ÇÖZÜMLEME (analysis) — Faz 2b, motor-dışı biçim 3 (regresyon kilidi)
+
+**Bileşik zaman çözümlemesi YENİ MOTOR GEREKTİRMEZ.** `compound(lemma, base, copula, person,
+negative)` üreteci, motorun `conjugate(lemma, base, person, aux=copula, negative=negative)`
+çıktısıyla **BİREBİR AYNIDIR** (gömülü leksikon 3250 fiil × 4 taban × 3 ek-fiil × 6 kişi ×
+2 olumsuz = 216.000 çağrı, 0 fark — `_copula_suffix` şart-2pl fix'i sonrası). `conjugate`'in
+`aux` ekseni zaten çözümleyicinin `_enumerate_conjugate` grid'inde (`_CONJ_AUX`) + segmentasyonda
+(`_seg_tense_aux`) var.
+
+Dolayısıyla bileşik zaman yüzeyleri **`kind="conjugate"` + `aux` kwargs** olarak çözülür:
+- `geliyordu → (gelmek, conjugate, {tense:pres, person:3sg, aux:hikaye})`
+- `gelirmiş → (gelmek, conjugate, {tense:aorist, person:3sg, aux:rivayet})`
+- `geliyorlardı → (gelmek, conjugate, {tense:pres, person:3pl, aux:hikaye})` (3pl taban+lAr, ek-fiil 3sg)
+- `gelseydim → (gelmek, conjugate, {tense:cond, person:1sg, aux:hikaye})`
+
+Bu SPEC bölümü **regresyon kilidi**: golden + korpus round-trip, ileride `aux` çözümleme yolu
+kırılırsa yakalar. `compound` kind'ı çözümlemede KULLANILMAZ (üreteç yüzü; analiz `conjugate`
+üstünden gelir — tek kanonik okuma, çift kayıt yok).
+
+## Round-trip değişmezi (hakem)
+`compound(lemma, base, copula, person, negative)` her yüzey `analyze(…, roots={lemma})` ile
+`(lemma, "conjugate", {tense:base, person, aux:copula[, negative]})` verir. Leksikon × tam
+grid → 0 miss (pre-existing disharmonic/monosyllabic kök-aday sınırları hariç).

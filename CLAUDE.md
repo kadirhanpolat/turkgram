@@ -242,13 +242,23 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
       Hakem: 42.000 çağrı (26k fiil + 16k nominal), 0 çökme, 0 ken-özgü miss (21 miss = pre-existing
       kök-aday sınırları: somak monosyllabic -Iyor, inhimak disharmonic, nakil/kavim düşen-ünlü dat;
       hepsi basit çekim/çekimde de kaçar + ben/sen dat+ken sentetik suppletif niş).
-    - Kalan: **bileşik zaman** çözümlemesi (zaten `conjugate(aux=)` ile çözümleniyor → regresyon-kilidi
-      golden); cümle-bağlamı disambiguation. FST araçları (Zemberek/TRmorph) adopt-referans.
+    - **Bileşik zaman çözümlemesi — REGRESYON KİLİDİ** (SPEC `compound-tense-spec.md` §Çözümleme):
+      YENİ MOTOR YOK. `compound(l,base,cop,person,neg)` == `conjugate(l,base,person,aux=cop,neg)`
+      (216.000 gen çağrı 0 fark, şart-2pl fix sonrası) → çözümleyici bu yüzeyleri `kind="conjugate"`
+      + `aux` olarak zaten çözer (geliyordu→{tense:pres,person:3sg,aux:hikaye}). `compound` kind'ı
+      analizde KULLANILMAZ (tek kanonik okuma). Golden (13 yüzey precision `want<=got` + 240-kombo
+      round-trip) ileride aux çözüm yolu kırılırsa yakalar. Hakem: 78.000 çağrı, 0 çökme, 0 compound-özgü
+      miss (78 miss = 10 pre-existing lemma: monosyllabic -Iyor ünlü-düşme damak/somak/çomak, "yor"-alt-dizi
+      çakışması yorgalamak/yorumlamak, disharmonic inhimak — HEPSİ basit çekimde de kaçar, `_root_candidates`
+      sınırı, compound'a özgü değil).
+  - **Faz 2b motor-dışı biçimlerin ÇÖZÜMLEMESİ TAMAMLANDI** (3 artım: -cAsInA, -ken, bileşik zaman).
+    Kalan: bu biçimlerin cümle-bağlamı disambiguation; FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2532 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+Test durumu: son ölçüm **2785 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
 p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (biçim-eklenen ulaç + bileşik zaman
 237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss; -cAsInA çözümleme 13.000 çağrı 0 çökme;
--ken çözümleme 42.000 çağrı 0 çökme 0 ken-özgü miss).
+-ken çözümleme 42.000 çağrı 0 çökme 0 ken-özgü miss; bileşik zaman çözümleme 78.000 çağrı
+0 çökme 0 compound-özgü miss).
 Leksikon wheel/sdist'e gömülü doğrulandı. Ayrıca `_copula_suffix` şart-2pl yuvarlama fix'i
 (geliyorsanuz→geliyorsanız): compound==conjugate(aux) 216.000 çağrı 0 fark.

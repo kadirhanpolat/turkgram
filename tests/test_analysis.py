@@ -16,8 +16,12 @@ from tests.golden_casina_analysis import (
 from tests.golden_ken_analysis import (
     GOLDEN_KEN, GOLDEN_KEN_SEGMENTS, KEN_LEXICON,
 )
+from tests.golden_compound_analysis import (
+    GOLDEN_COMPOUND_TENSE, COMPOUND_TENSE_LEXICON,
+)
 from turkgram.nonfinite import converb_casina, converb_ken
 from turkgram.morphology_noun import copula as _copula_gen
+from turkgram.compound import compound as _compound_gen
 
 
 # ---------------------------------------------------------------------------
@@ -492,3 +496,35 @@ def test_ken_nominal_roundtrip(headword, case):
         and dict(a.kwargs).get("case", None) == want_case
         for a in results
     ), f"ken nominal round-trip miss: {surface!r} (case={case}) → {results}"
+
+
+# ---------------------------------------------------------------------------
+# Faz 2b — motor-dışı biçim 3: bileşik ZAMAN çözümlemesi (REGRESYON KİLİDİ).
+# Yeni motor YOK: compound == conjugate(aux=) → kind="conjugate" + aux olarak çözülür.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("surface", sorted(GOLDEN_COMPOUND_TENSE))
+def test_golden_compound_tense_precision(surface):
+    got = {_norm_key(a.lemma, a.pos, a.kind, dict(a.kwargs))
+           for a in an.analyze(surface, roots=COMPOUND_TENSE_LEXICON)}
+    want = {_norm_key(g["lemma"], g["pos"], g["kind"], g["kwargs"])
+            for g in GOLDEN_COMPOUND_TENSE[surface]}
+    # Bileşik zaman okuması (conjugate+aux) sonuçlar arasında OLMALI (regresyon kilidi).
+    assert want <= got, f"surface={surface!r}\n  EKSİK: {want - got}\n  (tüm: {got})"
+
+
+@pytest.mark.parametrize("lemma", ["gelmek", "yapmak", "okumak", "gitmek", "görmek"])
+@pytest.mark.parametrize("base", ["pres", "aorist", "fut", "evid"])
+@pytest.mark.parametrize("copula", ["hikaye", "rivayet", "sart"])
+@pytest.mark.parametrize("person", ["3sg", "1sg", "2pl", "3pl"])
+def test_compound_tense_roundtrip(lemma, base, copula, person):
+    """compound ürettiği HER yüzey conjugate+aux olarak geri çözülmeli (regresyon kilidi)."""
+    surface = _compound_gen(lemma, base, copula, person)
+    results = an.analyze(surface, roots={lemma})
+    assert any(
+        a.lemma == lemma and a.kind == "conjugate"
+        and dict(a.kwargs).get("aux") == copula
+        and dict(a.kwargs).get("tense") == base
+        and dict(a.kwargs).get("person") == person
+        for a in results
+    ), f"bileşik zaman round-trip miss: {surface!r} ({lemma},{base},{copula},{person}) → {results}"
