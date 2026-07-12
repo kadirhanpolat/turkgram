@@ -13,7 +13,11 @@ from tests.golden_segments import GOLDEN_SEGMENTS
 from tests.golden_casina_analysis import (
     GOLDEN_CASINA, GOLDEN_CASINA_SEGMENTS, CASINA_LEXICON,
 )
-from turkgram.nonfinite import converb_casina
+from tests.golden_ken_analysis import (
+    GOLDEN_KEN, GOLDEN_KEN_SEGMENTS, KEN_LEXICON,
+)
+from turkgram.nonfinite import converb_casina, converb_ken
+from turkgram.morphology_noun import copula as _copula_gen
 
 
 # ---------------------------------------------------------------------------
@@ -424,3 +428,67 @@ def test_casina_roundtrip(lemma, base, negative):
         and dict(a.kwargs).get("negative", False) == negative
         for a in results
     ), f"round-trip miss: {surface!r} ({lemma},{base},neg={negative}) → {results}"
+
+
+# ---------------------------------------------------------------------------
+# Faz 2b — motor-dışı biçim 2: -ken çözümlemesi (ken-spec.md § Çözümleme)
+# Fiil: kind=converb_ken; nominal: kind=copula aux=ken (kişisiz).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("surface", sorted(GOLDEN_KEN))
+def test_golden_ken_precision(surface):
+    got = {_norm_key(a.lemma, a.pos, a.kind, dict(a.kwargs))
+           for a in an.analyze(surface, roots=KEN_LEXICON)}
+    want = {_norm_key(g["lemma"], g["pos"], g["kind"], g["kwargs"])
+            for g in GOLDEN_KEN[surface]}
+    assert got == want, (
+        f"surface={surface!r}\n  EKSİK: {want - got}\n  FAZLA: {got - want}"
+    )
+
+
+@pytest.mark.parametrize("surface", sorted(GOLDEN_KEN_SEGMENTS))
+def test_golden_ken_segments(surface):
+    entry = GOLDEN_KEN_SEGMENTS[surface]
+    lemma, expected = entry["lemma"], entry["segments"]
+    results = [a for a in an.analyze(surface, roots={lemma})
+               if a.kind in ("converb_ken", "copula")]
+    assert results, f"ken çözümü yok: {surface!r}"
+    matching = [a for a in results
+                if [(s.surface, s.label) for s in a.segments] == expected]
+    assert matching, (
+        f"{surface!r}\n  beklenen: {expected}\n"
+        + "\n".join(f"  var: {[(s.surface, s.label) for s in a.segments]}" for a in results)
+    )
+    assert "".join(s.surface for s in matching[0].segments) == surface
+
+
+@pytest.mark.parametrize("lemma", ["gelmek", "okumak", "gitmek", "gülmek",
+                                   "yapmak", "olmak", "bakmak"])
+@pytest.mark.parametrize("base", ["aorist", "pres", "evid", "fut"])
+@pytest.mark.parametrize("negative", [False, True])
+def test_ken_verb_roundtrip(lemma, base, negative):
+    """converb_ken ürettiği HER yüzey analyze ile geri çözülmeli."""
+    surface = converb_ken(lemma, base=base, negative=negative)
+    results = an.analyze(surface, roots={lemma})
+    assert any(
+        a.lemma == lemma and a.kind == "converb_ken"
+        and dict(a.kwargs).get("base") == base
+        and dict(a.kwargs).get("negative", False) == negative
+        for a in results
+    ), f"ken fiil round-trip miss: {surface!r} → {results}"
+
+
+@pytest.mark.parametrize("headword", ["çocuk", "hasta", "ev", "okul", "kapı",
+                                      "genç", "öğretmen"])
+@pytest.mark.parametrize("case", [None, "loc", "dat"])
+def test_ken_nominal_roundtrip(headword, case):
+    """copula(aux=ken) ürettiği HER yüzey analyze ile geri çözülmeli."""
+    surface = _copula_gen(headword, "ken", case=case)
+    results = an.analyze(surface, roots={headword})
+    want_case = case
+    assert any(
+        a.lemma == headword and a.kind == "copula"
+        and dict(a.kwargs).get("aux") == "ken"
+        and dict(a.kwargs).get("case", None) == want_case
+        for a in results
+    ), f"ken nominal round-trip miss: {surface!r} (case={case}) → {results}"

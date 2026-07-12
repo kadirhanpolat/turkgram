@@ -392,7 +392,7 @@ def _çevir_kwargs(kind: str, kwargs) -> dict:
     elif kind == "converb":
         if "kind" in kwargs:
             out["tür"] = kwargs["kind"]  # passthrough
-    elif kind == "converb_casina":
+    elif kind in ("converb_casina", "converb_ken"):
         if "base" in kwargs:
             out["taban"] = _TERS_KIP.get(kwargs["base"], kwargs["base"])
         if "negative" in kwargs:

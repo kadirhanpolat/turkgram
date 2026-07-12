@@ -159,6 +159,15 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   GEREKMEZ (mevcut önek+ters-mutasyon yeter). **Disharmonic-mastar sınırı:** `_root_candidates`
   öneki düzenli harmoniyle mastara çevirir (inhi→inhimek); disharmonic alıntı `inhimak` (leksikonda
   tek) TÜM kind'larda round-trip kaçırır — casina'ya özgü DEĞİL, genel pre-existing sınır.
+- **(h) `-ken` çözümlemesi (Faz 2b):** İKİ yol. Fiil = yeni kind `converb_ken`, casina §6g ile
+  aynı delegasyonlu segmentasyon (`base_form=conjugate` + tek `(surface[len:], "ken")`, glide YOK).
+  Nominal = MEVCUT `copula` kind'ı `aux="ken"` (yeni kind YOK; üretim de öyle). TUZAK — **ken
+  KİŞİSİZ + soru YOK:** `_enumerate_copula` aux==ken'de person=("3sg",)+question=(False,)'a kilitler
+  (kombinasyon patlaması yok); `_canon_copula` aux==ken dalı person/question eksenlerini ATAR (aksi
+  halde her yüzey 6 kişi × soru duplike verir, hepsi aynı yüzeye eşlenir). `("copula_aux","ken")→/ken/`
+  filtresi. Segmentasyon mevcut `_segment_copula` aux dalını kullanır (kaynaştırma -y- SAĞdaki `ken`
+  diliminde: ev|de|yken). BELİRSİZLİK bilinçli: gelirken hem fiil (converb_ken) hem isim (gelir+copula)
+  → roots ikisini içerirse iki analiz (precision golden 3 belirsiz yüzeyle sabitler).
 
 ---
 
@@ -173,7 +182,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - ✅ **A1** çatı entegre çekim + yığılma (`voice.py::apply_voice`, `conjugate(voice_chain=)`):
     ettirgen/edilgen/dönüşlü/işteş → dövüştürüldü. **Faz 1 fiil çekimi TAMAMLANDI.**
 - **Faz 2a çözümleyici ✅** (`analysis.py`, `tr.çözümle`; `docs/faz2a-*`): yüzey → kök+eksen
-  (analysis-by-generation, kind'lar: conjugate/decline/copula/converb/converb_casina/participle) + pedagojik
+  (analysis-by-generation, kind'lar: conjugate/decline/copula/converb/converb_casina/converb_ken/participle) + pedagojik
   segmentasyon. Round-trip sistematik sınıflarda doğrulandı; korpus 0 çökme. `-Iyor` ünlü-düşmesi,
   **suppletif zamir eğik durumu (`bana`/`sana`)** ve **nominal ekfiil soru grubu (`evde miydi`)**
   KAPATILDI. `-ken` ulacı doğru kapsam-dışı.
@@ -224,13 +233,22 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
       3250 fiil × 2 base × 2 neg = 13.000 çağrı, 0 çökme, 0 casina-miss (4 miss = 1 disharmonic
       alıntı `inhimak`, `_root_candidates` düzenli-harmoni varsayımından TÜM kind'ları eşit kırar,
       pre-existing; leksikondaki tek disharmonic mastar).
-    - Kalan: **`-ken`** (fiil `converb_ken` + nominal `copula(aux=ken)`) ve **bileşik zaman**
-      (zaten `conjugate(aux=)` ile çözümleniyor → regresyon-kilidi golden) çözümlemesi; cümle-bağlamı
-      disambiguation. FST araçları (Zemberek/TRmorph) adopt-referans.
+    - **`-ken` çözümlemesi** (SPEC `ken-spec.md` §Çözümleme): İKİ yol — **fiil** yeni kind
+      `converb_ken` (gelirken/geliyorken; enum base∈{aorist,pres,evid,fut}×negative=8 + `ken$`
+      marker; delegasyonlu segmentasyon + tek `ken` dilimi, glide YOK), **nominal** MEVCUT `copula`
+      kind'ı `aux="ken"` ile (çocukken/evdeyken; yeni kind YOK). ken KİŞİSİZ+soru YOK → copula enum
+      person=3sg/question=False'a kilitler, `_canon_copula` aux==ken dalı person/question ATAR (§6h).
+      BELİRSİZLİK: gelirken=(gelmek converb_ken)|(gelir isim copula); golden 3 belirsiz yüzey kapsar.
+      Hakem: 42.000 çağrı (26k fiil + 16k nominal), 0 çökme, 0 ken-özgü miss (21 miss = pre-existing
+      kök-aday sınırları: somak monosyllabic -Iyor, inhimak disharmonic, nakil/kavim düşen-ünlü dat;
+      hepsi basit çekim/çekimde de kaçar + ben/sen dat+ken sentetik suppletif niş).
+    - Kalan: **bileşik zaman** çözümlemesi (zaten `conjugate(aux=)` ile çözümleniyor → regresyon-kilidi
+      golden); cümle-bağlamı disambiguation. FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2420 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+Test durumu: son ölçüm **2532 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
 p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (biçim-eklenen ulaç + bileşik zaman
-237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss; -cAsInA çözümleme 13.000 çağrı 0 çökme).
+237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss; -cAsInA çözümleme 13.000 çağrı 0 çökme;
+-ken çözümleme 42.000 çağrı 0 çökme 0 ken-özgü miss).
 Leksikon wheel/sdist'e gömülü doğrulandı. Ayrıca `_copula_suffix` şart-2pl yuvarlama fix'i
 (geliyorsanuz→geliyorsanız): compound==conjugate(aux) 216.000 çağrı 0 fark.

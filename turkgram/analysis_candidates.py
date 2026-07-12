@@ -24,7 +24,7 @@ _FINITE_TENSES = ("pres", "past", "fut", "aorist", "evid", "cond", "necess", "op
 _PERSONS = ("1sg", "2sg", "3sg", "1pl", "2pl", "3pl")
 _CASES = ("nom", "acc", "dat", "loc", "abl", "gen", "ins")
 _POSSESSIVES = ("1sg", "2sg", "3sg", "1pl", "2pl", "3pl")
-_COPULA_AUX = (None, "hikaye", "rivayet", "sart")
+_COPULA_AUX = (None, "hikaye", "rivayet", "sart", "ken")
 _CONJ_AUX = (None, "hikaye", "rivayet", "sart")
 _ASPECTS = (None, "iver", "adur", "agel", "akal", "ayaz")
 
@@ -66,6 +66,7 @@ _FILTERS: dict[tuple[str, Any], re.Pattern[str]] = {
     ("ability", True):   re.compile(r"[ae]bil|[ae]m[aeıiuü]"),
     # copula
     ("copula_aux", "rivayet"): re.compile(r"m[ıiuü]ş"),
+    ("copula_aux", "ken"):     re.compile(r"ken"),
     # converb
     ("converb_kind", "dikce"): re.compile(r"[kc][cç]"),
     # participle
@@ -332,13 +333,16 @@ def _enumerate_copula(surface: str, stem: str) -> list[dict[str, Any]]:
         if aux and not _cell_allowed(surface, "copula_aux", aux):
             continue
         aux_cost = 1 if aux else 0
-        for person in _PERSONS:
+        # -ken KİŞİSİZ + soru YOK → kombinasyon patlamasını kes (person=3sg, question=False)
+        persons = ("3sg",) if aux == "ken" else _PERSONS
+        questions = (False,) if aux == "ken" else (False, True)
+        for person in persons:
             for number in ("sg", "pl"):
                 for poss in (None,) + tuple(_POSSESSIVES):
                     poss_cost = 0 if poss is None else 1
                     for case in (None,) + tuple(_CASES):
                         case_cost = 0 if case is None else 1
-                        for question in (False, True):
+                        for question in questions:
                             if question and " " not in surface:
                                 continue
                             total = aux_cost + poss_cost + case_cost
@@ -373,6 +377,22 @@ def _enumerate_casina(surface: str, stem: str) -> list[dict[str, Any]]:
         return []
     hyps: list[dict[str, Any]] = []
     for base in ("aorist", "evid"):
+        for negative in (False, True):
+            hyps.append({"base": base, "negative": negative})
+    return hyps
+
+
+# -ken zaman ulacı markerı: fiil tabanı daima "ken" ile biter (DONMUŞ ek, harmoni yok).
+_KEN_MARKER = re.compile(r"ken$")
+
+
+def _enumerate_ken(surface: str, stem: str) -> list[dict[str, Any]]:
+    """Fiil -ken hipotezleri: base ∈ {aorist,pres,evid,fut} × negative = 8.
+    Marker yoksa hiç enumerate etme (yüzey 'ken' ile bitmeli)."""
+    if not _KEN_MARKER.search(surface):
+        return []
+    hyps: list[dict[str, Any]] = []
+    for base in ("aorist", "pres", "evid", "fut"):
         for negative in (False, True):
             hyps.append({"base": base, "negative": negative})
     return hyps
