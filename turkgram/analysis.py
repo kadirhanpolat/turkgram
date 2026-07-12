@@ -715,10 +715,12 @@ def _analyze_multi_token(tokens: list[str], roots: Collection[str] | None) -> li
                             kwargs=canon, segments=segs, hypothetical=hyp,
                         ))
 
-    # 2. Birleşik önek (e.g. "aday oldu" → lemma "aday olmak")
-    if len(tokens) == 2:
-        prefix_tok = tokens[0]
-        body_tok = tokens[1]
+    # 2. Birleşik çok-token fiil (SPEC §8.2): değişmez nominal önek (çok-kelimeli
+    #    olabilir) + son token çekimli yardımcı/leksik fiil. "aday oldu" → "aday olmak";
+    #    "göz ardı etti" → "göz ardı etmek". Precision roots-garantili (§8.1).
+    if len(tokens) >= 2:
+        prefix_tok = " ".join(tokens[:-1])
+        body_tok = tokens[-1]
         surface_full = " ".join(tokens)
         body_cands = _root_candidates(body_tok)
         for body_lemma, kind_hints in body_cands.items():
@@ -775,10 +777,8 @@ def analyze(surface: str, pos: str | None = None,
 
     tokens = surface.split()
 
-    # Çok-token: yalnız tanınan kalıplar
+    # Çok-token: yalnız tanınan kalıplar (soru grubu + birleşik çok-token fiil, SPEC §8/§8.2)
     if len(tokens) > 1:
-        if len(tokens) > 2:
-            return []  # 3+ token gürültü
         results = _analyze_multi_token(tokens, roots)
         results = sorted(set_dedup(results), key=_sort_key)
         return results

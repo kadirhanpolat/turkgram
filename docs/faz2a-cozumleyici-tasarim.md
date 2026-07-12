@@ -180,9 +180,17 @@ korpus taraması 800 fiil + 600 isim, 0 çökme, ort 16ms/p95 41ms).
 korpusta 85 miss. `_root_candidates` -Iyor yüzeyinde düşen-ünlü tabanını geri üretecek şekilde
 genişletildi; korpus re-check 1200 analizde ~0 miss.
 
-**Birleşik çok-token fiiller (2b):** "göz ardı etmek", ikileme "katıla katıla gülmek" gibi
-3+ token lemmalar — çok-token yolu tek leading-önek + body varsayıyor; değişken-uzunluk önek /
-ikileme reconstruction 2b (gerçek-metin) işi. Korpusta ~69 miss (hepsi birleşik).
+**KAPATILDI — Birleşik çok-token fiil (değişken-uzunluk nominal önek; Faz 2b, SPEC §8.2):**
+"göz ardı etti" → "göz ardı etmek" gibi 3+ token birleşikler çok-token yolunda tek leading-önek
++ body varsaydığı için düşüyordu (~69 korpus miss, hepsi birleşik). `_analyze_multi_token`
+birleşik-önek kalıbı `len==2` → `len>=2` genellendi (`tokens[:-1]` = değişmez nominal önek,
+son token = çekimli yardımcı/leksik fiil); `analyze` `len>2 → []` erken-kesimi kaldırıldı. Motor
+birleşik lemmayı zaten çekiyordu (`conjugate` boşlukta böler) → analizör-tarafı iş yalnız önek
+genellemesi, yeni morfoloji yok. Hakem: 1888 dict-db birleşik lemma × 4 zaman = 7552 analiz,
+**0 çökme + 0 recall miss**. Precision roots-garantili (§8.1).
+**Kalan (2b): (a)** birleşik+soru ("göz ardı etti mi") — N-token önekli soru dalı; **(b)**
+ikileme'nin adverbial yeniden-kurulumu ("katıla katıla gülmek" = zarf-öbeği + leksik fiil,
+sözdizimsel) — bu artımda ikileme yalnız sözlük-lemması olarak (roots'ta varsa) geçer.
 
 **KAPATILDI — Suppletif zamir eğik durumları (`bana`, `sana`):** `ben→bana` biçimce
 türetilemez (suppletif); önek/ters-mutasyon `ban`'dan `ben`'e ulaşamaz. Yalnız DAT biçimleri

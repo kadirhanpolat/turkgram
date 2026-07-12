@@ -138,3 +138,81 @@ BATTERY_LEXICON = {
     'okumak', 'gelmek', 'yapmak', 'gitmek', 'yemek', 'dövmek', 'aday olmak',
     'gelin', 'ev', 'okuma', 'yüz', 'kitap', 'araba', 'burun', 'öğrenci', 'hasta',
 }
+
+# ---------------------------------------------------------------------------
+# Birleşik çok-token fiil (yardımcı fiille kurulan) — SPEC §8.2. HİBRİT değil:
+# BAĞIMSIZ Opus ajanı motoru GÖRMEDEN, yalnız dilbilgisi + SPEC'ten türetti.
+# TEST: analyze(surface, roots=COMPOUND_LEXICON) → TAM-küme eşitliği. Nominal önek
+# DEĞİŞMEZ; yalnız SON kelime (yardımcı fiil) çekimli. Soru + ikileme kapsam-dışı (§8.2).
+# Kritik morfofonoloji: et- ünlü-başlı ek önünde yumuşar (ediyor/edecek/eder) ama
+# ünsüz-başlı önünde YOK (etti/etmiş/etmedi); ol-/kıl- değişmez; kat+tı→kattı.
+# ---------------------------------------------------------------------------
+GOLDEN_COMPOUND = {
+    'göz ardı etti': [
+        {'lemma': 'göz ardı etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+    'kabul ediyor': [
+        {'lemma': 'kabul etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'pres', 'person': '3sg'}},
+    ],
+    'kabul ettim': [
+        {'lemma': 'kabul etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '1sg'}},
+    ],
+    'yardım edecek': [
+        {'lemma': 'yardım etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'fut', 'person': '3sg'}},
+    ],
+    'yardım ettiler': [
+        {'lemma': 'yardım etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3pl'}},
+    ],
+    'merak etmiş': [
+        {'lemma': 'merak etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'evid', 'person': '3sg'}},
+    ],
+    'terk etti': [
+        {'lemma': 'terk etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+    'terk ettin': [
+        {'lemma': 'terk etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '2sg'}},
+    ],
+    'merak etmedi': [
+        {'lemma': 'merak etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'negative': True}},
+    ],
+    'kabul eder': [
+        {'lemma': 'kabul etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'aorist', 'person': '3sg'}},
+    ],
+    'hasta oldu': [
+        {'lemma': 'hasta olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+    'yok oldu': [
+        {'lemma': 'yok olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+    'emin olmadı': [
+        {'lemma': 'emin olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'negative': True}},
+    ],
+    'hasta oluyor': [
+        {'lemma': 'hasta olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'pres', 'person': '3sg'}},
+    ],
+    'emin olacak': [
+        {'lemma': 'emin olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'fut', 'person': '3sg'}},
+    ],
+    'yok olduk': [
+        {'lemma': 'yok olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '1pl'}},
+    ],
+    'namaz kıldı': [
+        {'lemma': 'namaz kılmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+    'göz önünde bulundurdu': [
+        {'lemma': 'göz önünde bulundurmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+    'hesaba kattı': [
+        {'lemma': 'hesaba katmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+    'yoluna koydu': [
+        {'lemma': 'yoluna koymak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg'}},
+    ],
+}
+
+# Küratörlü leksikon: tüm birleşik lemma'lar (roots filtresi, SPEC §8.1/§8.2).
+COMPOUND_LEXICON = {
+    'göz ardı etmek', 'kabul etmek', 'yardım etmek', 'merak etmek', 'terk etmek',
+    'hasta olmak', 'yok olmak', 'emin olmak', 'namaz kılmak',
+    'göz önünde bulundurmak', 'hesaba katmak', 'yoluna koymak',
+}

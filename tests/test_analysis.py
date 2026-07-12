@@ -5,7 +5,9 @@ PYTHONUTF8=1 python -m pytest tests/test_analysis.py -q
 import pytest
 from turkgram import analysis as an
 from turkgram.morphology_noun import decline, copula
-from tests.golden_analysis import GOLDEN_ANALYSIS, BATTERY_LEXICON
+from tests.golden_analysis import (
+    GOLDEN_ANALYSIS, BATTERY_LEXICON, GOLDEN_COMPOUND, COMPOUND_LEXICON,
+)
 from tests.golden_segments import GOLDEN_SEGMENTS
 
 
@@ -53,9 +55,13 @@ def test_cozumsuz_bos_liste():
     assert result == []
 
 
-def test_cok_token_mesru_degil():
-    # 3 token → gürültü → boş
-    assert an.analyze("git git git") == []
+def test_cok_token_roots_filtreli():
+    # SPEC §8.2: çok-token birleşik fiil artık tanınır. roots verilmişse gerçek-olmayan
+    # birleşik lemma ("git git gitmek") elenir → boş (precision roots-garantili, §8.1).
+    assert an.analyze("git git git", roots={"gitmek"}) == []
+    # roots=None → hypothetical gürültü ÜRETİLEBİLİR (leksikonsuz doğa, §8.1); hepsi hyp.
+    noisy = an.analyze("git git git")
+    assert all(a.hypothetical for a in noisy)
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +175,25 @@ def test_golden_precision_tam_kume(surface):
            for a in an.analyze(surface, roots=BATTERY_LEXICON)}
     want = {_norm_key(g["lemma"], g["pos"], g["kind"], g["kwargs"])
             for g in GOLDEN_ANALYSIS[surface]}
+    missing = want - got
+    extra = got - want
+    assert got == want, (
+        f"surface={surface!r}\n"
+        f"  EKSİK (recall): {missing}\n"
+        f"  FAZLA (precision): {extra}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Birleşik çok-token fiil golden (Faz 2b, SPEC §8.2) — TAM-küme eşitliği
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("surface", sorted(GOLDEN_COMPOUND))
+def test_golden_compound_tam_kume(surface):
+    got = {_norm_key(a.lemma, a.pos, a.kind, dict(a.kwargs))
+           for a in an.analyze(surface, roots=COMPOUND_LEXICON)}
+    want = {_norm_key(g["lemma"], g["pos"], g["kind"], g["kwargs"])
+            for g in GOLDEN_COMPOUND[surface]}
     missing = want - got
     extra = got - want
     assert got == want, (

@@ -218,6 +218,31 @@ ama gürültü. Bu, leksikonsuz analysis-by-generation'ın DOĞASIDIR (tasarım 
 - Round-trip süpürmesi (§ test) `roots`=süpürme lemma-seti ile ya da İÇERME (tam-küme değil)
   ile sınar; gürültü membership'i bozmaz.
 
+### 8.2 Birleşik çok-token fiil — yardımcı fiille kurulan (Faz 2b)
+Kaynak: Korkmaz *Şekil Bilgisi*, Birleşik Fiiller — yardımcı fiillerle kurulan birleşik fiil =
+isim/isim-soylu unsur + yardımcı fiil (`et-`, `ol-`, `eyle-`, `kıl-`, `buyur-`, `yap-`…).
+Yalnız KURAL alınmıştır; düzyazı/örnek KOPYALANMAZ (#3). Değişmez: **nominal unsur çekim
+almaz; yalnız SON kelime (yardımcı fiil) çekimlenir.** Nominal unsur çok-kelimeli olabilir.
+
+- **Kalıp:** Yüzey N token (N≥2), son token çekimli fiil; `tokens[:-1]` birleşimi = değişmez
+  nominal önek. Lemma = `"<önek> <fiil-lemması>"` (ör. `göz ardı etti` → `göz ardı etmek`,
+  past 3sg; `yok oldu` → `yok olmak`, past 3sg; `kabul ediyor` → `kabul etmek`, pres 3sg).
+- **Genelleme:** Faz 2a'daki 2-token birleşik önek kalıbı (§8 madde 2) N-token'a genişler;
+  `len>2 → []` erken-kesimi YALNIZ bu kalıp (soru-dışı, birleşik) için kalkar. Nominal önek
+  yardımcı-fiil kapalı kümesine kısıtlanmaz — precision `roots`-garantilidir (aşağı).
+- **Motor sözleşmesi:** Üreteç birleşik lemmayı zaten çeker (`conjugate("göz ardı etmek",…)`
+  boşlukta böler, son kelimeyi çeker, öneki değişmez taşır). Analizör-tarafı iş YALNIZ önek
+  uzunluğu genellemesi; yeni morfoloji YOK.
+- **Precision `roots`-garantili (§8.1):** `"<önek> <fiil-lemması>"` ancak `roots`'ta gerçek
+  birleşik lemma ise `hypothetical=False` üretilir; ikileme+leksik-fiil (`katıla katıla
+  gülmek`) sözlük-lemması değilse elenir. `roots=None` → hypothetical gürültü (doğal, §8.1).
+- **Kapsam-dışı (bu artım; 2b içinde ertelendi):**
+  (a) **Birleşik + soru** (`göz ardı etti mi`): çok-token soru yolu (§8 madde 1) tek-token
+      önek varsayar; N-token önekli soru dalı ayrı iş.
+  (b) **İkileme'nin adverbial yeniden-kurulumu** (`katıla katıla` = -A ulaç ikilemesi zarf-öbeği
+      + leksik fiil): kompozisyonel değil sözdizimsel çözümleme → defer. Bu artımda ikileme
+      yalnız sözlük-lemması olarak (roots'ta varsa) birleşik-lemma gibi geçer.
+
 ---
 
 ## 9. Bağımsızlık ve golden

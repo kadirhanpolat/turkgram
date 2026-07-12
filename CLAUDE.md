@@ -125,6 +125,12 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   (e) **nominal ekfiil soru** (`evde miydi`) çok-token: soru dalı isim-gövde → `copula(question=True)`
   de dener; `_segment_copula` build-up peeling (KÖK|case|mI|aux|kişi), bare present `-dir`
   tabanını KULLANMAZ (case sınırı `decline`'dan, soru/aux copula deltasından ölçülür).
+  (f) **birleşik çok-token fiil** (`göz ardı etti` → `göz ardı etmek`; Faz 2b, SPEC §8.2):
+  `_analyze_multi_token` birleşik-önek kalıbı `len==2` → `len>=2` genellendi (`tokens[:-1]` =
+  DEĞİŞMEZ nominal önek, son token = çekimli fiil); `analyze` `len>2→[]` erken-kesimi KALKTI.
+  Motor birleşik lemmayı zaten çeker (`conjugate` boşlukta böler) → yeni morfoloji YOK, yalnız
+  önek genellemesi. Precision roots-garantili (§8.1); roots=None → hypothetical gürültü. Kalan:
+  birleşik+soru + ikileme adverbial-yeniden-kurulumu (sözdizimsel, defer).
 
 ---
 
@@ -142,11 +148,15 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   (analysis-by-generation, beş kind: conjugate/decline/copula/converb/participle) + pedagojik
   segmentasyon. Round-trip sistematik sınıflarda doğrulandı; korpus 0 çökme. `-Iyor` ünlü-düşmesi,
   **suppletif zamir eğik durumu (`bana`/`sana`)** ve **nominal ekfiil soru grubu (`evde miydi`)**
-  KAPATILDI. **Kalan 2b açığı** (design §3.1): birleşik çok-token fiil (`göz ardı etmek`);
-  `-ken` ulacı doğru kapsam-dışı.
-- **Faz 2b** — gerçek-metin sağlamlığı: geniş kök leksikonu, olasılıksal disambiguation,
-  motor-dışı biçimler, §3.1 açıkları. FST araçları (Zemberek/TRmorph) adopt-referans.
+  KAPATILDI. `-ken` ulacı doğru kapsam-dışı.
+- **Faz 2b** — gerçek-metin sağlamlığı:
+  - ✅ **Birleşik çok-token fiil** (SPEC §8.2, `göz ardı etti`→`göz ardı etmek`): değişken-uzunluk
+    nominal önek genellemesi (§6f). Hakem: 1888 dict-db birleşik lemma × 4 zaman = 7552 analiz,
+    **0 çökme + 0 recall miss**. Kalan: birleşik+soru, ikileme adverbial-kurulum (defer).
+  - Geniş kök leksikonu, olasılıksal disambiguation, motor-dışı biçimler. FST araçları
+    (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2177 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
-p95 bütçe, 795s). Her commit'te regresyonsuz + korpus 0 çökme (2435 çağrı, 0 çökme).
+Test durumu: son ölçüm **2197 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (birleşik fiil taraması 7552 analiz,
+0 çökme + 0 recall miss).
