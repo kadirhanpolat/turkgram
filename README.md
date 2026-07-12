@@ -57,7 +57,10 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (an
   - **Motor-dışı biçimler** (kolay→zor, SPEC→bağımsız golden→motor→hakem): **-cAsInA** gibilik
     ulacı (`converb_casina`, gülercesine), **-ken** zaman ulacı (`converb_ken`/nominal `copula`,
     gelirken/evdeyken), **bileşik zaman** (`compound`, geliyordu; 3çoğul `geliyorlardı`).
-  - Kalan: bu biçimlerin çözümlemesi (şu an yalnız üretir), cümle-bağlamı disambiguation, ikileme.
+  - **Bu biçimlerin ÇÖZÜMLEMESİ** (üretimin tersi) tamamlandı: `-cAsInA` (kind `converb_casina`),
+    `-ken` (fiil `converb_ken` + nominal `copula` aux=ken), **bileşik zaman** (zaten `conjugate`+aux
+    olarak çözülür → regresyon kilidi). Korpus hakemi ~130k round-trip çağrı, 0 çökme, 0 biçim-özgü miss.
+  - Kalan: cümle-bağlamı disambiguation, ikileme adverbial-kurulum (sözdizimsel, defer).
 - **Faz 3/4** — türetme genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
@@ -91,6 +94,11 @@ tg.analyze("bana", roots={"ben"})              # suppletif zamir → decline(cas
 tg.analyze("evde miydi", roots={"ev"})         # nominal ekfiil soru → copula(case='loc',
                                                #   aux='hikaye', question=True)
 tg.analyze("göz ardı etti", roots={"göz ardı etmek"})  # birleşik çok-token fiil (§8.2)
+tg.analyze("gülercesine", roots={"gülmek"})    # -cAsInA → converb_casina(base='aorist')
+tg.analyze("geliyorken", roots={"gelmek"})     # -ken fiil → converb_ken(base='pres')
+tg.analyze("evdeyken", roots={"ev"})           # -ken nominal → copula(aux='ken', case='loc')
+tg.analyze("gelirken", roots={"gelmek","gelir"})  # belirsiz: converb_ken | copula(gelir+ken)
+tg.analyze("geliyordu", roots={"gelmek"})      # bileşik zaman → conjugate(pres, aux='hikaye')
 
 # Gömülü kök leksikonu (opt-in) — çıplak-önek gürültüsünü eler
 from turkgram import lexicon
