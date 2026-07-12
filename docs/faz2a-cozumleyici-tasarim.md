@@ -170,6 +170,22 @@ def çözümle(yüzey, tür=None, *, kökler=None) -> list[Analysis]
 - `lexicon=` gibi ileri-parametre YOK; `roots` basit `Collection[str]` (kritik YAGNI reddi
   sonrası sadeleşmiş hâl; 2b genişletmesi default'lu ek parametreyle kırılmadan yapılır).
 
+### 3.1 Bilinen recall açıkları (adversarial hakem 2026-07-12; 2b'ye ertelendi)
+Round-trip sistematik paradigma sınıflarında doğrulandı (Task 8 süpürmesi 8148 hücre,
+0 açık). Hakem şu ÜÇ dar açığı buldu — ikisi üreteç-üretilebilir (round-trip iddiasının
+belgelenmiş istisnası), biri üreteç dilinde bile yok:
+- **Suppletif zamir eğik durumları** (`bana`, `sana`): `ben→bana` biçimce türetilemez
+  (suppletif); ters-mutasyon `ban`'dan `ben`'e ulaşamaz. Düzenli tabanlar (`beni`, `bende`)
+  ÇÖZÜLÜR. Kapatma: `_root_candidates`'e `PRONOUN_FORMS` ters tablosu (küçük kapalı küme).
+- **Nominal ekfiil soru grubu** (`evde miydi`, `hasta mıymış`): çok-token soru yolu yalnız
+  FİİL gövdesi deniyor; `copula(question=True)` gövdesi denenmiyor. Üreteç-üretilebilir →
+  gerçek açık. Kapatma: `_analyze_multi_token` soru-body adayına copula ekle.
+- **`-ken` ulacı** (`koşarken`, `koştururken`): converb envanterinde YOK (A5 8 ulaç; `-ken`
+  çekimli-gövde-üstü, A5-dışıydı) → üretecin dilinde de yok → **doğru kapsam-dışı**, açık değil.
+
+Precision bu açıklardan ETKİLENMEZ (inşa gereği). Filtre katmanı hakem'de 22×11K biçimde
+0 ihlal — recall açıkları filtreden DEĞİL, envanter/aday-üretim kararlarından.
+
 ## 4. Test stratejisi
 
 1. **Round-trip tam süpürme (recall kanıtı):** morfofonolojik sınıf başına sabit lemma

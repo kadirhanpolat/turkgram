@@ -34,6 +34,8 @@ from turkgram.nonfinite import converb, participle, CONVERBS, PARTICIPLES
 LEMMA_ALL = [
     "yapmak", "okumak", "gitmek", "yemek", "gelmek", "aday olmak",
     "görmek", "gülmek", "almak", "yazmak", "düşmek", "öksürmek",
+    # a/e-final fiiller: -Iyor ünlü-düşme kurtarma (fix doğrulaması)
+    "oynamak", "aramak", "başlamak", "söylemek",
 ]
 # Yalın (tek-sözcük) lemmalar — ulaç/fiilimsi/aspect/derin-çatı süpürmeleri için.
 LEMMA_SIMPLE = [l for l in LEMMA_ALL if " " not in l]

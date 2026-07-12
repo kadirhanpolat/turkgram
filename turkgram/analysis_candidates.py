@@ -191,6 +191,30 @@ def _root_candidates(surface_token: str) -> dict[str, list[str]]:
                 msuffix = "mak"
             _add(mutated + msuffix, "verb")
 
+    # ---------------------------------------------------------------------------
+    # -Iyor ünlü-düşme kurtarma (hedefli — yalnız -Iyor yüzeylerinde)
+    # ---------------------------------------------------------------------------
+    # _pres_stem: ünlü-final gövdede son ünlü düşer + yüksek ünlü (ıiuü) + "yor".
+    # Yüzey: <köksüz-taban> + <yüksek-ünlü> + "yor[...]"
+    # Gerçek kök = <köksüz-taban> + <düşen-ünlü (a/e/ı/i/o/ö/u/ü)>
+    # "oyn+u+yor" → taban "oyn", kurtarılacak kökler "oyna","oyni","oyno",...
+    # Oracle tüm adayları doğrular; gerçek kök "oyna" "oynuyor" üretir → kabul.
+    _HIGH_VOWELS = "ıiuü"
+    _ALL_VOWELS_TR = "aeıioöuü"
+    yor_idx = surface_token.find("yor")
+    if yor_idx > 1:
+        # "yor"dan hemen önce yüksek ünlü mü?
+        pre_yor = surface_token[yor_idx - 1]
+        if pre_yor in _HIGH_VOWELS:
+            # Tabanı al: "yor"dan önce, yüksek ünlüyü de çıkar
+            taban = surface_token[: yor_idx - 1]
+            if taban and any(c in _VOWELS for c in taban):
+                for v in _ALL_VOWELS_TR:
+                    root_cand = taban + v
+                    # Harmoni: son ünlü ön-ünlüyse mek, aksi mak
+                    inf_suf = "mek" if v in "eiüö" else "mak"
+                    _add(root_cand + inf_suf, "verb")
+
     return result
 
 

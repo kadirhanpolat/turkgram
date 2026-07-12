@@ -72,6 +72,71 @@ def test_kok_adaylari_mutasyon():
     assert "yemek" in cands2 or "ye" in cands2
 
 
+def test_kok_adaylari_iyor_unlu_dusme():
+    """Ünlü-düşmeli -Iyor yüzeylerinde gerçek kök adayı üretilmeli."""
+    # oyna→oynuyor: "oyn" önek, yüksek ünlü "u" düştü → "oyna" kurtarılmalı
+    cands = an._root_candidates("oynuyor")
+    assert "oynamak" in cands, f"oynamak eksik; adaylar: {list(cands)[:20]}"
+
+    # ara→arıyor: "ar" önek, yüksek ünlü "ı" düştü → "ara" kurtarılmalı
+    cands2 = an._root_candidates("arıyor")
+    assert "aramak" in cands2, f"aramak eksik; adaylar: {list(cands2)[:20]}"
+
+    # başla→başlıyor: "başl" önek, yüksek ünlü "ı" düştü → "başla" kurtarılmalı
+    cands3 = an._root_candidates("başlıyor")
+    assert "başlamak" in cands3, f"başlamak eksik; adaylar: {list(cands3)[:20]}"
+
+
+# ---------------------------------------------------------------------------
+# -Iyor ünlü-düşme recall — tam analiz
+# ---------------------------------------------------------------------------
+
+def test_iyor_unlu_dusme_recall():
+    """Ünlü-final fiillerin -Iyor çekimi geri çözülmeli (sistematik recall açığı fix)."""
+    # oyna → oynuyor
+    r = an.analyze("oynuyor", roots={"oynamak"})
+    assert any(
+        a.lemma == "oynamak" and a.kind == "conjugate"
+        and dict(a.kwargs).get("tense") == "pres"
+        and dict(a.kwargs).get("person") == "3sg"
+        for a in r
+    ), f"oynuyor çözülemedi: {r}"
+
+    # ara → arıyor
+    r2 = an.analyze("arıyor", roots={"aramak"})
+    assert any(
+        a.lemma == "aramak" and a.kind == "conjugate"
+        and dict(a.kwargs).get("tense") == "pres"
+        and dict(a.kwargs).get("person") == "3sg"
+        for a in r2
+    ), f"arıyor çözülemedi: {r2}"
+
+    # başla → başlıyor
+    r3 = an.analyze("başlıyor", roots={"başlamak"})
+    assert any(
+        a.lemma == "başlamak" and a.kind == "conjugate"
+        and dict(a.kwargs).get("tense") == "pres"
+        and dict(a.kwargs).get("person") == "3sg"
+        for a in r3
+    ), f"başlıyor çözülemedi: {r3}"
+
+    # demek → diyor (ye_de — zaten çalışıyor, regresyon koruması)
+    r4 = an.analyze("diyor", roots={"demek"})
+    assert any(
+        a.lemma == "demek" and a.kind == "conjugate"
+        and dict(a.kwargs).get("tense") == "pres"
+        for a in r4
+    ), f"diyor çözülemedi: {r4}"
+
+    # yemek → yiyor (ye_de — zaten çalışıyor, regresyon koruması)
+    r5 = an.analyze("yiyor", roots={"yemek"})
+    assert any(
+        a.lemma == "yemek" and a.kind == "conjugate"
+        and dict(a.kwargs).get("tense") == "pres"
+        for a in r5
+    ), f"yiyor çözülemedi: {r5}"
+
+
 def test_ses_filtresi_pres():
     # 'yor' içermeyen yüzeyde pres hücreleri hiç enumerate edilmez
     hyps = an._enumerate_conjugate("geldi", "gel", "gelmek")
