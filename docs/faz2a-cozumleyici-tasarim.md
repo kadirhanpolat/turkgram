@@ -170,6 +170,9 @@ def çözümle(yüzey, tür=None, *, kökler=None) -> list[Analysis]
 - **Motor-dışı biçimler** tanımca `[]` (2b).
 - `lexicon=` gibi ileri-parametre YOK; `roots` basit `Collection[str]` (kritik YAGNI reddi
   sonrası sadeleşmiş hâl; 2b genişletmesi default'lu ek parametreyle kırılmadan yapılır).
+  **2b GÜNCELLEME:** `roots` imzası DEĞİŞMEDİ (kırılma yok); gömülü leksikon ayrı bir opt-in
+  modülle (`turkgram/lexicon.py::load()`) sağlanıyor — `analyze`'a parametre eklenmedi, tüketici
+  `roots=lexicon.load()` geçer. Kaynak Zemberek (Apache-2.0), 26.632 lemma; `THIRD_PARTY_LICENSES.md`.
 
 ### 3.1 Bilinen recall açıkları (adversarial hakem + korpus taraması 2026-07-12)
 Round-trip sistematik paradigma sınıflarında doğrulandı (Task 8 süpürmesi 8148 hücre 0 açık;

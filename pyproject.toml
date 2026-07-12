@@ -28,6 +28,9 @@ Homepage = "https://github.com/kadirhanpolat/turkgram"
 [tool.setuptools]
 packages = ["turkgram"]
 
+[tool.setuptools.package-data]
+turkgram = ["data/*.tsv"]
+
 [tool.pytest.ini_options]
 # `.` → `tests` paketini bulmak için (from tests.golden_verbs import ...)
 pythonpath = ["."]

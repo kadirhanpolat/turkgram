@@ -1,0 +1,4 @@
+include LICENSE
+include THIRD_PARTY_LICENSES.md
+include README.md
+recursive-include turkgram/data *.tsv

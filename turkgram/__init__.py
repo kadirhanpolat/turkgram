@@ -23,7 +23,10 @@ Alt modüllere de doğrudan erişilebilir:
 """
 from __future__ import annotations
 
-from . import morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis
+from . import (
+    morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
+    lexicon,
+)
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
 from .morphology import (
@@ -83,6 +86,6 @@ __all__ = [
     "analyze", "Analysis", "Segment",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
-    "analysis",
+    "analysis", "lexicon",
     "__version__",
 ]

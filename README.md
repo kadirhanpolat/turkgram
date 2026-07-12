@@ -75,6 +75,13 @@ tg.analyze("okuduğum", roots={"okumak"})       # [Analysis(lemma='okumak', kind
 tg.analyze("bana", roots={"ben"})              # suppletif zamir → decline(case='dat')
 tg.analyze("evde miydi", roots={"ev"})         # nominal ekfiil soru → copula(case='loc',
                                                #   aux='hikaye', question=True)
+tg.analyze("göz ardı etti", roots={"göz ardı etmek"})  # birleşik çok-token fiil (§8.2)
+
+# Gömülü kök leksikonu (opt-in) — çıplak-önek gürültüsünü eler
+from turkgram import lexicon
+roots = lexicon.load()                         # ~26k lemma (Zemberek, Apache-2.0)
+tg.analyze("evler", roots=roots)               # → yalnız [ev, decline(number='pl')]
+lexicon.load("verb")                           # POS filtreli (fiil mastarları)
 ```
 
 ## Türkçe API (`turkgram.tr`)
@@ -116,3 +123,7 @@ süpürme `-m slow` ile: `pytest -m slow`.
 ## Lisans
 
 MIT. (Gramer kuralları olgudur; telifli metin içermez — bu yüzden dağıtılabilir.)
+
+Gömülü kök leksikonu (`turkgram/data/lexicon_tr.tsv`) **Zemberek-NLP** projesinin
+`master-dictionary` sözlüğünden türetilmiş lemma+POS olgularını içerir (Apache-2.0);
+atıf ve değişiklik beyanı [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).

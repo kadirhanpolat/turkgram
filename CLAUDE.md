@@ -20,6 +20,9 @@ Motor biçimleri **RUNTIME ÜRETİR, SAKLAMAZ**. Kök + morfofonolojik sınıfta
   `voice.py` (çatı `apply_voice`), `derivation.py` (yapım eki). Genel API `__init__.py`.
 - **Çözümleme (Faz 2a):** `analysis.py` (`analyze`: yüzey→kök+eksen+segment) +
   `analysis_candidates.py` (öneri üretimi). Analysis-by-generation: üreteç oracle (bkz. #6).
+- **Kök leksikonu (Faz 2b, opt-in):** `lexicon.py` — gömülü `data/lexicon_tr.tsv` (Zemberek
+  Apache-2.0'dan türetilmiş lemma+POS). `load()` → `analyze(roots=…)` için lemma kümesi;
+  gürültü eler. `analyze(roots=None)` DOKUNULMAZ (bkz. #7 Faz 2b).
 - **Türkçe yüz:** `tr.py` — Türkçe-karakterli sarmalayıcılar (`çekimle`/`ad_çekimle`/
   `ekfiil`/`ulaç`/`fiilimsi`/`türet`/`çözümle`), içeride İngilizce çekirdeği çağırır (bkz. #4).
 
@@ -159,10 +162,16 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - ✅ **Birleşik + soru** (`göz ardı etti mi`, `kabul ediyor musun`): önceki genellemeyle
     BEDAVA açıldı (§6f); 17-giriş bağımsız golden + korpus (1888 lemma × 4 soru biçimi = 7552
     analiz, 0 çökme + 0 miss). Kalan: ikileme adverbial-yeniden-kurulum (sözdizimsel, defer).
-  - Geniş kök leksikonu, olasılıksal disambiguation, motor-dışı biçimler. FST araçları
-    (Zemberek/TRmorph) adopt-referans.
+  - ✅ **Geniş kök leksikonu** (`turkgram/lexicon.py` + gömülü `data/lexicon_tr.tsv`): Zemberek
+    `master-dictionary` (Apache-2.0) → 26.632 lemma (POS'lu; fiil mastar, isim-soylu çıplak).
+    **OPT-IN** (TUZAK): `lexicon.load()` çağıran alır; `analyze(roots=None)` davranışı DEĞİŞMEZ
+    (gürültü modu korunur, kırılma yok). Üretilebilirlik `tools/build_lexicon.py`; Apache atıf
+    `THIRD_PARTY_LICENSES.md` (§3 olgu-listesi savunması). Kurcalama beyanı: yalnız lemma+POS
+    çıkarıldı, Zemberek kodu/düzyazısı KOPYALANMADI. Gömülü veri wheel/sdist'e MANIFEST + package-data
+    ile girer. `load(pos=)` POS filtreli; varsayılan çekilebilir alt-küme (verb+noun+adj+adv+pron+num).
+  - Olasılıksal disambiguation, motor-dışı biçimler. FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2197 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+Test durumu: son ölçüm **2231 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
 p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (birleşik fiil taraması 7552 analiz,
-0 çökme + 0 recall miss).
+0 çökme + 0 recall miss). Leksikon wheel/sdist'e gömülü doğrulandı.
