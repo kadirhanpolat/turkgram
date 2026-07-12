@@ -178,8 +178,13 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
     **OPT-IN** (`analyze` DOKUNULMAZ). freq=None → dilbilimsel önceliklere düşer. TUZAK: güven
     yalnız gösterim; KESİN SIRA tuple-anahtarından (float sıralamaya sızmaz). Kanca sıklık
     tablosunu sonra kırılmadan alır. Hakem: korpus rank/disambiguate 0 çökme + güven∑=1.
-  - Motor-dışı biçimler; gömülü sıklık tablosu (türetilmiş lemma-frekans). FST araçları
-    (Zemberek/TRmorph) adopt-referans.
+  - ✅ **Gömülü lemma-frekans tablosu** (`lexicon.load_freq()` + `data/lemma_freq_tr.tsv`):
+    hermitdave/FrequencyWords (OpenSubtitles, MIT) yüzey-frekansı, turkgram'ın KENDİ analizör+
+    leksikonuyla lemma-frekansına indirgendi (belirsiz yüzey → distinct lemmalara eşit bölünür).
+    `disambiguation.rank(freq=lexicon.load_freq())` kancasını besler. Üretim `tools/build_lemma_freq.py`
+    (top-N yüzey; ~60ms/yüzey → offline); atıf `THIRD_PARTY_LICENSES.md`. Tablo-dışı lemma → 0
+    (dilbilimsel önceliğe düşer). Kendinden-tutarlı (yalnız leksikon lemmaları).
+  - Motor-dışı biçimler; cümle-bağlamı disambiguation. FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
 Test durumu: son ölçüm **2242 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +

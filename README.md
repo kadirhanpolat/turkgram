@@ -88,7 +88,8 @@ from turkgram import disambiguation as dis
 cands = tg.analyze("gelin", roots=roots)
 dis.rank(cands, pos=lexicon.pos_map())         # → [gelin(isim), gelmek(emir)…] (ekonomi+POS)
 dis.disambiguate(cands, pos=lexicon.pos_map()) # → [(Analysis, güven), …] güven∈[0,1], ∑=1
-dis.rank(cands, freq={"gelmek": 1000})         # sıklık kancası: tepe fiile döner
+dis.rank(cands, freq={"gelmek": 1000})         # sıklık kancası: manuel ağırlık
+dis.rank(cands, freq=lexicon.load_freq())      # gömülü lemma-frekansı (OpenSubtitles, MIT)
 ```
 
 ## Türkçe API (`turkgram.tr`)

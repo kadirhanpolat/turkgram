@@ -51,3 +51,31 @@ limitations under the License.
 ```
 
 Apache License 2.0'ın tam metni: http://www.apache.org/licenses/LICENSE-2.0
+
+---
+
+## hermitdave/FrequencyWords (`turkgram/data/lemma_freq_tr.tsv`)
+
+Gömülü lemma-frekans tablosu (`turkgram/data/lemma_freq_tr.tsv`), **hermitdave/FrequencyWords**
+projesinin Türkçe (OpenSubtitles 2018) yüzey-frekans listesinden türetilmiş **lemma-sayımı**
+olgularını içerir.
+
+- **Kaynak:** https://github.com/hermitdave/FrequencyWords
+- **Telif:** Copyright (c) 2016 Hermit Dave
+- **Lisans:** MIT License
+
+### Yapılan değişiklik beyanı
+
+Orijinal yüzey-frekans listesi (`content/2018/tr/tr_full.txt`) turkgram'ın KENDİ analizör +
+gömülü leksikonuyla işlendi (`tools/build_lemma_freq.py`): en sık N yüzey biçimi çözümlenip
+sayımları çözülen lemma(lar)a dağıtıldı (belirsiz yüzey → distinct lemmalara eşit bölünerek),
+lemma bazında toplandı. Ham liste KOPYALANMADI; yalnız türetilmiş lemma-sayımı gömülüdür.
+Frekans OLGUsu telif konusu değildir (CLAUDE.md §3); bu türetme turkgram'ın MIT dağıtımına
+dâhil edilebilir. MIT gereği bu atıf ve telif bildirimi korunur.
+
+```
+MIT License — Copyright (c) 2016 Hermit Dave
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction … (tam metin: kaynak repo LICENSE).
+```
