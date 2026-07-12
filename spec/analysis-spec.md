@@ -236,10 +236,14 @@ almaz; yalnız SON kelime (yardımcı fiil) çekimlenir.** Nominal unsur çok-ke
 - **Precision `roots`-garantili (§8.1):** `"<önek> <fiil-lemması>"` ancak `roots`'ta gerçek
   birleşik lemma ise `hypothetical=False` üretilir; ikileme+leksik-fiil (`katıla katıla
   gülmek`) sözlük-lemması değilse elenir. `roots=None` → hypothetical gürültü (doğal, §8.1).
+- **Birleşik + soru (KAPSAM İÇİ):** `göz ardı etti mi`, `kabul ediyor musun`. Soru dalı
+  (§8 madde 1) `body = tokens[:-1]` üzerinden çalışır; `_root_candidates` boşluk-üstü karakter-
+  önek grid'i olduğundan çok-kelimeli body için birleşik mastarı (`göz ardı etmek`) verb-adayı
+  üretir → `conjugate(question=True)` oracle doğrular. Ayrı N-token soru dalı GEREKMEZ; `len>2 →
+  []` kesimi kalkınca yan-etkiyle açıldı. Soru ekinin ünlü uyumu + şahıs yerleşimi (`ediyor
+  musun` / `ettim mi`) üreteçten gelir; analizör oracle-doğrular.
 - **Kapsam-dışı (bu artım; 2b içinde ertelendi):**
-  (a) **Birleşik + soru** (`göz ardı etti mi`): çok-token soru yolu (§8 madde 1) tek-token
-      önek varsayar; N-token önekli soru dalı ayrı iş.
-  (b) **İkileme'nin adverbial yeniden-kurulumu** (`katıla katıla` = -A ulaç ikilemesi zarf-öbeği
+  (a) **İkileme'nin adverbial yeniden-kurulumu** (`katıla katıla` = -A ulaç ikilemesi zarf-öbeği
       + leksik fiil): kompozisyonel değil sözdizimsel çözümleme → defer. Bu artımda ikileme
       yalnız sözlük-lemması olarak (roots'ta varsa) birleşik-lemma gibi geçer.
 

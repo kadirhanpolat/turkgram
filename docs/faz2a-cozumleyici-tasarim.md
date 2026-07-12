@@ -188,9 +188,12 @@ son token = çekimli yardımcı/leksik fiil); `analyze` `len>2 → []` erken-kes
 birleşik lemmayı zaten çekiyordu (`conjugate` boşlukta böler) → analizör-tarafı iş yalnız önek
 genellemesi, yeni morfoloji yok. Hakem: 1888 dict-db birleşik lemma × 4 zaman = 7552 analiz,
 **0 çökme + 0 recall miss**. Precision roots-garantili (§8.1).
-**Kalan (2b): (a)** birleşik+soru ("göz ardı etti mi") — N-token önekli soru dalı; **(b)**
-ikileme'nin adverbial yeniden-kurulumu ("katıla katıla gülmek" = zarf-öbeği + leksik fiil,
-sözdizimsel) — bu artımda ikileme yalnız sözlük-lemması olarak (roots'ta varsa) geçer.
+**KAPATILDI — birleşik + soru** ("göz ardı etti mi", "kabul ediyor musun"): önceki genellemeyle
+(len>2→[] kesimi kalkınca) soru dalı erişilir oldu; `_root_candidates` boşluk-üstü grid birleşik
+mastarı üretir → `conjugate(question=True)` doğrular, ayrı N-token soru dalı gerekmedi. 17-giriş
+bağımsız golden + korpus (1888 lemma × 4 soru biçimi = 7552 analiz, 0 çökme + 0 miss).
+**Kalan (2b):** ikileme'nin adverbial yeniden-kurulumu ("katıla katıla gülmek" = zarf-öbeği +
+leksik fiil, sözdizimsel) — bu artımda ikileme yalnız sözlük-lemması olarak (roots'ta varsa) geçer.
 
 **KAPATILDI — Suppletif zamir eğik durumları (`bana`, `sana`):** `ben→bana` biçimce
 türetilemez (suppletif); önek/ters-mutasyon `ban`'dan `ben`'e ulaşamaz. Yalnız DAT biçimleri

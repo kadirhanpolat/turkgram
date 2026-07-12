@@ -7,6 +7,7 @@ from turkgram import analysis as an
 from turkgram.morphology_noun import decline, copula
 from tests.golden_analysis import (
     GOLDEN_ANALYSIS, BATTERY_LEXICON, GOLDEN_COMPOUND, COMPOUND_LEXICON,
+    GOLDEN_COMPOUND_Q, COMPOUND_Q_LEXICON,
 )
 from tests.golden_segments import GOLDEN_SEGMENTS
 
@@ -194,6 +195,21 @@ def test_golden_compound_tam_kume(surface):
            for a in an.analyze(surface, roots=COMPOUND_LEXICON)}
     want = {_norm_key(g["lemma"], g["pos"], g["kind"], g["kwargs"])
             for g in GOLDEN_COMPOUND[surface]}
+    missing = want - got
+    extra = got - want
+    assert got == want, (
+        f"surface={surface!r}\n"
+        f"  EKSİK (recall): {missing}\n"
+        f"  FAZLA (precision): {extra}"
+    )
+
+
+@pytest.mark.parametrize("surface", sorted(GOLDEN_COMPOUND_Q))
+def test_golden_compound_soru_tam_kume(surface):
+    got = {_norm_key(a.lemma, a.pos, a.kind, dict(a.kwargs))
+           for a in an.analyze(surface, roots=COMPOUND_Q_LEXICON)}
+    want = {_norm_key(g["lemma"], g["pos"], g["kind"], g["kwargs"])
+            for g in GOLDEN_COMPOUND_Q[surface]}
     missing = want - got
     extra = got - want
     assert got == want, (

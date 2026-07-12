@@ -129,8 +129,11 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   `_analyze_multi_token` birleşik-önek kalıbı `len==2` → `len>=2` genellendi (`tokens[:-1]` =
   DEĞİŞMEZ nominal önek, son token = çekimli fiil); `analyze` `len>2→[]` erken-kesimi KALKTI.
   Motor birleşik lemmayı zaten çeker (`conjugate` boşlukta böler) → yeni morfoloji YOK, yalnız
-  önek genellemesi. Precision roots-garantili (§8.1); roots=None → hypothetical gürültü. Kalan:
-  birleşik+soru + ikileme adverbial-yeniden-kurulumu (sözdizimsel, defer).
+  önek genellemesi. Precision roots-garantili (§8.1); roots=None → hypothetical gürültü.
+  **Birleşik + soru** (`göz ardı etti mi`, `kabul ediyor musun`) BEDAVA geldi: `len>2→[]`
+  kalkınca soru dalı (§8 madde 1) erişilir oldu; `_root_candidates` boşluk-üstü grid birleşik
+  mastarı üretir → `conjugate(question=True)` oracle doğrular, ayrı N-token soru dalı GEREKMEZ.
+  Kalan: ikileme adverbial-yeniden-kurulumu (sözdizimsel, defer).
 
 ---
 
@@ -152,7 +155,10 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
 - **Faz 2b** — gerçek-metin sağlamlığı:
   - ✅ **Birleşik çok-token fiil** (SPEC §8.2, `göz ardı etti`→`göz ardı etmek`): değişken-uzunluk
     nominal önek genellemesi (§6f). Hakem: 1888 dict-db birleşik lemma × 4 zaman = 7552 analiz,
-    **0 çökme + 0 recall miss**. Kalan: birleşik+soru, ikileme adverbial-kurulum (defer).
+    **0 çökme + 0 recall miss**.
+  - ✅ **Birleşik + soru** (`göz ardı etti mi`, `kabul ediyor musun`): önceki genellemeyle
+    BEDAVA açıldı (§6f); 17-giriş bağımsız golden + korpus (1888 lemma × 4 soru biçimi = 7552
+    analiz, 0 çökme + 0 miss). Kalan: ikileme adverbial-yeniden-kurulum (sözdizimsel, defer).
   - Geniş kök leksikonu, olasılıksal disambiguation, motor-dışı biçimler. FST araçları
     (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.

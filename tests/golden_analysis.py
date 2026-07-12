@@ -216,3 +216,70 @@ COMPOUND_LEXICON = {
     'hasta olmak', 'yok olmak', 'emin olmak', 'namaz kılmak',
     'göz önünde bulundurmak', 'hesaba katmak', 'yoluna koymak',
 }
+
+# ---------------------------------------------------------------------------
+# Birleşik çok-token fiil + SORU (SPEC §8.2). BAĞIMSIZ Opus ajanı motoru GÖRMEDEN
+# türetti. Soru eki mI ayrı token, önceki kelimenin son ünlüsüne uyumlu (mı/mi/mu/mü).
+# Şahıs yerleşimi: pres/fut/aorist → soru ekiNDEN sonra (ediyor musun); görülen geçmiş
+# -DI → şahıs fiile bağlı, soru en sonda (ettim mi). TEST: roots=COMPOUND_Q_LEXICON,
+# TAM-küme eşitliği (question=True okuması). Bu grup c99f3bf'te len>2→[] kesimi kalkınca
+# yan-etkiyle açıldı; bu golden davranışı KİLİTLER (regresyon koruması).
+# ---------------------------------------------------------------------------
+GOLDEN_COMPOUND_Q = {
+    'göz ardı etti mi': [
+        {'lemma': 'göz ardı etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'question': True}},
+    ],
+    'kabul ediyor musun': [
+        {'lemma': 'kabul etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'pres', 'person': '2sg', 'question': True}},
+    ],
+    'kabul ediyor muyum': [
+        {'lemma': 'kabul etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'pres', 'person': '1sg', 'question': True}},
+    ],
+    'yardım edecek mi': [
+        {'lemma': 'yardım etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'fut', 'person': '3sg', 'question': True}},
+    ],
+    'yardım edecek misin': [
+        {'lemma': 'yardım etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'fut', 'person': '2sg', 'question': True}},
+    ],
+    'merak eder mi': [
+        {'lemma': 'merak etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'aorist', 'person': '3sg', 'question': True}},
+    ],
+    'merak eder misin': [
+        {'lemma': 'merak etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'aorist', 'person': '2sg', 'question': True}},
+    ],
+    'merak etmiş mi': [
+        {'lemma': 'merak etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'evid', 'person': '3sg', 'question': True}},
+    ],
+    'terk ettim mi': [
+        {'lemma': 'terk etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '1sg', 'question': True}},
+    ],
+    'terk ettin mi': [
+        {'lemma': 'terk etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '2sg', 'question': True}},
+    ],
+    'merak etmedi mi': [
+        {'lemma': 'merak etmek', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'negative': True, 'question': True}},
+    ],
+    'hasta oldu mu': [
+        {'lemma': 'hasta olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'question': True}},
+    ],
+    'hasta oluyor musun': [
+        {'lemma': 'hasta olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'pres', 'person': '2sg', 'question': True}},
+    ],
+    'yok olduk mu': [
+        {'lemma': 'yok olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '1pl', 'question': True}},
+    ],
+    'emin olmadı mı': [
+        {'lemma': 'emin olmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'negative': True, 'question': True}},
+    ],
+    'namaz kıldı mı': [
+        {'lemma': 'namaz kılmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'question': True}},
+    ],
+    'göz önünde bulundurdu mu': [
+        {'lemma': 'göz önünde bulundurmak', 'pos': 'verb', 'kind': 'conjugate', 'kwargs': {'tense': 'past', 'person': '3sg', 'question': True}},
+    ],
+}
+
+COMPOUND_Q_LEXICON = {
+    'göz ardı etmek', 'kabul etmek', 'yardım etmek', 'merak etmek', 'terk etmek',
+    'hasta olmak', 'yok olmak', 'emin olmak', 'namaz kılmak', 'göz önünde bulundurmak',
+}
