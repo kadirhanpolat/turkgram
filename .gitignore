@@ -14,3 +14,9 @@ books/
 
 # Yerel ajan/oturum durumu — commit'lenmez.
 .claude/
+
+# Ham kaynak frekans listesi (hermitdave, 29MB) ve geçici build dosyaları.
+tools/tr_full.txt
+tools/tr_full_*.txt
+tools/build_ckpt.json
+tools/*.tmp
