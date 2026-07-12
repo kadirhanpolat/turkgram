@@ -66,4 +66,12 @@ GOLDEN_COMPOUND = {
     ("gelmek", "aorist", "hikaye", "3sg", True): "gelmezdi",     # gelmez + di (z→d sesli)
     ("gelmek", "fut", "hikaye", "3sg", True): "gelmeyecekti",    # gelmeyecek + ti (k→t)
     ("gelmek", "evid", "hikaye", "3sg", True): "gelmemişti",     # gelmemiş + ti (ş→t)
+
+    # 7) şart-2pl yuvarlak-ünlü kapsamı (regresyon: -sA sonrası 2pl yüksek ünlü DÜZ;
+    #    gövde yuvarlaklığı taşınmaz → -sanız/-seniz, -sanuz DEĞİL).
+    ("gelmek", "pres", "sart", "2pl", False): "geliyorsanız",    # geliyor + sa + nız (o→u değil, a→ı)
+    ("okumak", "pres", "sart", "2pl", False): "okuyorsanız",     # okuyor + sa + nız
+    ("okumak", "aorist", "sart", "2pl", False): "okursanız",     # okur + sa + nız
+    ("görmek", "pres", "sart", "2pl", False): "görüyorsanız",    # görüyor + sa + nız (ü→ı, düz-arka)
+    ("okumak", "evid", "sart", "2pl", False): "okumuşsanız",     # okumuş + sa + nız
 }

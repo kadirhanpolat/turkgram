@@ -547,7 +547,10 @@ def _copula_suffix(stem: str, aux: str, person: str) -> str:
               "1pl": i + "z", "2pl": "s" + i + "n" + i + "z", "3pl": "l" + a + "r"}
         return base + _z[person]
     if aux == "sart":                                     # -(y)sA + k-tipi
-        return stem + y + "s" + a + _k[person]
+        # 2pl -nIz araya giren -sA ünlüsüne (düz a/e) uyar → -sanız/-seniz;
+        # gövde yuvarlaklığı taşınmaz (geliyorsanız, geliyorsanuz DEĞİL).
+        _ks = dict(_k, **{"2pl": "n" + ("ı" if a == "a" else "i") + "z"})
+        return stem + y + "s" + a + _ks[person]
     raise ValueError(f"bilinmeyen aux: {aux}")
 
 

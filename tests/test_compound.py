@@ -18,6 +18,22 @@ def test_compound_3pl_placement():
     assert compound("gelmek", "aorist", "rivayet", "3pl") == "gelirlermiş"
 
 
+def test_compound_sart_2pl_rounding():
+    # Regresyon: -sA sonrası 2pl yüksek ünlü DÜZ (a→ı / e→i); gövde yuvarlaklığı
+    # taşınmaz. Eski hata: geliyorsanuz. Doğru: geliyorsanız.
+    assert compound("gelmek", "pres", "sart", "2pl") == "geliyorsanız"
+    assert compound("okumak", "aorist", "sart", "2pl") == "okursanız"
+    assert compound("görmek", "pres", "sart", "2pl") == "görüyorsanız"
+    assert compound("gülmek", "aorist", "sart", "2pl") == "gülerseniz"  # ön-ünlü bozulmamalı
+
+
+def test_copula_sart_2pl_rounding():
+    # Aynı hata nominal ek-fiile de sızabilir: yuvarlak-ünlü gövde + şart 2pl.
+    from turkgram.morphology_noun import copula
+    assert copula("okul", "sart", "2pl") == "okulsanız"
+    assert copula("ev", "sart", "2pl") == "evseniz"
+
+
 def test_compound_invalid():
     with pytest.raises(ValueError):
         compound("gelmek", "past", "hikaye")   # basit geçmiş taban kapsam dışı
