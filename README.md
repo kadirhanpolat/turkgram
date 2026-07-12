@@ -82,6 +82,13 @@ from turkgram import lexicon
 roots = lexicon.load()                         # ~26k lemma (Zemberek, Apache-2.0)
 tg.analyze("evler", roots=roots)               # → yalnız [ev, decline(number='pl')]
 lexicon.load("verb")                           # POS filtreli (fiil mastarları)
+
+# Disambiguation (opt-in) — adayları olabilirlik sırasına koy + güven (olasılık)
+from turkgram import disambiguation as dis
+cands = tg.analyze("gelin", roots=roots)
+dis.rank(cands, pos=lexicon.pos_map())         # → [gelin(isim), gelmek(emir)…] (ekonomi+POS)
+dis.disambiguate(cands, pos=lexicon.pos_map()) # → [(Analysis, güven), …] güven∈[0,1], ∑=1
+dis.rank(cands, freq={"gelmek": 1000})         # sıklık kancası: tepe fiile döner
 ```
 
 ## Türkçe API (`turkgram.tr`)

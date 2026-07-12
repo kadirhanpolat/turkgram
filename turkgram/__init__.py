@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
-    lexicon,
+    lexicon, disambiguation,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -67,6 +67,9 @@ from .derivation import derivations
 # ── Çözümleme (analysis: yüzey → kök+eksenler, Faz 2a) ──────────────────
 from .analysis import analyze, Analysis, Segment
 
+# ── Disambiguation (aday sıralama + güven, Faz 2b) ──────────────────────
+from .disambiguation import rank, disambiguate
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -84,8 +87,10 @@ __all__ = [
     "derivations",
     # çözümleme
     "analyze", "Analysis", "Segment",
+    # disambiguation
+    "rank", "disambiguate",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
-    "analysis", "lexicon",
+    "analysis", "lexicon", "disambiguation",
     "__version__",
 ]

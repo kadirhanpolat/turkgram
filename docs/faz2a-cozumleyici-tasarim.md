@@ -165,7 +165,9 @@ def çözümle(yüzey, tür=None, *, kökler=None) -> list[Analysis]
 - **Türetme döngü dışı:** `derivation.py` yapım ekleri verifier'da yok. `-mA/-mAk/-Iş`
   ad-fiilleri `participle` üzerinden SINIRLI kapsanır (üreteç destekliyor). "okuma"nın
   leksik "reading" okuması 2b.
-- **Olasılıksal disambiguation yok** — sıralama deterministik ama sıklık/bağlam bilmez (2b).
+- **Olasılıksal disambiguation** — `analyze` sırası hâlâ deterministik (dokunulmadı); 2b'de
+  ayrı opt-in modül geldi (`turkgram/disambiguation.py::rank`/`disambiguate`): dilbilimsel
+  öncelik + opsiyonel `freq=`. Cümle-bağlamı hâlâ yok (sonraki artım). SPEC: `disambiguation-spec.md`.
 - **Sözlükselleşmiş biçim uyarısı yok** ("dolmuş","gelir" kompozisyonel analiz alır; M-02 → 2b).
 - **Motor-dışı biçimler** tanımca `[]` (2b).
 - `lexicon=` gibi ileri-parametre YOK; `roots` basit `Collection[str]` (kritik YAGNI reddi

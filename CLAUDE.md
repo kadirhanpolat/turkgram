@@ -23,6 +23,9 @@ Motor biçimleri **RUNTIME ÜRETİR, SAKLAMAZ**. Kök + morfofonolojik sınıfta
 - **Kök leksikonu (Faz 2b, opt-in):** `lexicon.py` — gömülü `data/lexicon_tr.tsv` (Zemberek
   Apache-2.0'dan türetilmiş lemma+POS). `load()` → `analyze(roots=…)` için lemma kümesi;
   gürültü eler. `analyze(roots=None)` DOKUNULMAZ (bkz. #7 Faz 2b).
+- **Disambiguation (Faz 2b, opt-in):** `disambiguation.py` — `rank`/`disambiguate` aday
+  sıralar + güven (olasılık). Dilbilimsel öncelik (sıklık>POS-tutarlılık>kind>morfem-ekonomisi)
+  + opsiyonel `freq=`. `analyze` imzası/sırası DOKUNULMAZ (bkz. #7). SPEC: `disambiguation-spec.md`.
 - **Türkçe yüz:** `tr.py` — Türkçe-karakterli sarmalayıcılar (`çekimle`/`ad_çekimle`/
   `ekfiil`/`ulaç`/`fiilimsi`/`türet`/`çözümle`), içeride İngilizce çekirdeği çağırır (bkz. #4).
 
@@ -169,9 +172,16 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
     `THIRD_PARTY_LICENSES.md` (§3 olgu-listesi savunması). Kurcalama beyanı: yalnız lemma+POS
     çıkarıldı, Zemberek kodu/düzyazısı KOPYALANMADI. Gömülü veri wheel/sdist'e MANIFEST + package-data
     ile girer. `load(pos=)` POS filtreli; varsayılan çekilebilir alt-küme (verb+noun+adj+adv+pron+num).
-  - Olasılıksal disambiguation, motor-dışı biçimler. FST araçları (Zemberek/TRmorph) adopt-referans.
+  - ✅ **Olasılıksal disambiguation** (`disambiguation.py`, SPEC `disambiguation-spec.md`):
+    `rank`/`disambiguate` — dilbilimsel öncelik (sıklık>POS-tutarlılık>kind-önceliği>morfem-
+    ekonomisi>deterministik tiebreak) + opsiyonel `freq=` kancası + normalize güven (softmax).
+    **OPT-IN** (`analyze` DOKUNULMAZ). freq=None → dilbilimsel önceliklere düşer. TUZAK: güven
+    yalnız gösterim; KESİN SIRA tuple-anahtarından (float sıralamaya sızmaz). Kanca sıklık
+    tablosunu sonra kırılmadan alır. Hakem: korpus rank/disambiguate 0 çökme + güven∑=1.
+  - Motor-dışı biçimler; gömülü sıklık tablosu (türetilmiş lemma-frekans). FST araçları
+    (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2231 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
-p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (birleşik fiil taraması 7552 analiz,
-0 çökme + 0 recall miss). Leksikon wheel/sdist'e gömülü doğrulandı.
+Test durumu: son ölçüm **2242 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (birleşik fiil 7552 analiz 0 miss;
+disambiguation rank/disambiguate 0 çökme + güven∑=1). Leksikon wheel/sdist'e gömülü doğrulandı.
