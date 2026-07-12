@@ -44,7 +44,10 @@ LEMMA_SIMPLE = [l for l in LEMMA_ALL if " " not in l]
 #       çoğul-iyelik(göz) / harmoni-kırıcı(saat)
 AD_SETI = ["ev", "kitap", "genç", "araba", "burun", "göz", "su", "saat"]
 
-ROOTS = set(LEMMA_ALL) | set(AD_SETI)
+# Şahıs zamirleri — suppletif eğik biçim round-trip'i (Faz 2b §3.1 kapatma A).
+ZAMIR_SETI = ["ben", "sen", "o", "biz", "siz"]
+
+ROOTS = set(LEMMA_ALL) | set(AD_SETI) | set(ZAMIR_SETI)
 
 _PERSONS = ("1sg", "2sg", "3sg", "1pl", "2pl", "3pl")
 _CASES = ("nom", "acc", "dat", "loc", "abl", "gen", "ins")
@@ -208,6 +211,28 @@ def _run_full_sweep() -> _Sweep:
                     sw.check("copula", lemma, s, {
                         "aux": aux, "person": person, "number": "sg",
                         "possessive": None, "case": case, "question": False,
+                    })
+
+    # -- zamir eğik: 5 zamir × durum7 (suppletif bana/sana dahil) --
+    for lemma in ZAMIR_SETI:
+        for case in _CASES:
+            s = _safe_gen(lambda l=lemma, c=case: decline(l, case=c))
+            sw.check("decline", lemma, s, {
+                "number": "sg", "possessive": None, "case": case,
+            })
+
+    # -- copula SORU grubu: aux{None,hikaye,rivayet} × kişi × durum{None,loc} --
+    for lemma in AD_SETI:
+        for aux in (None, "hikaye", "rivayet", "sart"):
+            for person in _PERSONS:
+                for case in (None, "loc"):
+                    s = _safe_gen(
+                        lambda l=lemma, a=aux, p=person, c=case:
+                        copula(l, a, p, case=c, question=True)
+                    )
+                    sw.check("copula", lemma, s, {
+                        "aux": aux, "person": person, "number": "sg",
+                        "possessive": None, "case": case, "question": True,
                     })
 
     # -- converb: 8 ulaç — yalın lemmalar (bileşik önek düşürür) --

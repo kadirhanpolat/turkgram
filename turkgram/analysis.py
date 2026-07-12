@@ -487,32 +487,65 @@ def _segment_decline(lemma: str, canon: dict[str, Any],
 
 def _segment_copula(lemma: str, canon: dict[str, Any],
                     surface: str) -> tuple[Segment, ...]:
-    """Ek-fiil segmentasyonu — lemma KÖK; aux + person oracle'la türetilir."""
+    """
+    Ek-fiil segmentasyonu — build-up peeling; eksenler yüzey sırasıyla eklenir.
+
+    Yüzey morfem sırası: KÖK | case | mI(soru) | aux | person
+    (evde miydim = ev + de + mi + ydi + m). Her sınır oracle'la ölçülür:
+    bir sonraki ekseni açıp uzunluk farkını al.
+    """
     aux = canon.get("aux", None)
     person = canon.get("person", "3sg")
+    case = canon.get("case", None)
+    question = canon.get("question", False)
+    possessive = canon.get("possessive", None)
+    number = canon.get("number", "sg")
 
-    # KÖK = lemma (tüm uzunluğuyla)
-    root_surf = surface[:len(lemma)]
+    def _cop(*, aux_: Any = None, question_: bool = False,
+             person_: str = "3sg") -> str | None:
+        return _gen_with_raw("copula", lemma, {
+            "aux": aux_, "person": person_, "number": number,
+            "possessive": possessive, "case": case, "question": question_,
+        })
 
-    segs: list[tuple[str, str]] = [(root_surf, "KÖK")]
+    # KÖK = lemma (bare present -dir tabanını KULLANMA: copula(None,3sg)→"evdir").
+    segs: list[tuple[str, str]] = [(surface[:len(lemma)], "KÖK")]
     pos = len(lemma)
 
-    # aux suffix: copula(lemma, aux, '3sg') - len(lemma)
-    if aux:
-        t3sg = _gen_with_raw("copula", lemma, {
-            "aux": aux, "person": "3sg", "number": "sg",
-            "possessive": None, "case": None, "question": False,
+    # 1. case — copula case-çekimli isim üstüne kurulur; sınırı decline ölçer
+    if case and case != "nom":
+        cf = _gen_with_raw("decline", lemma, {
+            "number": number, "possessive": possessive, "case": case,
         })
-        if t3sg is not None:
-            aux_surf = surface[pos:len(t3sg)]
-            if aux_surf:
-                segs.append((aux_surf, _get_label("aux", aux)))
-            pos = len(t3sg)
+        if cf is not None:
+            seg = surface[pos:len(cf)]
+            if seg:
+                segs.append((seg, _get_label("case", case)))
+            pos = len(cf)
 
-    # person suffix
-    person_surf = surface[pos:]
-    if person_surf and person and person != "3sg":
-        segs.append((person_surf, _get_label("person", person)))
+    # 2. soru (mI) — aux'tan ÖNCE gelir (evde mi + ydi)
+    if question:
+        qf = _cop(question_=True)
+        if qf is not None:
+            seg = surface[pos:len(qf)]
+            if seg:
+                segs.append((seg, _get_label("question", True)))
+            pos = len(qf)
+
+    # 3. aux (ekfiil zaman/kip)
+    if aux:
+        af = _cop(aux_=aux, question_=question)
+        if af is not None:
+            seg = surface[pos:len(af)]
+            if seg:
+                segs.append((seg, _get_label("aux", aux)))
+            pos = len(af)
+
+    # 4. person (3sg eksiz)
+    if person and person != "3sg":
+        person_surf = surface[pos:]
+        if person_surf:
+            segs.append((person_surf, _get_label("person", person)))
 
     return _segs_to_tuple(segs)
 
@@ -648,23 +681,39 @@ def _analyze_multi_token(tokens: list[str], roots: Collection[str] | None) -> li
         body = " ".join(tokens[:-1])
         body_cands = _root_candidates(body)
         for lemma, kind_hints in body_cands.items():
-            if "verb" not in kind_hints:
-                continue
-            if roots is not None and lemma not in roots:
-                continue
             hyp = roots is None
-            stem = lemma[:-3] if lemma.endswith(("mak", "mek")) else lemma
-            for raw_kwargs in _enumerate_conjugate(surface_full, stem, lemma):
-                if not raw_kwargs.get("question"):
-                    continue
-                canon = _canonicalize("conjugate", raw_kwargs)
-                raw = _raw_from_canon("conjugate", canon)
-                if _verify("conjugate", lemma, raw, surface_full):
-                    segs = _segment("conjugate", lemma, canon, surface_full)
-                    results.append(Analysis(
-                        lemma=lemma, pos="verb", kind="conjugate",
-                        kwargs=canon, segments=segs, hypothetical=hyp,
-                    ))
+            in_roots = roots is None or lemma in roots
+            if not in_roots:
+                continue
+
+            # 1a. Fiil gövdesi → conjugate(question=True)
+            if "verb" in kind_hints:
+                stem = lemma[:-3] if lemma.endswith(("mak", "mek")) else lemma
+                for raw_kwargs in _enumerate_conjugate(surface_full, stem, lemma):
+                    if not raw_kwargs.get("question"):
+                        continue
+                    canon = _canonicalize("conjugate", raw_kwargs)
+                    raw = _raw_from_canon("conjugate", canon)
+                    if _verify("conjugate", lemma, raw, surface_full):
+                        segs = _segment("conjugate", lemma, canon, surface_full)
+                        results.append(Analysis(
+                            lemma=lemma, pos="verb", kind="conjugate",
+                            kwargs=canon, segments=segs, hypothetical=hyp,
+                        ))
+
+            # 1b. İsim gövdesi → copula(question=True)  [nominal ekfiil soru grubu]
+            if "noun" in kind_hints:
+                for raw_kwargs in _enumerate_copula(surface_full, lemma):
+                    if not raw_kwargs.get("question"):
+                        continue
+                    canon = _canonicalize("copula", raw_kwargs)
+                    raw = _raw_from_canon("copula", canon)
+                    if _verify("copula", lemma, raw, surface_full):
+                        segs = _segment("copula", lemma, canon, surface_full)
+                        results.append(Analysis(
+                            lemma=lemma, pos="noun", kind="copula",
+                            kwargs=canon, segments=segs, hypothetical=hyp,
+                        ))
 
     # 2. Birleşik önek (e.g. "aday oldu" → lemma "aday olmak")
     if len(tokens) == 2:

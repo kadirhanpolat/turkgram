@@ -120,6 +120,11 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   yüzey öneki değil; `_root_candidates` -Iyor'da düşen-ünlü tabanını geri üretir. (c) golden
   HİBRİT kurulur: üreteç-ground-truth (brute-force) + motor-körü audit (recall denetimi).
   Ses filtreleri YALNIZ gereklilik önermesi (yanlış budayamaz → recall güvenli).
+  (d) **suppletif zamir DAT** (`bana`/`sana`) önek türetemez → `_SUPPLETIVE_PRONOUN_ROOTS`
+  kapalı-küme ters tablosu; diğer eğik biçimler (`onu`/`beni`/`bende`) önekten zaten çözülür.
+  (e) **nominal ekfiil soru** (`evde miydi`) çok-token: soru dalı isim-gövde → `copula(question=True)`
+  de dener; `_segment_copula` build-up peeling (KÖK|case|mI|aux|kişi), bare present `-dir`
+  tabanını KULLANMAZ (case sınırı `decline`'dan, soru/aux copula deltasından ölçülür).
 
 ---
 
@@ -135,12 +140,13 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
     ettirgen/edilgen/dönüşlü/işteş → dövüştürüldü. **Faz 1 fiil çekimi TAMAMLANDI.**
 - **Faz 2a çözümleyici ✅** (`analysis.py`, `tr.çözümle`; `docs/faz2a-*`): yüzey → kök+eksen
   (analysis-by-generation, beş kind: conjugate/decline/copula/converb/participle) + pedagojik
-  segmentasyon. Round-trip sistematik sınıflarda doğrulandı; korpus 0 çökme. **Bilinen 2b
-  açıkları** (design §3.1): birleşik çok-token fiil, suppletif zamir eğik durumu, nominal
-  ekfiil soru grubu. `-Iyor` ünlü-düşmesi KAPATILDI.
+  segmentasyon. Round-trip sistematik sınıflarda doğrulandı; korpus 0 çökme. `-Iyor` ünlü-düşmesi,
+  **suppletif zamir eğik durumu (`bana`/`sana`)** ve **nominal ekfiil soru grubu (`evde miydi`)**
+  KAPATILDI. **Kalan 2b açığı** (design §3.1): birleşik çok-token fiil (`göz ardı etmek`);
+  `-ken` ulacı doğru kapsam-dışı.
 - **Faz 2b** — gerçek-metin sağlamlığı: geniş kök leksikonu, olasılıksal disambiguation,
   motor-dışı biçimler, §3.1 açıkları. FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2086 test yeşil** (+ round-trip süpürme `-m slow`). Her commit'te
-regresyonsuz + korpus 0 çökme.
+Test durumu: son ölçüm **2177 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+p95 bütçe, 795s). Her commit'te regresyonsuz + korpus 0 çökme (2435 çağrı, 0 çökme).

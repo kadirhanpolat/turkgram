@@ -94,6 +94,20 @@ def _vowel_budget(surface_token: str, prefix_len: int) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Suppletif zamir eğik biçimleri (Faz 2b §3.1 kapatma)
+# ---------------------------------------------------------------------------
+# ben→bana, sen→sana yönelme (dat) biçimleri BİÇİMCE türetilemez: önek/ters-
+# mutasyon `ban`/`san` tabanından `ben`/`sen`'e ulaşamaz (suppletif). Diğer eğik
+# biçimler zaten çözülür: `o` öneki → onu/ona/onda/ondan/onun/onunla; `ben`/`biz`/
+# `siz` öneki → beni/bende/benden/benim/benimle vb. Bu yüzden yalnız dat biçimleri
+# kapalı-küme ters tablo gerektirir. Oracle (decline) precision'ı garanti eder.
+_SUPPLETIVE_PRONOUN_ROOTS: dict[str, str] = {
+    "bana": "ben",
+    "sana": "sen",
+}
+
+
+# ---------------------------------------------------------------------------
 # Ters-mutasyon envanteri (SPEC §4) — kök adayları
 # ---------------------------------------------------------------------------
 def _reverse_mutations(prefix: str) -> list[str]:
@@ -158,6 +172,10 @@ def _root_candidates(surface_token: str) -> dict[str, list[str]]:
             result[cand] = []
         if kind not in result[cand]:
             result[cand].append(kind)
+
+    # Suppletif zamir eğik biçimleri (kapalı küme; prefix türetemez)
+    if surface_token in _SUPPLETIVE_PRONOUN_ROOTS:
+        _add(_SUPPLETIVE_PRONOUN_ROOTS[surface_token], "noun")
 
     n = len(surface_token)
     # En az 1 harf önek (boş önek = yüzeyin kendisi fiilimsi kök değil)

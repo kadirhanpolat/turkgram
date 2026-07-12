@@ -39,7 +39,9 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (an
   fiilimsi+iyelik/durum istifi · **A1 çatı** (ettirgen/edilgen/dönüşlü/işteş + yığılma).
 - **Faz 2a ✅** — çözümleyici (`analysis.py`, `tr.çözümle`; `docs/faz2a-*`): yüzey →
   kök+eksen + segmentasyon (beş kind). Round-trip sistematik sınıflarda doğrulandı, korpus
-  0 çökme. Bilinen 2b açıkları: tasarım §3.1.
+  0 çökme. `-Iyor` ünlü-düşmesi, suppletif zamir eğik durumu (`bana`/`sana`) ve nominal
+  ekfiil soru grubu (`evde miydi`) kapatıldı. Kalan 2b açığı: birleşik çok-token fiil
+  (`göz ardı etmek`); ayrıntı: tasarım §3.1.
 - **Faz 2b** — gerçek-metin sağlamlığı (leksikon + disambiguation). **Faz 3/4** — türetme
   genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
@@ -70,6 +72,9 @@ tg.conjugate("dövmek", "past", "3sg", voice_chain=["recip","caus","pass"])  # '
 tg.analyze("okuduğum", roots={"okumak"})       # [Analysis(lemma='okumak', kind='participle',
                                                #   kwargs={'ptype':'dik','possessive':'1sg'},
                                                #   segments=(oku|duğ[DIk]|um[Im]), ...)]
+tg.analyze("bana", roots={"ben"})              # suppletif zamir → decline(case='dat')
+tg.analyze("evde miydi", roots={"ev"})         # nominal ekfiil soru → copula(case='loc',
+                                               #   aux='hikaye', question=True)
 ```
 
 ## Türkçe API (`turkgram.tr`)

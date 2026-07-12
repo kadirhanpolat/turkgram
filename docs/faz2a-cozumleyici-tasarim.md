@@ -184,13 +184,21 @@ genişletildi; korpus re-check 1200 analizde ~0 miss.
 3+ token lemmalar — çok-token yolu tek leading-önek + body varsayıyor; değişken-uzunluk önek /
 ikileme reconstruction 2b (gerçek-metin) işi. Korpusta ~69 miss (hepsi birleşik).
 
-**Kalan dar açıklar (2b'ye ertelendi; hakem buldu):**
-- **Suppletif zamir eğik durumları** (`bana`, `sana`): `ben→bana` biçimce türetilemez
-  (suppletif); ters-mutasyon `ban`'dan `ben`'e ulaşamaz. Düzenli tabanlar (`beni`, `bende`)
-  ÇÖZÜLÜR. Kapatma: `_root_candidates`'e `PRONOUN_FORMS` ters tablosu (küçük kapalı küme).
-- **Nominal ekfiil soru grubu** (`evde miydi`, `hasta mıymış`): çok-token soru yolu yalnız
-  FİİL gövdesi deniyor; `copula(question=True)` gövdesi denenmiyor. Üreteç-üretilebilir →
-  gerçek açık. Kapatma: `_analyze_multi_token` soru-body adayına copula ekle.
+**KAPATILDI — Suppletif zamir eğik durumları (`bana`, `sana`):** `ben→bana` biçimce
+türetilemez (suppletif); önek/ters-mutasyon `ban`'dan `ben`'e ulaşamaz. Yalnız DAT biçimleri
+açıktı — diğer eğik biçimler zaten çözülüyordu (`o` öneki → onu/ona/onda…; `ben`/`biz`/`siz`
+öneki → beni/bende/benim…). `analysis_candidates._SUPPLETIVE_PRONOUN_ROOTS` kapalı-küme ters
+tablosu (`bana→ben`, `sana→sen`) `_root_candidates`'e eklendi; oracle (decline) precision'ı
+garanti eder. Süpürme: 5 zamir × durum7 round-trip 0 açık.
+
+**KAPATILDI — Nominal ekfiil soru grubu (`evde miydi`, `hasta mıymış`):** çok-token soru yolu
+yalnız FİİL gövdesi deniyordu; `copula(question=True)` gövdesi denenmiyordu → üreteç-üretilebilir
+gerçek açık. `_analyze_multi_token` soru dalına isim-gövde → `_enumerate_copula(question=True)`
+yolu eklendi; `_segment_copula` build-up peeling'e çevrildi (KÖK | case | mI | aux | person;
+bare present `-dir` tabanını kullanmaz). Süpürme: AD_SETI × aux4 × kişi6 × durum{None,loc} ×
+soru round-trip 0 açık.
+
+**Kalan dar açık (2b'ye ertelendi; doğru kapsam-dışı):**
 - **`-ken` ulacı** (`koşarken`, `koştururken`): converb envanterinde YOK (A5 8 ulaç; `-ken`
   çekimli-gövde-üstü, A5-dışıydı) → üretecin dilinde de yok → **doğru kapsam-dışı**, açık değil.
 

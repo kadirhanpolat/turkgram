@@ -4,6 +4,7 @@ PYTHONUTF8=1 python -m pytest tests/test_analysis.py -q
 """
 import pytest
 from turkgram import analysis as an
+from turkgram.morphology_noun import decline, copula
 from tests.golden_analysis import GOLDEN_ANALYSIS, BATTERY_LEXICON
 from tests.golden_segments import GOLDEN_SEGMENTS
 
@@ -215,6 +216,89 @@ def test_golden_segments(surface):
     assert joined == body_token, (
         f"Span bütünlüğü bozuk: {joined!r} != {body_token!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Faz 2b açık kapatma A: suppletif zamir eğik durumları (bana/sana)
+#
+# Bağımsız round-trip: üreteç (decline) ürettiği HER zamir eğik biçimi geri
+# çözülmeli. bana/sana biçimce türetilemez (ben→bana suppletif) → kapalı-küme
+# ters tablo gerekir. Düzenli tabanlar (beni/bende/ona…) regresyon koruması.
+# ---------------------------------------------------------------------------
+
+_PRONOUNS = ["ben", "sen", "o", "biz", "siz"]
+_ALL_CASES = ["nom", "acc", "dat", "loc", "abl", "gen", "ins"]
+
+
+@pytest.mark.parametrize("pron", _PRONOUNS)
+@pytest.mark.parametrize("case", _ALL_CASES)
+def test_zamir_egik_roundtrip(pron, case):
+    """decline(zamir, case) her eğik biçim analyze ile geri çözülmeli."""
+    surface = decline(pron, case=case)
+    results = an.analyze(surface, roots={pron})
+    assert any(
+        a.lemma == pron and a.kind == "decline"
+        and dict(a.kwargs).get("case", "nom") == case
+        for a in results
+    ), f"zamir eğik çözülemedi: {surface!r} (lemma={pron!r}, case={case!r}) → {results}"
+
+
+def test_zamir_bana_sana_odakli():
+    """Suppletif dat biçimleri (kapatma odağı) — açıkça çöz."""
+    for surface, lemma in (("bana", "ben"), ("sana", "sen")):
+        results = an.analyze(surface, roots={lemma})
+        assert any(
+            a.lemma == lemma and a.kind == "decline"
+            and dict(a.kwargs).get("case") == "dat"
+            for a in results
+        ), f"{surface!r} → {lemma!r} dat çözülemedi: {results}"
+
+
+# ---------------------------------------------------------------------------
+# Faz 2b açık kapatma B: nominal ekfiil soru grubu (evde miydi / hasta mıymış)
+#
+# Bağımsız round-trip: üreteç (copula question=True) ürettiği HER çok-token soru
+# biçimi geri çözülmeli. Çok-token soru yolu önce yalnız fiil gövdesini deniyordu.
+# ---------------------------------------------------------------------------
+
+_COPULA_Q_NOUNS = ["ev", "hasta", "öğrenci"]
+
+
+@pytest.mark.parametrize("lemma", _COPULA_Q_NOUNS)
+@pytest.mark.parametrize("aux", [None, "hikaye", "rivayet"])
+@pytest.mark.parametrize("case", [None, "loc"])
+@pytest.mark.parametrize("person", ["3sg", "1sg", "2sg"])
+def test_ekfiil_soru_roundtrip(lemma, aux, case, person):
+    """copula(question=True) her soru biçimi analyze ile geri çözülmeli."""
+    surface = copula(lemma, aux, person, case=case, question=True)
+    assert " " in surface  # soru biçimi çok-token
+    results = an.analyze(surface, roots={lemma})
+    want_case = case
+    assert any(
+        a.lemma == lemma and a.kind == "copula"
+        and dict(a.kwargs).get("question") is True
+        and dict(a.kwargs).get("aux") == aux
+        and dict(a.kwargs).get("case", None) == want_case
+        and dict(a.kwargs).get("person", "3sg") == person
+        for a in results
+    ), f"ekfiil soru çözülemedi: {surface!r} → {results}"
+
+
+def test_ekfiil_soru_segment_tiling():
+    """Soru biçimi segmentleri TAM yüzeyi (boşluk dahil) döşemeli."""
+    for lemma in _COPULA_Q_NOUNS:
+        for case in (None, "loc"):
+            for aux in (None, "hikaye", "rivayet"):
+                surface = copula(lemma, aux, "3sg", case=case, question=True)
+                results = an.analyze(surface, roots={lemma})
+                matching = [a for a in results if a.kind == "copula" and a.lemma == lemma]
+                assert matching, f"copula çözümü yok: {surface!r}"
+                a = matching[0]
+                joined = "".join(s.surface for s in a.segments)
+                assert joined == surface, (
+                    f"Span bütünlüğü bozuk: {joined!r} != {surface!r}\n"
+                    f"  segmentler: {[(s.surface, s.label) for s in a.segments]}"
+                )
 
 
 # ---------------------------------------------------------------------------
