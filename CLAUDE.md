@@ -151,6 +151,14 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   kalkınca soru dalı (§8 madde 1) erişilir oldu; `_root_candidates` boşluk-üstü grid birleşik
   mastarı üretir → `conjugate(question=True)` oracle doğrular, ayrı N-token soru dalı GEREKMEZ.
   Kalan: ikileme adverbial-yeniden-kurulumu (sözdizimsel, defer).
+- **(g) `-cAsInA` çözümlemesi (Faz 2b, yeni kind `converb_casina`):** finit-taban-üstü ek →
+  segmentasyon DELEGASYON (A3 emsali, §6c): `base_form=conjugate(lemma,base,"3sg",neg)` dilimlerini
+  `_segment_conjugate`'ten al, üstüne tek `(surface[len(base_form):], "cAsInA")` dilimi ekle. Enum
+  yalnız `base∈{aorist,evid}×negative` (4 hipotez) + `_CASINA_MARKER` (`[cç][ae]s[ıi]n[ae]$`)
+  gereklilik filtresi → marker yoksa hiç enumerate etme (recall-güvenli). Kök adayı yeni mantık
+  GEREKMEZ (mevcut önek+ters-mutasyon yeter). **Disharmonic-mastar sınırı:** `_root_candidates`
+  öneki düzenli harmoniyle mastara çevirir (inhi→inhimek); disharmonic alıntı `inhimak` (leksikonda
+  tek) TÜM kind'larda round-trip kaçırır — casina'ya özgü DEĞİL, genel pre-existing sınır.
 
 ---
 
@@ -165,7 +173,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - ✅ **A1** çatı entegre çekim + yığılma (`voice.py::apply_voice`, `conjugate(voice_chain=)`):
     ettirgen/edilgen/dönüşlü/işteş → dövüştürüldü. **Faz 1 fiil çekimi TAMAMLANDI.**
 - **Faz 2a çözümleyici ✅** (`analysis.py`, `tr.çözümle`; `docs/faz2a-*`): yüzey → kök+eksen
-  (analysis-by-generation, beş kind: conjugate/decline/copula/converb/participle) + pedagojik
+  (analysis-by-generation, kind'lar: conjugate/decline/copula/converb/converb_casina/participle) + pedagojik
   segmentasyon. Round-trip sistematik sınıflarda doğrulandı; korpus 0 çökme. `-Iyor` ünlü-düşmesi,
   **suppletif zamir eğik durumu (`bana`/`sana`)** ve **nominal ekfiil soru grubu (`evde miydi`)**
   KAPATILDI. `-ken` ulacı doğru kapsam-dışı.
@@ -207,10 +215,22 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
       TUZAK — **3pl=tabanda -lAr, ek-fiil 3sg** → geliyorlardı (geliyordular DEĞİL). Taban
       `conjugate`'ten aynen; ek-fiil `_copula_suffix`'e delege (sıfır yeni morfoloji). SPEC
       `compound-tense-spec.md`. Hakem: 237.262 çağrı 0 çökme (2 leksikon-çöpü pre-existing guard).
-  - Kalan: bu biçimlerin ÇÖZÜMLEMESİ (analyze şu an yalnız üretir); cümle-bağlamı disambiguation.
-    FST araçları (Zemberek/TRmorph) adopt-referans.
+  - ✅ **Motor-dışı biçimlerin ÇÖZÜMLEMESİ** (3 artım, kolay→zor; her biri SPEC-çözümleme-bölümü
+    →bağımsız golden(Opus,motor-körü)→motor→hakem):
+    - **`-cAsInA` çözümlemesi** (yeni kind `converb_casina`, SPEC `casina-spec.md` §Çözümleme):
+      gülercesine→(gülmek, converb_casina, {base:aorist}). Enum base×negative=4 hipotez, `-CAsInA`
+      marker filtresi (recall-güvenli). Segmentasyon DELEGASYON (A3 emsali): tabanı `_segment_conjugate`'e
+      ver + tek `cAsInA` dilimi (§6g). `tr.çözümle` kwargs `taban`/olumsuz. Hakem: gömülü leksikon
+      3250 fiil × 2 base × 2 neg = 13.000 çağrı, 0 çökme, 0 casina-miss (4 miss = 1 disharmonic
+      alıntı `inhimak`, `_root_candidates` düzenli-harmoni varsayımından TÜM kind'ları eşit kırar,
+      pre-existing; leksikondaki tek disharmonic mastar).
+    - Kalan: **`-ken`** (fiil `converb_ken` + nominal `copula(aux=ken)`) ve **bileşik zaman**
+      (zaten `conjugate(aux=)` ile çözümleniyor → regresyon-kilidi golden) çözümlemesi; cümle-bağlamı
+      disambiguation. FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2354 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+Test durumu: son ölçüm **2420 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
 p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (biçim-eklenen ulaç + bileşik zaman
-237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss). Leksikon wheel/sdist'e gömülü doğrulandı.
+237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss; -cAsInA çözümleme 13.000 çağrı 0 çökme).
+Leksikon wheel/sdist'e gömülü doğrulandı. Ayrıca `_copula_suffix` şart-2pl yuvarlama fix'i
+(geliyorsanuz→geliyorsanız): compound==conjugate(aux) 216.000 çağrı 0 fark.

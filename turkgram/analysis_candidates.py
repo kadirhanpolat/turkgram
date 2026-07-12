@@ -361,6 +361,23 @@ def _enumerate_converb(surface: str, stem: str) -> list[dict[str, Any]]:
     return hyps
 
 
+# -cAsInA gibilik ulacı markerı: yüzey daima -CAsInA kuyruğuyla biter
+# (cesine/casına/çesine/çasına). Gereklilik filtresi → recall-güvenli.
+_CASINA_MARKER = re.compile(r"[cç][ae]s[ıi]n[ae]$")
+
+
+def _enumerate_casina(surface: str, stem: str) -> list[dict[str, Any]]:
+    """-cAsInA hipotezleri: base ∈ {aorist, evid} × negative ∈ {False, True} = 4.
+    Marker yoksa hiç enumerate etme (yüzey -CAsInA kuyruklu olmalı)."""
+    if not _CASINA_MARKER.search(surface):
+        return []
+    hyps: list[dict[str, Any]] = []
+    for base in ("aorist", "evid"):
+        for negative in (False, True):
+            hyps.append({"base": base, "negative": negative})
+    return hyps
+
+
 def _enumerate_participle(surface: str, stem: str) -> list[dict[str, Any]]:
     budget = _count_vowels(surface) - _count_vowels(stem)
     hyps: list[dict[str, Any]] = []

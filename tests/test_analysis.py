@@ -10,6 +10,10 @@ from tests.golden_analysis import (
     GOLDEN_COMPOUND_Q, COMPOUND_Q_LEXICON,
 )
 from tests.golden_segments import GOLDEN_SEGMENTS
+from tests.golden_casina_analysis import (
+    GOLDEN_CASINA, GOLDEN_CASINA_SEGMENTS, CASINA_LEXICON,
+)
+from turkgram.nonfinite import converb_casina
 
 
 # ---------------------------------------------------------------------------
@@ -377,3 +381,46 @@ def test_call_count_reset():
     assert an.call_count() == 0
     an.analyze("okuyor", roots={"okumak"})
     assert an.call_count() > 0
+
+
+# ---------------------------------------------------------------------------
+# Faz 2b — motor-dışı biçim 1: -cAsInA çözümlemesi (casina-spec.md § Çözümleme)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("surface", sorted(GOLDEN_CASINA))
+def test_golden_casina_precision(surface):
+    got = {_norm_key(a.lemma, a.pos, a.kind, dict(a.kwargs))
+           for a in an.analyze(surface, roots=CASINA_LEXICON)}
+    want = {_norm_key(g["lemma"], g["pos"], g["kind"], g["kwargs"])
+            for g in GOLDEN_CASINA[surface]}
+    assert got == want, (
+        f"surface={surface!r}\n  EKSİK: {want - got}\n  FAZLA: {got - want}"
+    )
+
+
+@pytest.mark.parametrize("surface", sorted(GOLDEN_CASINA_SEGMENTS))
+def test_golden_casina_segments(surface):
+    entry = GOLDEN_CASINA_SEGMENTS[surface]
+    lemma, expected = entry["lemma"], entry["segments"]
+    results = [a for a in an.analyze(surface, roots={lemma})
+               if a.kind == "converb_casina"]
+    assert results, f"converb_casina çözümü yok: {surface!r}"
+    got = [(s.surface, s.label) for s in results[0].segments]
+    assert got == expected, f"{surface!r}\n  beklenen: {expected}\n  alınan:   {got}"
+    assert "".join(s.surface for s in results[0].segments) == surface
+
+
+@pytest.mark.parametrize("lemma", ["gelmek", "gülmek", "yapmak", "okumak",
+                                   "gitmek", "görmek", "almak", "bilmek"])
+@pytest.mark.parametrize("base", ["aorist", "evid"])
+@pytest.mark.parametrize("negative", [False, True])
+def test_casina_roundtrip(lemma, base, negative):
+    """converb_casina ürettiği HER yüzey analyze ile geri çözülmeli (recall)."""
+    surface = converb_casina(lemma, base=base, negative=negative)
+    results = an.analyze(surface, roots={lemma})
+    assert any(
+        a.lemma == lemma and a.kind == "converb_casina"
+        and dict(a.kwargs).get("base") == base
+        and dict(a.kwargs).get("negative", False) == negative
+        for a in results
+    ), f"round-trip miss: {surface!r} ({lemma},{base},neg={negative}) → {results}"

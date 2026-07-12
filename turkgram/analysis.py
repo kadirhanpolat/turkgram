@@ -22,12 +22,12 @@ from typing import Any, Collection, Mapping
 
 from .morphology import conjugate
 from .morphology_noun import decline, copula
-from .nonfinite import converb, participle
+from .nonfinite import converb, participle, converb_casina
 from .analysis_candidates import (
     _VOICE_CHAINS,
     _root_candidates,
     _enumerate_conjugate, _enumerate_decline, _enumerate_copula,
-    _enumerate_converb, _enumerate_participle,
+    _enumerate_converb, _enumerate_participle, _enumerate_casina,
 )
 
 # ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ class Analysis:
 # Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
 _POS = ("verb", "noun")
-_KINDS = ("conjugate", "decline", "copula", "converb", "participle")
+_KINDS = ("conjugate", "decline", "copula", "converb", "converb_casina", "participle")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -71,6 +71,7 @@ _KIND_FUNCS: dict[str, Any] = {
     "decline": decline,
     "copula": copula,
     "converb": converb,
+    "converb_casina": converb_casina,
     "participle": participle,
 }
 
@@ -148,6 +149,14 @@ def _canon_participle(kwargs: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _canon_casina(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """base daima; negative yalnız True iken (converb kind emsali + conjugate negative)."""
+    out: dict[str, Any] = {"base": kwargs["base"]}
+    if kwargs.get("negative"):
+        out["negative"] = True
+    return out
+
+
 def _canonicalize(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     if kind == "conjugate":
         return _canon_conjugate(kwargs)
@@ -157,6 +166,8 @@ def _canonicalize(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
         return _canon_copula(kwargs)
     if kind == "converb":
         return dict(kwargs)  # kind zorunlu, değiştirme
+    if kind == "converb_casina":
+        return _canon_casina(kwargs)
     if kind == "participle":
         return _canon_participle(kwargs)
     return dict(kwargs)
@@ -216,6 +227,8 @@ def _call_generator(kind: str, lemma: str, frozen_kwargs: tuple) -> str | None:
             return fn(lemma, aux, person, **kwargs)
         elif kind == "converb":
             return fn(lemma, kwargs["kind"])
+        elif kind == "converb_casina":
+            return fn(lemma, base=kwargs["base"], negative=kwargs.get("negative", False))
         elif kind == "participle":
             ptype = kwargs.pop("ptype")
             return fn(lemma, ptype, **kwargs)
@@ -304,6 +317,8 @@ def _raw_from_canon(kind: str, canon: dict[str, Any]) -> dict[str, Any]:
         raw.setdefault("possessive", None)
         raw.setdefault("number", "sg")
         raw.setdefault("question", False)
+    elif kind == "converb_casina":
+        raw.setdefault("negative", False)  # base canon'da daima var
     elif kind == "participle":
         raw.setdefault("possessive", None)
         raw.setdefault("case", None)
@@ -564,6 +579,30 @@ def _segment_converb(lemma: str, canon: dict[str, Any],
     return _segs_to_tuple(segs)
 
 
+def _segment_converb_casina(lemma: str, canon: dict[str, Any],
+                            surface: str) -> tuple[Segment, ...]:
+    """-cAsInA segmentasyonu — DELEGASYON (A3 emsali): finit tabanı conjugate
+    segmentasyonuna ver, sonra tek cAsInA dilimini ekle. Taban = conjugate(base,3sg,neg)."""
+    base = canon["base"]
+    negative = canon.get("negative", False)
+    base_form = _gen_with_raw("conjugate", lemma, {
+        "tense": base, "person": None, "negative": negative,
+        "ability": False, "question": False, "aux": None,
+        "aspect": None, "voice_chain": None,
+    })
+    if base_form is None or not surface.startswith(base_form):
+        return _segs_to_tuple([(surface, "KÖK")])  # güvenli geri-düşüş
+    base_canon: dict[str, Any] = {"tense": base, "person": "3sg"}
+    if negative:
+        base_canon["negative"] = True
+    base_segs = _segment_conjugate(lemma, base_canon, base_form)
+    pairs = [(s.surface, s.label) for s in base_segs]
+    suffix = surface[len(base_form):]
+    if suffix:
+        pairs.append((suffix, "cAsInA"))
+    return _segs_to_tuple(pairs)
+
+
 def _segment_participle(lemma: str, canon: dict[str, Any],
                         surface: str) -> tuple[Segment, ...]:
     """
@@ -620,6 +659,8 @@ def _segment(kind: str, lemma: str, canon_kwargs: dict[str, Any],
         return _segment_copula(lemma, canon_kwargs, surface_token)
     if kind == "converb":
         return _segment_converb(lemma, canon_kwargs, surface_token)
+    if kind == "converb_casina":
+        return _segment_converb_casina(lemma, canon_kwargs, surface_token)
     if kind == "participle":
         return _segment_participle(lemma, canon_kwargs, surface_token)
     # Fallback: tüm yüzey = KÖK
@@ -817,6 +858,7 @@ def analyze(surface: str, pos: str | None = None,
 _ENUMERATE_FN: dict[str, Any] = {
     "conjugate": lambda surface, stem, lemma: _enumerate_conjugate(surface, stem, lemma),
     "converb":   lambda surface, stem, lemma: _enumerate_converb(surface, stem),
+    "converb_casina": lambda surface, stem, lemma: _enumerate_casina(surface, stem),
     "participle": lambda surface, stem, lemma: _enumerate_participle(surface, stem),
     "decline":   lambda surface, stem, lemma: _enumerate_decline(surface, stem),
     "copula":    lambda surface, stem, lemma: _enumerate_copula(surface, stem),
@@ -851,7 +893,7 @@ def _try_verb(surface: str, lemma: str, stem: str,
     if roots is not None and lemma not in roots:
         return
     hyp = roots is None
-    for kind in ("conjugate", "converb", "participle"):
+    for kind in ("conjugate", "converb", "converb_casina", "participle"):
         _process_kind(kind, "verb", surface, lemma, stem, analyses, seen, hyp)
 
 

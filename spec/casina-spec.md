@@ -74,3 +74,68 @@ def converb_casina(lemma: str, *, base: str = "aorist", negative: bool = False) 
 ## Golden zorunlu kapsam
 En az 8 aorist + 5 evid + 3 olumsuz hücre; kalın/ince, düz/yuvarlak, yumuşama, -Ir istisna,
 tek/çok-heceli çeşitliliği. Her hücre elle-doğrulanmış (motora bakmadan).
+
+---
+
+# ÇÖZÜMLEME (analysis) — Faz 2b, motor-dışı biçim 1
+
+`analyze` şimdiye dek yalnız ÜRETTİĞİ biçimi geri tanımıyordu; `-cAsInA` yüzeyleri
+(gülercesine) yalnız gürültü çözülüyordu. Bu bölüm çözümleme sözleşmesini kilitler.
+Çözümleme **analysis-by-generation**'dır (analysis-spec.md): kök adayı → grid → üreteç
+oracle doğrular (`converb_casina(...) == yüzey`). Precision yapısal (analizör dili ⊆
+üreteç dili).
+
+## Yeni kind
+
+`kind = "converb_casina"`, `pos = "verb"`. `_KINDS` sırasına `converb`'ten SONRA eklenir
+(sıralama: `... converb, converb_casina, participle ...` — bkz. sıralama anahtarı §8).
+
+## Kanonik kwargs
+
+- `base` **daima** yer alır: `"aorist"` | `"evid"` (tanımlayıcı eksen; converb'in `kind`'i
+  gibi — atılabilir bir "default" YOK, her yüzey tek base'e eşlenir).
+- `negative`: yalnız `True` iken yer alır (conjugate kanonu emsali; `False` atılır).
+
+Örnek: `gülercesine → {"base": "aorist"}`; `gelmemişçesine → {"base": "evid", "negative": True}`.
+
+## Enumerasyon (grid)
+
+`base ∈ {aorist, evid} × negative ∈ {False, True}` = **4 hipotez**. Ses filtresi (gereklilik,
+recall-güvenli): yüzey `-cAsInA` markerını içermeli → `s[ıi]n[ae]$` ( …sına/…sine ile biter)
+VE bir `[cç][ae]` içermeli. Filtre yalnız budama; oracle kesin doğrular.
+
+## Kök adayları
+
+Mevcut `_root_candidates` önek-tabanlı kök üretimi YETERLİ: `gülercesine` öneki `gül` →
+`gülmek`; `gidercesine` öneki `gid` → ters-mutasyon `git` → `gitmek`. Yeni kök mantığı GEREKMEZ.
+(-cAsInA tabanı finit 3sg; -Iyor ünlü-düşmesi bu tabanlarda yok — aorist/evid.)
+
+## Segmentasyon (DELEGASYON — A3 emsali)
+
+`-cAsInA` finit taban üstüne biner → tabanı **`conjugate` segmentasyonuna delege et**, sonra
+tek `cAsInA` dilimi ekle:
+1. `base_form = conjugate(lemma, base, "3sg", negative=negative)` (ör. güler, gelmiş, gelmemiş).
+2. Taban dilimleri = `_segment_conjugate(lemma, {tense:base, person:"3sg", negative:…}, base_form)`
+   → `[(gül,KÖK),(er,Ir)]` / `[(gel,KÖK),(me,mA),(miş,mIş)]`.
+3. Son dilim = `(surface[len(base_form):], "cAsInA")` → ör. `(cesine, cAsInA)`.
+
+Dilimler birleşince yüzeyi verir (bitişik). Etiket `"cAsInA"` (kanonik ek adı).
+
+Segmentasyon golden (tek-çözüm, sadeleştirilmiş — belirsizlik yok):
+| yüzey | lemma | segmentler |
+|-------|-------|-----------|
+| gülercesine | gülmek | (gül,KÖK)(er,Ir)(cesine,cAsInA) |
+| yaparcasına | yapmak | (yap,KÖK)(ar,Ir)(casına,cAsInA) |
+| okurcasına | okumak | (oku,KÖK)(r,Ir)(casına,cAsInA) |
+| gelmişçesine | gelmek | (gel,KÖK)(miş,mIş)(çesine,cAsInA) |
+| görmüşçesine | görmek | (gör,KÖK)(müş,mIş)(çesine,cAsInA) |
+
+## Round-trip değişmezi (hakem)
+
+Üreteç `converb_casina(lemma, base=b, negative=n)` ürettiği HER yüzey, `analyze(surface,
+roots={lemma})` ile geri çözülmeli: `(lemma, "verb", "converb_casina", {base:b[,negative]})`
+sonuçlar arasında OLMALI. Gömülü leksikon fiilleri × 2 base × 2 negative taranır → 0 miss.
+
+## Kapsam dışı (defer)
+Nominal-eklenen `-CAsInA` (delicesine/aptalcasına — sıfat/isim tabanı) ve `-AcAk` tabanı
+ÜRETİMDE de yok → çözümlemede de yok.
