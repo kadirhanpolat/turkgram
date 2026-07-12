@@ -566,8 +566,9 @@ def _pres_question(stem: str, person: str) -> str:
 def copula(headword: str, aux: str | None = None, person: str = "3sg", *,
            case: str | None = None, possessive: str | None = None,
            number: str = "sg", question: bool = False) -> str:
-    """Nominal ek-fiil (kopula). aux ∈ {None(geniş), 'hikaye', 'rivayet', 'sart'};
-    gövde `decline(headword, ...)` ile kurulur, ek-fiil son sese göre biner."""
+    """Nominal ek-fiil (kopula). aux ∈ {None(geniş), 'hikaye', 'rivayet', 'sart', 'ken'};
+    gövde `decline(headword, ...)` ile kurulur, ek-fiil son sese göre biner. 'ken'
+    (iken) kişisiz DONMUŞ ek: gövde + (y)ken (evdeyken, çocukken)."""
     if person not in PERSONS:
         raise ValueError(f"bilinmeyen person: {person}")
     core: dict = {}
@@ -582,6 +583,9 @@ def copula(headword: str, aux: str | None = None, person: str = "3sg", *,
             return _pres_question(decline(headword, **core), person)
         return predicative(headword, person=person, **core)
     stem = decline(headword, **core)
+    if aux == "ken":                                      # -ken (iken): kişisiz, DONMUŞ ek
+        y = "y" if ends_in_vowel(stem) else ""            # glide yalnız ünlü-final gövdede
+        return stem + y + "ken"
     if question:                                          # mI gövde ile ek-fiil arasına
         return f"{stem} {_copula_suffix('m' + high_vowel(stem), aux, person)}"
     return _copula_suffix(stem, aux, person)

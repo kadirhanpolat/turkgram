@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
-    lexicon, disambiguation,
+    lexicon, disambiguation, compound,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -56,7 +56,10 @@ from .morphology_noun import (
 )
 
 # ── Fiilimsi (zarf-fiil / ulaç + sıfat-fiil/ad-fiil) ─────────────────────
-from .nonfinite import converb, participle
+from .nonfinite import converb, participle, converb_casina, converb_ken
+
+# ── Bileşik zaman (birleşik çekim: hikaye/rivayet/şart) ──────────────────
+from .compound import compound
 
 # ── Çatı (voice: ettirgen/edilgen/dönüşlü/işteş + yığılma) ───────────────
 from .voice import apply_voice
@@ -80,7 +83,9 @@ __all__ = [
     "decline", "paradigm_noun", "parse_noun", "predicative", "copula",
     "with_ki", "equative", "NounStem",
     # fiilimsi
-    "converb", "participle",
+    "converb", "participle", "converb_casina", "converb_ken",
+    # bileşik zaman
+    "compound",
     # çatı
     "apply_voice",
     # türetme
@@ -91,6 +96,6 @@ __all__ = [
     "rank", "disambiguate",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
-    "analysis", "lexicon", "disambiguation",
+    "analysis", "lexicon", "disambiguation", "compound",
     "__version__",
 ]

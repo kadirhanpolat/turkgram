@@ -15,7 +15,7 @@ A5 yalnız KÖK-EKLENEN ulaçları üretir. `-ken`/`-cAsInA` (çekimli gövde ü
 from __future__ import annotations
 
 from .morphology import (
-    parse_verb, _stem_before_suffix,
+    parse_verb, _stem_before_suffix, conjugate,
     low_vowel, high_vowel, ends_in_vowel, hardens,
 )
 from .morphology_noun import decline
@@ -24,6 +24,10 @@ from .morphology_noun import decline
 _VOWEL_INITIAL = frozenset({"arak", "ip", "inca", "eli", "esiye"})
 _CONSONANT_INITIAL = frozenset({"madan", "dikce", "meksizin"})
 CONVERBS = _VOWEL_INITIAL | _CONSONANT_INITIAL
+
+# Biçim-eklenen ulaçlar (finit taban üstüne biner; A5 kök-eklenenlerden ayrı).
+_CASINA_BASES = frozenset({"aorist", "evid"})       # -cAsInA: geniş / -mIş tabanı
+_KEN_BASES = frozenset({"aorist", "pres", "evid", "fut"})  # -ken: dört basit taban
 
 
 def converb(lemma: str, kind: str) -> str:
@@ -61,6 +65,36 @@ def converb(lemma: str, kind: str) -> str:
     # -mAksIzIn: -mAk sonrası YÜKSEK-DÜZ
     iyi = "i" if a == "e" else "ı"
     return stem + "m" + a + "ks" + iyi + "z" + iyi + "n"
+
+
+# ---------------------------------------------------------------------------
+# Biçim-eklenen ulaçlar — finit taban üstüne biner (casina-spec.md, ken-spec.md).
+# Taban motorun `conjugate` çıktısından AYNEN alınır (yumuşama/-Ir istisna/olumsuz
+# orada çözülü); ek yalnız tabanın son sesine/ünlüsüne göre gerçeklenir.
+# ---------------------------------------------------------------------------
+def converb_casina(lemma: str, *, base: str = "aorist", negative: bool = False) -> str:
+    """`-cAsInA` gibilik/benzerlik zarf-fiili (gülercesine, gelmişçesine). base ∈
+    {aorist, evid}. Kişisiz. C(ç/c son-ses) + A(alçak) + s + Iyi(YÜKSEK-DÜZ) + n + A."""
+    if base not in _CASINA_BASES:
+        raise ValueError(
+            f"bilinmeyen -cAsInA tabanı: {base!r}. Geçerli: {', '.join(sorted(_CASINA_BASES))}"
+        )
+    stem = conjugate(lemma, base, "3sg", negative=negative)
+    a = low_vowel(stem)                              # a / e — son ünlüden
+    iyi = "ı" if a == "a" else "i"                   # YÜKSEK-DÜZ (yuvarlaklık taşınmaz)
+    c = "ç" if hardens(stem) else "c"                # son ses sert → ç
+    return stem + c + a + "s" + iyi + "n" + a
+
+
+def converb_ken(lemma: str, *, base: str = "aorist", negative: bool = False) -> str:
+    """`-ken` zaman zarf-fiili (gelirken, geliyorken). base ∈ {aorist, pres, evid, fut}.
+    `-ken` DONMUŞ ektir (ünlü uyumu YOK); finit taban ünsüz-final → glide YOK."""
+    if base not in _KEN_BASES:
+        raise ValueError(
+            f"bilinmeyen -ken tabanı: {base!r}. Geçerli: {', '.join(sorted(_KEN_BASES))}"
+        )
+    stem = conjugate(lemma, base, "3sg", negative=negative)
+    return stem + "ken"
 
 
 # ---------------------------------------------------------------------------

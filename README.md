@@ -16,18 +16,20 @@ saf-Python, bağımlılıksız bir kütüphane.
 | Fiil çekimi | `turkgram.morphology` | `conjugate`, `paradigm`, `parse_verb`, `inflect_last_token` |
 | Çatı (voice) | `turkgram.voice` | **`apply_voice`** (ettirgen/edilgen/dönüşlü/işteş + yığılma) |
 | İsim çekimi | `turkgram.morphology_noun` | `decline`, `paradigm_noun`, `predicative`, **`copula`**, `with_ki`, `equative` |
-| Fiilimsi | `turkgram.nonfinite` | **`converb`** (ulaç), **`participle`** (sıfat-fiil/ad-fiil + iyelik/durum) |
+| Fiilimsi | `turkgram.nonfinite` | **`converb`** (8 ulaç), **`participle`** (sıfat-fiil/ad-fiil), **`converb_casina`** (-cAsInA), **`converb_ken`** (-ken) |
+| Bileşik zaman | `turkgram.compound` | **`compound`** (hikaye/rivayet/şart birleşik çekim; 3çoğul geliyorlardı) |
 | Yapım eki (türetme) | `turkgram.derivation` | `derivations` |
 | **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon) |
 | Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots), **`load_freq`**, `pos_map` (gömülü; opt-in) |
 | Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `türet`, **`çözümle`** |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`** |
 
-Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman + soru + olumsuz + yeterlik +
-**tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/işteş, yığılabilir →
-dövüştürüldü). İsim: durum × iyelik × çokluk + ekfiil/-ki/-CA, pronominal -n-, **nominal
-ek-fiil kopula** (öğrenciydim). Fiilimsi: **8 ulaç** + **sıfat-fiil/ad-fiil + iyelik/durum
-istifi** (okuduğum/gitmesini).
+Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
+soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
+işteş, yığılabilir → dövüştürüldü). İsim: durum × iyelik × çokluk + ekfiil/-ki/-CA, pronominal
+-n-, **nominal ek-fiil kopula** (öğrenciydim), **-ken** (evdeyken). Fiilimsi: **8 ulaç** +
+**sıfat-fiil/ad-fiil + iyelik/durum istifi** (okuduğum/gitmesini) + **biçim-eklenen ulaçlar**
+(-cAsInA gülercesine, -ken gelirken).
 
 **Çözümleme (Faz 2a):** üretimin tersi — yüzey biçimden kök + eksen değerleri + pedagojik
 morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (analizör yalnız
@@ -51,8 +53,11 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (an
   - **Olasılıksal disambiguation** (`disambiguation.rank`/`disambiguate`) — dilbilimsel öncelik
     + opsiyonel sıklık + güven (softmax).
   - **Gömülü lemma-frekans** (`lexicon.load_freq()`, hermitdave MIT'ten türetilmiş) — sıklık
-    kancasını besler.
-  - Kalan: motor-dışı biçimler, cümle-bağlamı disambiguation, ikileme adverbial-kurulum.
+    kancasını besler. Motor-tabanlı rebuild (`tools/build_surface_freq.py`): 4033→**20429 lemma**.
+  - **Motor-dışı biçimler** (kolay→zor, SPEC→bağımsız golden→motor→hakem): **-cAsInA** gibilik
+    ulacı (`converb_casina`, gülercesine), **-ken** zaman ulacı (`converb_ken`/nominal `copula`,
+    gelirken/evdeyken), **bileşik zaman** (`compound`, geliyordu; 3çoğul `geliyorlardı`).
+  - Kalan: bu biçimlerin çözümlemesi (şu an yalnız üretir), cümle-bağlamı disambiguation, ikileme.
 - **Faz 3/4** — türetme genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.

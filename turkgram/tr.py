@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from . import morphology as _m, morphology_noun as _n, derivation as _d
 from . import nonfinite as _nf
+from . import compound as _c
 
 
 # ── Türkçe-duyarlı küçük harf (#10: İ→i, I→ı) ────────────────────────────
@@ -59,6 +60,7 @@ _DURUM = {
 _BIRLESIK = {
     "hikaye": "hikaye", "hikâye": "hikaye", "hikaye ": "hikaye",
     "rivayet": "rivayet", "şart": "sart", "sart": "sart",
+    "ken": "ken", "iken": "ken",   # nominal -ken ek-fiili (ekfiil(ad, 'ken'))
 }
 _TUR = {
     "isim": "noun", "fiil": "verb",
@@ -256,6 +258,27 @@ def fiilimsi(fiil, tür, *, iyelik=None, durum=None):
     return _nf.participle(fiil, _map(_FIILIMSI, tür, "fiilimsi tür"),
                           possessive=_map(_KISI, iyelik, "iyelik"),
                           case=_map(_DURUM, durum, "durum"))
+
+
+def gibilik(fiil, *, taban="geniş", olumsuz=False):
+    """converb_casina — -cAsInA gibilik/benzerlik zarf-fiili (gülercesine,
+    gelmişçesine). taban ∈ {geniş, öğrenilen_geçmiş}."""
+    return _nf.converb_casina(fiil, base=_map(_KIP, taban, "taban"), negative=olumsuz)
+
+
+def iken(fiil, *, taban="geniş", olumsuz=False):
+    """converb_ken — -ken zaman zarf-fiili (gelirken, geliyorken). taban ∈ {geniş,
+    şimdiki, öğrenilen_geçmiş, gelecek}. Nominal -ken için: ekfiil(ad, 'ken')."""
+    return _nf.converb_ken(fiil, base=_map(_KIP, taban, "taban"), negative=olumsuz)
+
+
+def birleşik_çekim(fiil, taban, birleşik, kişi="3tekil", *, olumsuz=False):
+    """compound — bileşik (birleşik) zaman: basit taban + ek-fiil + kişi
+    (geliyordu, gelirmiş, geleceklerdi). taban ∈ {şimdiki, geniş, gelecek,
+    öğrenilen_geçmiş}; birleşik ∈ {hikaye, rivayet, şart}. 3çoğul → geliyorlardı."""
+    return _c.compound(fiil, _map(_KIP, taban, "taban"),
+                       _map(_BIRLESIK, birleşik, "birleşik"),
+                       _map(_KISI, kişi, "kişi"), negative=olumsuz)
 
 
 # ── Türetme ─────────────────────────────────────────────────────────────

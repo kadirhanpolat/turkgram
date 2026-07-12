@@ -19,8 +19,9 @@ Motor **çekilmiş biçimleri** RUNTIME ÜRETİR, SAKLAMAZ. Kök + morfofonoloji
 (lemma listesi + POS + sayım) → değişmezi ihlal etmez. Üretilmiş çekim tablosu asla gömülmez.
 
 - **İngilizce çekirdek:** `morphology.py` (fiil çekimi), `morphology_noun.py` (isim
-  çekimi + `copula`), `nonfinite.py` (ulaç `converb` + fiilimsi `participle`),
-  `voice.py` (çatı `apply_voice`), `derivation.py` (yapım eki). Genel API `__init__.py`.
+  çekimi + `copula`, `aux="ken"` nominal -ken), `nonfinite.py` (ulaç `converb` + fiilimsi
+  `participle` + biçim-eklenen `converb_casina`/`converb_ken`), `compound.py` (bileşik zaman
+  `compound`), `voice.py` (çatı `apply_voice`), `derivation.py` (yapım eki). Genel API `__init__.py`.
 - **Çözümleme (Faz 2a):** `analysis.py` (`analyze`: yüzey→kök+eksen+segment) +
   `analysis_candidates.py` (öneri üretimi). Analysis-by-generation: üreteç oracle (bkz. #6).
 - **Kök leksikonu + frekans (Faz 2b, opt-in):** `lexicon.py` — gömülü `data/lexicon_tr.tsv`
@@ -31,7 +32,8 @@ Motor **çekilmiş biçimleri** RUNTIME ÜRETİR, SAKLAMAZ. Kök + morfofonoloji
   sıralar + güven (olasılık). Dilbilimsel öncelik (sıklık>POS-tutarlılık>kind>morfem-ekonomisi)
   + opsiyonel `freq=`. `analyze` imzası/sırası DOKUNULMAZ (bkz. #7). SPEC: `disambiguation-spec.md`.
 - **Türkçe yüz:** `tr.py` — Türkçe-karakterli sarmalayıcılar (`çekimle`/`ad_çekimle`/
-  `ekfiil`/`ulaç`/`fiilimsi`/`türet`/`çözümle`), içeride İngilizce çekirdeği çağırır (bkz. #4).
+  `ekfiil`/`ulaç`/`fiilimsi`/`gibilik`/`iken`/`birleşik_çekim`/`türet`/`çözümle`), içeride
+  İngilizce çekirdeği çağırır (bkz. #4).
 
 ---
 
@@ -188,14 +190,27 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
     yalnız gösterim; KESİN SIRA tuple-anahtarından (float sıralamaya sızmaz). Kanca sıklık
     tablosunu sonra kırılmadan alır. Hakem: korpus rank/disambiguate 0 çökme + güven∑=1.
   - ✅ **Gömülü lemma-frekans tablosu** (`lexicon.load_freq()` + `data/lemma_freq_tr.tsv`):
-    hermitdave/FrequencyWords (OpenSubtitles, MIT) yüzey-frekansı, turkgram'ın KENDİ analizör+
-    leksikonuyla lemma-frekansına indirgendi (belirsiz yüzey → distinct lemmalara eşit bölünür).
-    `disambiguation.rank(freq=lexicon.load_freq())` kancasını besler. Üretim `tools/build_lemma_freq.py`
-    (top-N yüzey; ~60ms/yüzey → offline); atıf `THIRD_PARTY_LICENSES.md`. Tablo-dışı lemma → 0
-    (dilbilimsel önceliğe düşer). Kendinden-tutarlı (yalnız leksikon lemmaları).
-  - Motor-dışı biçimler; cümle-bağlamı disambiguation. FST araçları (Zemberek/TRmorph) adopt-referans.
+    hermitdave/FrequencyWords (OpenSubtitles, MIT) yüzey-frekansı → lemma-frekans. **Rebuild
+    (`tools/build_surface_freq.py`):** analyze() yerine lemma→motor→enumerate→dict-lookup;
+    her lemmanın tüm yüzey biçimleri üretilip listede aranır (mutation gid-/git- yakalanır).
+    4033→**20429 lemma** (~2dk). Detay (`data/lemma_freq_detail_tr.tsv`, yüzey-dökümü) + sıfır-lemma
+    listesi opsiyonel. `disambiguation.rank(freq=lexicon.load_freq())` kancasını besler; atıf
+    `THIRD_PARTY_LICENSES.md`. Ham kaynak `tools/tr_full.txt` gitignore'lu.
+  - ✅ **Motor-dışı biçimler — biçim-eklenen ulaçlar + bileşik zaman** (3 madde, kolay→zor;
+    her biri SPEC→bağımsız golden(Opus,motor-körü)→motor→hakem):
+    - **`-cAsInA`** gibilik ulacı (`nonfinite.converb_casina`, `tr.gibilik`): gülercesine/
+      gelmişçesine. Aorist+evid tabanı; C(ç/c son-ses)+A+s+Iyi(YÜKSEK-DÜZ)+n+A. SPEC `casina-spec.md`.
+    - **`-ken`** zaman ulacı (`nonfinite.converb_ken` fiil + `copula(aux="ken")` nominal;
+      `tr.iken`): gelirken/geliyorken/evdeyken. `ken` DONMUŞ (ünlü uyumu YOK); nominal glide
+      yalnız ünlü-final. SPEC `ken-spec.md`.
+    - **Bileşik zaman** (`compound.compound`, `tr.birleşik_çekim`): geliyordu/gelirmiş.
+      TUZAK — **3pl=tabanda -lAr, ek-fiil 3sg** → geliyorlardı (geliyordular DEĞİL). Taban
+      `conjugate`'ten aynen; ek-fiil `_copula_suffix`'e delege (sıfır yeni morfoloji). SPEC
+      `compound-tense-spec.md`. Hakem: 237.262 çağrı 0 çökme (2 leksikon-çöpü pre-existing guard).
+  - Kalan: bu biçimlerin ÇÖZÜMLEMESİ (analyze şu an yalnız üretir); cümle-bağlamı disambiguation.
+    FST araçları (Zemberek/TRmorph) adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2242 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
-p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (birleşik fiil 7552 analiz 0 miss;
-disambiguation rank/disambiguate 0 çökme + güven∑=1). Leksikon wheel/sdist'e gömülü doğrulandı.
+Test durumu: son ölçüm **2354 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (biçim-eklenen ulaç + bileşik zaman
+237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss). Leksikon wheel/sdist'e gömülü doğrulandı.
