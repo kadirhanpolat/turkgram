@@ -79,3 +79,55 @@ Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction … (tam metin: kaynak repo LICENSE).
 ```
+
+---
+
+## TrMor2018 (`turkgram/data/disambig_*_tr.tsv`)
+
+Gömülü istatistiksel disambiguation modeli (`turkgram/data/disambig_emission_tr.tsv`,
+`disambig_transition_tr.tsv`, `disambig_emission_fine_tr.tsv`,
+`disambig_transition_fine_tr.tsv`), **TrMor2018** projesinin eğitim verisinden türetilmiş
+**log-olasılık sayımları** olgularını içerir.
+
+- **Kaynak:** https://github.com/ai-ku/TrMor2018
+- **Telif:** Copyright (c) 2019 Gözde Gül Şahin, Eray Yıldız, Deniz Yuret
+- **Lisans:** MIT License
+
+### Yapılan değişiklik beyanı
+
+Orijinal `trmor2018.train` dosyası (`tools/build_disambig_model.py` betiğiyle) işlendi:
+
+- Her satırdan yalnız **yüzey biçim** ve **doğru analiz etiketi** okundu.
+- Etiketlerden **major POS** (Artım-1) ve **inflectional eksenler** (tense/case/person/
+  possessive/voice/ptype — Artım-2) çıkarıldı.
+- Sayımlardan **log-olasılık** tabloları türetildi (Laplace yumuşatma); nadir yüzeyler
+  min-count=2 ile budandı.
+- Ham eğitim metni/cümleleri KOPYALANMADI; yalnız sayım-türevi TSV dosyaları gömülüdür.
+
+Morfolojik etiket dağılımı (hangi formun hangi POS'ta göründüğü) bir olgu listesidir;
+bu türetme turkgram'ın MIT dağıtımına dâhil edilebilir. MIT gereği bu atıf ve telif
+bildirimi korunur.
+
+```
+MIT License
+
+Copyright (c) 2019 Gözde Gül Şahin, Eray Yıldız, Deniz Yuret
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

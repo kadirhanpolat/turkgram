@@ -36,7 +36,11 @@ Motor **çekilmiş biçimleri** RUNTIME ÜRETİR, SAKLAMAZ. Kök + morfofonoloji
   K2 edat yönetimi, K3 ayrı soru mI, K4 kişi uyumu, K5 tamlayan-iyelik) yeniden sıralar. Kural-tabanlı
   (kapalı listeler), izole `disambiguation._rank_key`'in ÜSTÜNE biner; kural yoksa izoleye düşer.
   Recall-güvenli (aday budamaz). `analyze`/izole `rank` DOKUNULMAZ. SPEC: `sentence-disambiguation-spec.md`.
-- **Türkçe yüz:** `tr.py` — Türkçe-karakterli sarmalayıcılar (`çekimle`/`ad_çekimle`/
+- **İstatistiksel disambiguation (Faz 2b, opt-in):** `statistical.py` — `parse_oflazer`
+  (Artım-1 Oflazer→major_pos eşlemesi), `model_from_counts` (sayım→log-prob), `load_model`
+  (gömülü TSV'den kompakt model), `rank_statistical` (çarpımsal/bağlamsız), `viterbi`
+  (HMM Viterbi cümle-düzeyi). `analyze`/`disambiguation.rank`/`context.rank_in_context`
+  DOKUNULMAZ. SPEC: `statistical-disambiguation-spec.md`.
   `ekfiil`/`ulaç`/`fiilimsi`/`gibilik`/`iken`/`birleşik_çekim`/`türet`/`çözümle`), içeride
   İngilizce çekirdeği çağırır (bkz. #4).
 
@@ -176,7 +180,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
 
 ---
 
-## 7. Yol haritası ve DURUM (2026-07-12)
+## 7. Yol haritası ve DURUM (2026-07-14)
 
 - **Faz 0 ✅** — bağımsız paket + motor/testler taşındı + sözlük bağlandı. Türkçe API (`tr.py`).
 - **Faz 1** (fiil çekim derinleştirme, `docs/faz1-implementation-plan.md`):
@@ -267,12 +271,40 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
     `_K4_PERSON_KINDS`; `ben öğretmenim`→copula. Golden reconcile: nom/question=False default kanonik
     kwargs'tan atılır (beklenen {}); `bunun`→lemma `bun` (bu'nun düzensiz tamlayanı, önceden var olan
     zamir açığı — bu katmana özgü değil). Kalan: olasılıksal dizi etiketleme; FST araçları adopt-referans.
+  - ✅ **İstatistiksel disambiguation katmanı** (`statistical.py`, SPEC `statistical-disambiguation-spec.md`):
+    kural-tabanlı `context.py`'nin bağımsız istatistiksel muadili. Saf-Python, opt-in.
+    - **Artım-1** (major POS, kaba): `parse_oflazer` (Oflazer→major_pos, son ^DB grubu), `rank_statistical`
+      (çarpımsal emisyon skoru), `viterbi` (Viterbi HMM, cümle-düzeyi). Gömülü model: 31.190 emisyon +
+      161 geçiş (TrMor2018, 34.673 cümle, 460.669 token). `model_from_counts`, `load_model` (TSV).
+      TUZAK: Artım-1 viterbi recall-güvenli — yalniz sıra değiştir, aday budamaz.
+    - **Artım-2** (tam eksen): `parse_oflazer_full` (tüm inflectional eksenler: tense/case/person/
+      possessive/number/negative/voice/ptype), `_analysis_fine_state` (Analysis→ince-durum),
+      `_fine_state_from_oflazer` (Oflazer→ince-durum). İnce-taneli HMM: "Verb:past"/"Noun:acc" vb.
+      durumlar; gömülü model: 31.310 emisyon + **726 geçiş** (Artım-1'in 161'ine karşı 4.5×).
+      Veri: `tools/build_disambig_model.py --fine`. TUZAK: nom varsayılan → kwargs'tan ATıLIR (golden
+      da beklemeyi boş bırakmıştır, CLAUDE.md §4 genel kuralı).
+    - Diferansiyel harness (`tools/diff_harness.py`): çarpımsal/HMM/kural/gold dört-yollu;
+      ayrışma sınıfları: product_hmm_split/hmm_rule_split/gold_only/all_differ (SPEC §4).
+    - İlk harness bulgusu: `üç gelin`, `kırmızı gül` → hmm_rule_split (HMM fiil seçerken kural isim;
+      K1 doğru, HMM mini-geçiş görmemiş — SPEC §4'te beklenen kural açığı tespiti).
+    - Golden: `tests/golden_statistical.py` (Artım-1, 49 durum) + `tests/golden_statistical_artim2.py`
+      (Artım-2, eksen/ince-durum/cümle, 92 test). Her ikisi motor-körü kuruldu.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2819 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
-p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (biçim-eklenen ulaç + bileşik zaman
-237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss; -cAsInA çözümleme 13.000 çağrı 0 çökme;
--ken çözümleme 42.000 çağrı 0 çökme 0 ken-özgü miss; bileşik zaman çözümleme 78.000 çağrı
-0 çökme 0 compound-özgü miss).
-Leksikon wheel/sdist'e gömülü doğrulandı. Ayrıca `_copula_suffix` şart-2pl yuvarlama fix'i
-(geliyorsanuz→geliyorsanız): compound==conjugate(aux) 216.000 çağrı 0 fark.
+Test durumu: son ölçüm **2960 test yeşil** (2868 önceki + 92 artım2) (+round-trip `-m slow`:
+recall tam + p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme.
+
+Yeni dosyalar (2026-07-14):
+- `turkgram/statistical.py` — istatistiksel disambiguation motoru (Art.-1 + Art.-2)
+  `parse_oflazer`, `parse_oflazer_full`, `_analysis_fine_state`, `_fine_state_from_oflazer`,
+  `load_model`, `rank_statistical`, `viterbi`, `model_from_counts`
+- `turkgram/data/disambig_emission_tr.tsv` — TrMor2018'den 31.190 emisyon log-prob [Art.-1]
+- `turkgram/data/disambig_transition_tr.tsv` — 161 geçiş log-prob [Art.-1]
+- `turkgram/data/disambig_emission_fine_tr.tsv` — 31.310 ince emisyon [Art.-2]
+- `turkgram/data/disambig_transition_fine_tr.tsv` — 726 ince geçiş [Art.-2]
+- `tools/build_disambig_model.py` — TrMor2018 → kompakt TSV (Artım-1); `--fine` ile Artım-2
+- `tools/diff_harness.py` — dört-yollu diferansiyel harness (geliştirme aracı)
+- `tests/golden_statistical.py` — Art.-1 bağımsız golden (eşleme/sayım/Viterbi, 49 test)
+- `tests/test_statistical.py` — Art.-1 runner (49 test)
+- `tests/golden_statistical_artim2.py` — Art.-2 bağımsız golden (eksen/ince-durum/cümle)
+- `tests/test_statistical_artim2.py` — Art.-2 runner (92 test)
