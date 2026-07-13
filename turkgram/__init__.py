@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
-    lexicon, disambiguation, compound,
+    lexicon, disambiguation, compound, context,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -73,6 +73,9 @@ from .analysis import analyze, Analysis, Segment
 # ── Disambiguation (aday sıralama + güven, Faz 2b) ──────────────────────
 from .disambiguation import rank, disambiguate
 
+# ── Cümle-bağlamı disambiguation (kural-tabanlı sözdizimsel katman, Faz 2b) ─
+from .context import rank_in_context
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -94,8 +97,10 @@ __all__ = [
     "analyze", "Analysis", "Segment",
     # disambiguation
     "rank", "disambiguate",
+    # cümle-bağlamı disambiguation
+    "rank_in_context",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
-    "analysis", "lexicon", "disambiguation", "compound",
+    "analysis", "lexicon", "disambiguation", "compound", "context",
     "__version__",
 ]

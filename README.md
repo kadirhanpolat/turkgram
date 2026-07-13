@@ -22,6 +22,7 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon) |
 | Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots), **`load_freq`**, `pos_map` (gömülü; opt-in) |
 | Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
+| Cümle-bağlamı | `turkgram.context` | **`rank_in_context`** (komşuluk kurallarıyla yeniden sıralama; opt-in) |
 | Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
@@ -60,7 +61,11 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (an
   - **Bu biçimlerin ÇÖZÜMLEMESİ** (üretimin tersi) tamamlandı: `-cAsInA` (kind `converb_casina`),
     `-ken` (fiil `converb_ken` + nominal `copula` aux=ken), **bileşik zaman** (zaten `conjugate`+aux
     olarak çözülür → regresyon kilidi). Korpus hakemi ~130k round-trip çağrı, 0 çökme, 0 biçim-özgü miss.
-  - Kalan: cümle-bağlamı disambiguation, ikileme adverbial-kurulum (sözdizimsel, defer).
+  - **Cümle-bağlamı disambiguation** (`context.rank_in_context`) — kural-tabanlı sözdizimsel katman:
+    5 komşuluk kuralı (niteleyici+ad, edat yönetimi, ayrı soru mI, kişi uyumu, tamlayan-iyelik) izole
+    sıralamanın üstüne biner; kural yoksa izoleye düşer. Recall-güvenli (opt-in). Ör. `üç gelin`→isim,
+    `ben geldim`→1sg, `ben öğretmenim`→copula, `okula doğru`→yönelme.
+  - Kalan: olasılıksal dizi etiketleme, ikileme adverbial-kurulum (sözdizimsel, defer).
 - **Faz 3/4** — türetme genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.

@@ -31,6 +31,11 @@ Motor **çekilmiş biçimleri** RUNTIME ÜRETİR, SAKLAMAZ. Kök + morfofonoloji
 - **Disambiguation (Faz 2b, opt-in):** `disambiguation.py` — `rank`/`disambiguate` aday
   sıralar + güven (olasılık). Dilbilimsel öncelik (sıklık>POS-tutarlılık>kind>morfem-ekonomisi)
   + opsiyonel `freq=`. `analyze` imzası/sırası DOKUNULMAZ (bkz. #7). SPEC: `disambiguation-spec.md`.
+- **Cümle-bağlamı disambiguation (Faz 2b, opt-in):** `context.py` — `rank_in_context(tokens,
+  analyses_per_token, freq=, pos=)` bir cümlenin token'larını komşuluk kanıtıyla (K1 niteleyici+ad,
+  K2 edat yönetimi, K3 ayrı soru mI, K4 kişi uyumu, K5 tamlayan-iyelik) yeniden sıralar. Kural-tabanlı
+  (kapalı listeler), izole `disambiguation._rank_key`'in ÜSTÜNE biner; kural yoksa izoleye düşer.
+  Recall-güvenli (aday budamaz). `analyze`/izole `rank` DOKUNULMAZ. SPEC: `sentence-disambiguation-spec.md`.
 - **Türkçe yüz:** `tr.py` — Türkçe-karakterli sarmalayıcılar (`çekimle`/`ad_çekimle`/
   `ekfiil`/`ulaç`/`fiilimsi`/`gibilik`/`iken`/`birleşik_çekim`/`türet`/`çözümle`), içeride
   İngilizce çekirdeği çağırır (bkz. #4).
@@ -252,10 +257,19 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
       çakışması yorgalamak/yorumlamak, disharmonic inhimak — HEPSİ basit çekimde de kaçar, `_root_candidates`
       sınırı, compound'a özgü değil).
   - **Faz 2b motor-dışı biçimlerin ÇÖZÜMLEMESİ TAMAMLANDI** (3 artım: -cAsInA, -ken, bileşik zaman).
-    Kalan: bu biçimlerin cümle-bağlamı disambiguation; FST araçları (Zemberek/TRmorph) adopt-referans.
+  - ✅ **Cümle-bağlamı disambiguation** (`context.py::rank_in_context`, SPEC `sentence-disambiguation-spec.md`):
+    kural-tabanlı sözdizimsel katman (karar: kural-tabanlı > istatistiksel; MIT-dağıtılabilir, deterministik).
+    5 kural kapalı-listelerle (K1 niteleyici+ad, K2 edat yönetimi, K3 ayrı soru mI, K4 kişi uyumu —
+    **conjugate+copula ikisi de**, K5 tamlayan-iyelik). Bağlam kanıtı (int) izole `_rank_key`'in ÜSTÜNE
+    biner → kural yoksa izoleye düşer (geriye-uyum). Recall-güvenli (aday budamaz; hakem 7500+4800 cümle
+    0 çökme 0 recall ihlali). Tokenizasyon+analyze ÇAĞIRANIN (sözdizimi defer). **OPT-IN.** TUZAK (hakem
+    HIGH yakaladı): K4 person ekseni olan HER kind'e uygulanmalı (conjugate+copula) — `_VERB_KINDS` değil
+    `_K4_PERSON_KINDS`; `ben öğretmenim`→copula. Golden reconcile: nom/question=False default kanonik
+    kwargs'tan atılır (beklenen {}); `bunun`→lemma `bun` (bu'nun düzensiz tamlayanı, önceden var olan
+    zamir açığı — bu katmana özgü değil). Kalan: olasılıksal dizi etiketleme; FST araçları adopt-referans.
 - **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2785 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
+Test durumu: son ölçüm **2819 test yeşil** (+ round-trip süpürme `-m slow`: recall tam +
 p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme (biçim-eklenen ulaç + bileşik zaman
 237.262 çağrı 0 çökme; birleşik fiil 7552 analiz 0 miss; -cAsInA çözümleme 13.000 çağrı 0 çökme;
 -ken çözümleme 42.000 çağrı 0 çökme 0 ken-özgü miss; bileşik zaman çözümleme 78.000 çağrı
