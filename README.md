@@ -65,7 +65,12 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (an
     5 komşuluk kuralı (niteleyici+ad, edat yönetimi, ayrı soru mI, kişi uyumu, tamlayan-iyelik) izole
     sıralamanın üstüne biner; kural yoksa izoleye düşer. Recall-güvenli (opt-in). Ör. `üç gelin`→isim,
     `ben geldim`→1sg, `ben öğretmenim`→copula, `okula doğru`→yönelme.
-  - Kalan: olasılıksal dizi etiketleme, ikileme adverbial-kurulum (sözdizimsel, defer).
+  - **İstatistiksel disambiguation katmanı** (madde A, üzerinde çalışılıyor — SPEC:
+    `spec/statistical-disambiguation-spec.md`): kural-tabanlı `context.py`'nin **bağımsız
+    istatistiksel muadili** + kural/istatistik/gold ayrışmalarını ölçen diferansiyel harness.
+    İki model (çarpımsal skorlama + HMM, paylaşımlı sayım tabanından); veri **TrMor2018**
+    (ai-ku, MIT); saf-Python, opt-in, `analyze`/`context` dokunulmaz. CRF ertelendi (SPEC §9).
+  - Kalan: ikileme adverbial-kurulum (sözdizimsel, defer); FST araçları adopt-referans.
 - **Faz 3/4** — türetme genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.

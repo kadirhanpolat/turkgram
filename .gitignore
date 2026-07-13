@@ -20,3 +20,7 @@ tools/tr_full.txt
 tools/tr_full_*.txt
 tools/build_ckpt.json
 tools/*.tmp
+
+# Ham TrMor2018 disambiguation korpusu (ai-ku, MIT, ~76MB) — istatistiksel katman
+# eğitim/gold kaynağı. Ham korpus commit'lenmez; yalnız türetilmiş kompakt model gömülür.
+tools/trmor2018/
