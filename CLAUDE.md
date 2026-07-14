@@ -303,10 +303,16 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
     **`analyze()`** sıfat desteği — `Analysis(kind='intensify'|'diminutive', pos='adj')`;
     analysis-by-generation, roots-garantili precision. 28 analiz testi.
     **`tr.py`** — `yoğunlaştır()` + `küçült()` Türkçe sarmalayıcılar.
-- **Faz 4** — sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
+- **Faz 4 ✅** — sözdizimi üretim (`syntax.py`, `spec/syntax-spec.md`):
+  - `isim_tamlamasi(tamlayan, tamlanan, tur='belirtili'|'belirtisiz')` —
+    belirtili: `evin kapısı`, belirtisiz: `taş köprüsü`. gen+3sg-poss mekaniği.
+  - `sifat_tamlamasi(sıfat, isim)` — `kırmızı araba` (kongruans yok).
+  - `cumle_uret(ozne, yuklem, kip, olumsuz, soru)` — `ben geliyorum`, `o okudu`,
+    `onlar gidecekler`; pro-drop Türkçe özneli, kip uyumu otomatik.
+  - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
+  57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **3170 test yeşil** (3142 önceki + 28 analiz) (+round-trip `-m slow`:
-recall tam + p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme.
+Test durumu: son ölçüm **3372 test yeşil** (3227 önceki + 145 syntax/zarf/c1/c2/analysis) (+round-trip `-m slow`).
 
 Yeni dosyalar (2026-07-14):
 - `turkgram/statistical.py` — istatistiksel disambiguation motoru (Art.-1 + Art.-2)

@@ -172,6 +172,42 @@ def _diminutive_imtirak(adj: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# §3 — Zarf türetme: sıfat → zarf (-CA eki)
+# ---------------------------------------------------------------------------
+
+def zarf_yap(adj: str) -> str:
+    """Sıfat + -CA → zarf biçimi (SPEC adjective-spec.md §3).
+
+    Türkçede sıfatlar -CA eki (-ce/-ca/-çe/-ça) ile zarfa dönüşür:
+    - Sertleşme: hardens(adj) → çe/ça; else ce/ca
+    - Armoni: son hecede ön-ünlü (ö/ü/e/i) → -ce; arka → -ca
+    - Ünlü-final: kaynaştırma yok (hızlı + ca = hızlıca)
+
+    Ornekler:
+    - güzel  → güzelce   (ön, ses yumuşak)
+    - hızlı  → hızlıca   (arka, ses yumuşak)
+    - sık    → sıkça    (arka, sert)
+    - çabuk  → çabukça   (arka, sert k)
+    - açık   → açıkça   (arka, sert k)
+    - uzak   → uzakça    (arka, sert k)
+    - alçak  → alçakça   (arka, sert k)
+    - iyi    → iyice     (ön, yumuşak)
+    - kötü   → kötüce   (ön, yumuşak)
+    - ağır   → ağırca    (arka, yumuşak)
+    - hafif  → hafifçe   (ön, sert f)
+    """
+    if not adj:
+        return adj
+    adj = adj.strip().lower()
+    lv = last_vowel(adj)
+    # Ön-ünlü → -ce; arka → -ca
+    a = "e" if lv not in BACK else "a"
+    # Sertleşme: son ünsüz sert → ç
+    c = "ç" if hardens(adj) else "c"
+    return adj + c + a
+
+
+# ---------------------------------------------------------------------------
 # Public API özeti
 # ---------------------------------------------------------------------------
-__all__ = ["intensify", "diminutive", "INTENSIFIER_PREFIX"]
+__all__ = ["intensify", "diminutive", "zarf_yap", "INTENSIFIER_PREFIX"]

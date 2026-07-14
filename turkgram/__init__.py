@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
-    lexicon, disambiguation, compound, context, adjective,
+    lexicon, disambiguation, compound, context, adjective, syntax,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -67,8 +67,8 @@ from .voice import apply_voice
 # ── Yapım eki (türetme) ──────────────────────────────────────────────────
 from .derivation import derivations
 
-# ── Sıfat morfolojisi (pekiştirme + küçültme, Faz 3 C2) ────────────────────
-from .adjective import intensify, diminutive
+# ── Sıfat morfolojisi (pekiştirme + küçültme + zarf türetme, Faz 3 C2) ────────────────────
+from .adjective import intensify, diminutive, zarf_yap
 
 # ── Çözümleme (analysis: yüzey → kök+eksenler, Faz 2a) ──────────────────
 from .analysis import analyze, Analysis, Segment
@@ -78,6 +78,9 @@ from .disambiguation import rank, disambiguate
 
 # ── Cümle-bağlamı disambiguation (kural-tabanlı sözdizimsel katman, Faz 2b) ─
 from .context import rank_in_context
+
+# ── Sözdizimi katmanı (öbek üretimi, Faz 4) ──────────────────────────────
+from .syntax import isim_tamlamasi, sifat_tamlamasi, cumle_uret
 
 __version__ = "0.1.0"
 
@@ -103,9 +106,11 @@ __all__ = [
     # cümle-bağlamı disambiguation
     "rank_in_context",
     # sıfat morfolojisi
-    "intensify", "diminutive",
+    "intensify", "diminutive", "zarf_yap",
+    # sözdizimi öbek üretimi
+    "isim_tamlamasi", "sifat_tamlamasi", "cumle_uret",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
-    "analysis", "lexicon", "disambiguation", "compound", "context", "adjective",
+    "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",
     "__version__",
 ]
