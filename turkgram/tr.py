@@ -476,3 +476,69 @@ def küçült(sıfat: str, ek: str = "-CIk") -> str | None:
     """
     ek_norm = _EK_TRLESTIR.get(_tr_lower(ek), ek)
     return _adj.diminutive(_tr_lower(sıfat), ek_norm)
+
+
+def zarf_yap(sıfat: str) -> str:
+    """Sıfat → zarf (-CA eki): güzelce, sıkça, hafifçe.
+
+    >>> zarf_yap('güzel')  # 'güzelce'
+    >>> zarf_yap('sık')    # 'sıkça'
+    """
+    return _adj.zarf_yap(_tr_lower(sıfat))
+
+
+# ── Sözdizimi katmanı (Faz 4) ───────────────────────────────────────────────
+
+from . import syntax as _syn  # noqa: E402 — modül seviyesinde import
+
+_TAMLAMA_TUR = {
+    "belirtili": "belirtili",
+    "belirtisiz": "belirtisiz",
+    "takılı": "belirtili",    # alias
+    "takısız": "belirtisiz",  # alias
+}
+
+
+def isim_tamlamasi(
+    tamlayan: str,
+    tamlanan: str,
+    *,
+    tur: str = "belirtili",
+) -> str:
+    """İsim tamlaması üret.
+
+    tur: 'belirtili' (evin kapısı) | 'belirtisiz' (taş köprüsü)
+
+    >>> isim_tamlamasi('ev', 'kapı')                    # 'evin kapısı'
+    >>> isim_tamlamasi('taş', 'köprü', tur='belirtisiz') # 'taş köprüsü'
+    """
+    tur_norm = _TAMLAMA_TUR.get(_tr_lower(tur), tur)
+    return _syn.isim_tamlamasi(tamlayan, tamlanan, tur=tur_norm)
+
+
+def sifat_tamlamasi(sifat: str, isim: str) -> str:
+    """Sıfat tamlaması üret: 'kırmızı araba', 'büyük ev'.
+
+    >>> sifat_tamlamasi('kırmızı', 'araba')  # 'kırmızı araba'
+    """
+    return _syn.sifat_tamlamasi(sifat, isim)
+
+
+def cumle_uret(
+    ozne: str,
+    yuklem: str,
+    *,
+    kip: str = "şimdiki",
+    olumsuz: bool = False,
+    soru: bool = False,
+) -> str:
+    """Basit özne-yüklem cümlesi üret.
+
+    kip: Türkçe kip adı (şimdiki/geçmiş/gelecek/geniş/…) veya İngilizce (pres/past/…)
+
+    >>> cumle_uret('ben', 'gelmek', kip='şimdiki')   # 'ben geliyorum'
+    >>> cumle_uret('o', 'okumak', kip='geçmiş')      # 'o okudu'
+    >>> cumle_uret('biz', 'gitmek', kip='gelecek', olumsuz=True) # 'biz gitmeyeceğiz'
+    """
+    kip_norm = _map(_KIP, kip, "kip") if _tr_lower(kip) in _KIP else kip
+    return _syn.cumle_uret(ozne, yuklem, kip=kip_norm, olumsuz=olumsuz, soru=soru)
