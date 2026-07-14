@@ -393,6 +393,17 @@ def decline(headword: str, *, number: str = "sg",
 
     vs = parse_noun(headword)
 
+    # §P1-P2 — ben/sen çoğulu suppletif: biz/siz'e yönlendir.
+    # biz/siz başlı başına çoğul zamirler; decline('biz', number='sg', ...) doğru
+    # eğik biçimleri (bize/bizi/bizde/…) PRONOUN_FORMS'tan üretir.
+    if vs.special and number == "pl" and vs.root in _PLURAL_SUPPLETION:
+        return decline(_PLURAL_SUPPLETION[vs.root], number="sg",
+                       possessive=possessive, case=case)
+
+    # §P3-P8 — n-gövde zamir: iyeliksiz tekil, kök _N_STEM_PRONOUNS'da.
+    if vs.root in _N_STEM_PRONOUNS and number == "sg" and possessive is None:
+        return vs.prefix + _decline_n_stem_pronoun(vs.root, case)
+
     if vs.special:
         # §8 zamir istisnası: yalın tekil iyeliksiz → tam-biçim tablosu.
         if number == "sg" and possessive is None:
@@ -416,6 +427,17 @@ def decline(headword: str, *, number: str = "sg",
 # o/bu/şu durum/çoğul önünde n-gövde alır (pronominal-n çekirdeği).
 _N_STEM: dict[str, str] = {"o": "on", "bu": "bun", "şu": "şun"}
 
+# §P1-P2 — ben/sen çoğulu suppletiftir (biz/siz).
+_PLURAL_SUPPLETION: dict[str, str] = {"ben": "biz", "sen": "siz"}
+
+# §P3-P8 — n-gövde zamirleri: ünlü-final olmalarına rağmen eğik durumda
+# pronominal -n- alırlar (hepsi→hepsini, kendi→kendini). İnstrumental
+# istisnası: -yle/-le pron-n'yi tetiklemez (hepsiyle, kendiyle).
+_N_STEM_PRONOUNS: frozenset[str] = frozenset({
+    "hepsi", "kendi", "hiçbiri", "birisi", "biri",
+    "öteki", "öbürü", "hangisi", "bazısı", "çoğu", "azı",
+})
+
 
 def _decline_su_possessive(possessive: str, case: str) -> str:
     """§8: 'su' iyelikte -y- gövdeli (suy-). Ünsüz-final base gibi işlenir.
@@ -435,6 +457,24 @@ def _decline_pronoun(vs: NounStem, case: str) -> str:
         return vs.root
     forms = PRONOUN_FORMS[vs.root]
     return forms[case]
+
+
+def _decline_n_stem_pronoun(root: str, case: str) -> str:
+    """§P3-P8 n-gövde zamir çekimi (hepsi, kendi, hiçbiri, …).
+
+    Kural: ünlü-final kök olmasına rağmen eğik durumda pronominal -n- alır.
+    İSTİSNA — instrumental (-yle): pron-n YOK; ünlü-final buffer kullanılır
+    (hepsiyle, kendiyle — NOT hepsiniyle).
+    Nom: kök kendisi.
+    """
+    if case == "nom":
+        return root
+    base = root  # ünlü-final (hepsi, kendi, öbürü, …)
+    if case == "ins":
+        # İnstrumental: ünlü-final gibi davran → -yle
+        return _apply_case(base, case, base_vowel_final=True, has_pron_n=False)
+    # Diğer tüm eğik durumlar: pronominal -n-
+    return _apply_case(base, case, base_vowel_final=True, has_pron_n=True)
 
 
 def _decline_core(vs: NounStem, number: str, possessive: str | None,

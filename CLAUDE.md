@@ -289,9 +289,23 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
       K1 doğru, HMM mini-geçiş görmemiş — SPEC §4'te beklenen kural açığı tespiti).
     - Golden: `tests/golden_statistical.py` (Artım-1, 49 durum) + `tests/golden_statistical_artim2.py`
       (Artım-2, eksen/ince-durum/cümle, 92 test). Her ikisi motor-körü kuruldu.
-- **Faz 3/4** — türetme genişletme; sıfat/zamir; sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
+- **Faz 3** — sözcük-sınıfı genişleme:
+  - ✅ **C1 Zamir çekimi** (`morphology_noun.py`, SPEC `spec/pronoun-spec.md`):
+    **P1-P2** suppletif çoğul (`ben→biz`/`sen→siz`; `decline('ben',number='pl')` → `'biz'`),
+    **P3-P8** n-gövde zamirleri (`hepsi/kendi/hiçbiri/birisi/biri/öteki/öbürü/hangisi/bazısı/çoğu/azı`;
+    eğik durumda -n- kaynastrması: `hepsini/hepsine/…`; instrumental istisnası: `hepsiyle`).
+    Round-trip otomatik (analysis-by-generation kapsar). 129 yeni golden test.
+  - ✅ **C2 Sıfat morfolojisi** (`adjective.py`, SPEC `spec/adjective-spec.md`):
+    **Pekiştirme** `intensify()` — ünlü-başlı algoritmik (`ap-`: apaçık, upuzun) +
+    ünsüz-başlı kapalı tablo (`INTENSIFIER_PREFIX`: bembeyaz, kapkara, yepyeni, büsbüyük);
+    **Küçültme** `diminutive()` — 3 ek: `-CIk` (kısacık/yavaşçık/küçücük; k-düşme), `-Imsı`
+    (yeşilimsi/karamsı/mavimsi), `-Imtırak` (sarımtırak/yeşilmtirak). 53 yeni test.
+    **`analyze()`** sıfat desteği — `Analysis(kind='intensify'|'diminutive', pos='adj')`;
+    analysis-by-generation, roots-garantili precision. 28 analiz testi.
+    **`tr.py`** — `yoğunlaştır()` + `küçült()` Türkçe sarmalayıcılar.
+- **Faz 4** — sözdizimi (defer). Bkz. `docs/faz1-bosluk-analizi.md`.
 
-Test durumu: son ölçüm **2960 test yeşil** (2868 önceki + 92 artım2) (+round-trip `-m slow`:
+Test durumu: son ölçüm **3170 test yeşil** (3142 önceki + 28 analiz) (+round-trip `-m slow`:
 recall tam + p95 bütçe). Her commit'te regresyonsuz + korpus 0 çökme.
 
 Yeni dosyalar (2026-07-14):
@@ -308,3 +322,22 @@ Yeni dosyalar (2026-07-14):
 - `tests/test_statistical.py` — Art.-1 runner (49 test)
 - `tests/golden_statistical_artim2.py` — Art.-2 bağımsız golden (eksen/ince-durum/cümle)
 - `tests/test_statistical_artim2.py` — Art.-2 runner (92 test)
+
+Yeni dosyalar (2026-07-14, Faz 3 C1 zamir):
+- `spec/pronoun-spec.md` — zamir morfolojisi SPEC (P1-P8: suppletif çoğul + n-gövde zamirleri)
+- `turkgram/morphology_noun.py` — `_PLURAL_SUPPLETION`, `_N_STEM_PRONOUNS`, `_decline_n_stem_pronoun`
+  eklendi; `decline()` suppletif çoğul + n-gövde dalı eklendi
+- `tests/golden_pronoun.py` — 129-girdi bağımsız golden (motordan bağımsız, elle-doğrulanmış)
+- `tests/test_pronoun.py` — runner (129 test)
+
+Yeni dosyalar (2026-07-14, Faz 3 C2 sıfat):
+- `spec/adjective-spec.md` — sıfat morfolojisi SPEC (pekiştirme + küçültme)
+- `turkgram/adjective.py` — `intensify()`, `diminutive()`, `INTENSIFIER_PREFIX`
+- `tests/golden_adjective.py` — 53-girdi bağımsız golden
+- `tests/test_adjective.py` — runner (53 test)
+
+Yeni dosyalar (2026-07-14, Faz 3 C2 sıfat analiz):
+- `turkgram/analysis.py` — `_try_adj_all()` + `pos='adj'` desteği eklendi
+- `turkgram/tr.py` — `yoğunlaştır()`, `küçült()` Türkçe sarmalayıcılar + `_EK_TRLESTIR` eklendi
+- `tests/golden_adjective_analysis.py` — 28-girdi bağımsız analiz golden
+- `tests/test_adjective_analysis.py` — runner (28 test)

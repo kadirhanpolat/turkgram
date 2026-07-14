@@ -19,23 +19,27 @@ saf-Python, bağımlılıksız bir kütüphane.
 | Fiilimsi | `turkgram.nonfinite` | **`converb`** (8 ulaç), **`participle`** (sıfat-fiil/ad-fiil), **`converb_casina`** (-cAsInA), **`converb_ken`** (-ken) |
 | Bileşik zaman | `turkgram.compound` | **`compound`** (hikaye/rivayet/şart birleşik çekim; 3çoğul geliyorlardı) |
 | Yapım eki (türetme) | `turkgram.derivation` | `derivations` |
-| **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon) |
+| **Sıfat morfolojisi** | `turkgram.adjective` | **`intensify`** (pekiştirme: bembeyaz, apaçık), **`diminutive`** (-CIk/-ImsI/-ImtIrak) |
+| **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon; fiil/isim/sıfat) |
 | Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots), **`load_freq`**, `pos_map` (gömülü; opt-in) |
 | Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
 | Cümle-bağlamı | `turkgram.context` | **`rank_in_context`** (komşuluk kurallarıyla yeniden sıralama; opt-in) |
 | **İstatistiksel disambiguation** | `turkgram.statistical` | **`load_model`**, **`rank_statistical`**, **`viterbi`**, `parse_oflazer_full` (opt-in) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`** |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
 işteş, yığılabilir → dövüştürüldü). İsim: durum × iyelik × çokluk + ekfiil/-ki/-CA, pronominal
 -n-, **nominal ek-fiil kopula** (öğrenciydim), **-ken** (evdeyken). Fiilimsi: **8 ulaç** +
 **sıfat-fiil/ad-fiil + iyelik/durum istifi** (okuduğum/gitmesini) + **biçim-eklenen ulaçlar**
-(-cAsInA gülercesine, -ken gelirken).
+(-cAsInA gülercesine, -ken gelirken). **Sıfat:** pekiştirme (bembeyaz/apaçık) + küçültme
+(-CIk: kısacık; -ImsI: yeşilimsi; -ImtIrak: sarımtırak). **Zamir çekimi:** suppletif çoğul
+(ben→biz/seni→siz) + n-gövde zamirleri (hepsini/hepsine/hepsiyle).
 
-**Çözümleme (Faz 2a):** üretimin tersi — yüzey biçimden kök + eksen değerleri + pedagojik
-morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (analizör yalnız
-üretecin üretebildiği çözümleri döndürür → biçim-precision inşa gereği garanti).
+**Çözümleme (Faz 2a-3):** üretimin tersi — yüzey biçimden kök + eksen değerleri + pedagojik
+morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı. **Faz 3 ile sıfat
+çözümlemesi eklendi:** `analyze('bembeyaz', roots={'beyaz'})` → `Analysis(kind='intensify')`,
+`analyze('kısacık', roots={'kısa'})` → `Analysis(kind='diminutive', kwargs={'suffix':'-CIk'})`.
 
 ## Durum / Yol haritası
 
@@ -75,7 +79,17 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı (an
       ince-taneli HMM durumları (`Verb:past`, `Noun:acc`); 31.310 emisyon + 726 geçiş.
     Saf-Python, opt-in, `analyze`/`context` dokunulmaz. CRF ertelendi (SPEC §9).
   - Kalan: ikileme adverbial-kurulum (sözdizimsel, defer); FST araçları adopt-referans.
-- **Faz 3/4** — türetme genişletme, sıfat/zamir, sözdizimi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
+- **Faz 3 ✅** — sözcük-sınıfı genişleme:
+  - **C1 ✅ Zamir çekimi** — suppletif çoğul (`ben→biz`, `sen→siz`) + n-gövde zamirleri
+    (`hepsi/kendi/hiçbiri/…`; eğik: `hepsini/hepsine/hepsiyle`; instrumental istisnası doğru).
+    129 yeni golden test.
+  - **C2 ✅ Sıfat morfolojisi** (`adjective.py`, SPEC `spec/adjective-spec.md`) —
+    pekiştirme `intensify()` (ünlü-başlı algoritmik + ünsüz-başlı kapalı tablo) +
+    küçültme `diminutive()` (3 ek: `-CIk`/`-ImsI`/`-ImtIrak`) + sıfat `analyze()` desteği
+    (`kind='intensify'|'diminutive'`, pos='adj') + Türkçe API (`yoğunlaştır()`/`küçült()`).
+    53 üretim + 28 analiz golden testi.
+- **Faz 4** — sözdizimi: `syntax.py` — `isim_tamlamasi()` + `sifat_tamlamasi()` + `cumle_uret()`;
+  ardından öbek analizi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 

@@ -23,6 +23,7 @@ from typing import Any, Collection, Mapping
 from .morphology import conjugate
 from .morphology_noun import decline, copula
 from .nonfinite import converb, participle, converb_casina, converb_ken
+from .adjective import intensify, diminutive, _VALID_SUFFIXES as _ADJ_SUFFIXES
 from .analysis_candidates import (
     _VOICE_CHAINS,
     _root_candidates,
@@ -62,9 +63,10 @@ class Analysis:
 # ---------------------------------------------------------------------------
 # Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
-_POS = ("verb", "noun")
+_POS = ("verb", "noun", "adj")
 _KINDS = ("conjugate", "decline", "copula", "converb",
-          "converb_casina", "converb_ken", "participle")
+          "converb_casina", "converb_ken", "participle",
+          "intensify", "diminutive")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -888,6 +890,12 @@ def analyze(surface: str, pos: str | None = None,
 
     # Sırala
     analyses.sort(key=_sort_key)
+
+    # Adım 4: Sıfat çözümlemesi (intensify + diminutive) — roots sağlandıysa
+    # Roots'taki her kök için oracle çağrısı; precision roots-garantili.
+    if roots is not None and pos in (None, "adj"):
+        _try_adj_all(surface_token, roots, analyses, seen)
+
     return analyses
 
 
@@ -943,3 +951,60 @@ def _try_noun(surface: str, lemma: str, stem: str,
     hyp = roots is None
     for kind in ("decline", "copula"):
         _process_kind(kind, "noun", surface, lemma, stem, analyses, seen, hyp)
+
+
+def _try_adj_all(
+    surface: str, roots: Collection[str],
+    analyses: list[Analysis], seen: set[tuple],
+) -> None:
+    """§Sifat çözümleme (Faz 3 C2) — analysis-by-generation.
+
+    roots'taki her lemma için:
+    - intensify(lemma) == surface → Analysis(kind='intensify')
+    - diminutive(lemma, suffix) == surface → Analysis(kind='diminutive', suffix=suffix)
+
+    Precision: roots-garantili (roots None ise çağrılmaz).
+    """
+    for lemma in roots:
+        # intensify
+        try:
+            form = intensify(lemma)
+        except Exception:
+            form = None
+        if form is not None and form == surface:
+            key = ("intensify", lemma, ())
+            if key not in seen:
+                seen.add(key)
+                segs = _segs_to_tuple([
+                    (form[:len(form) - len(lemma)], "pekıştirme"),
+                    (lemma, "kök"),
+                ])
+                analyses.append(Analysis(
+                    lemma=lemma, pos="adj", kind="intensify",
+                    kwargs={}, segments=segs, hypothetical=False,
+                ))
+
+        # diminutive: 3 ek
+        for suffix in _ADJ_SUFFIXES:
+            try:
+                form = diminutive(lemma, suffix)
+            except Exception:
+                form = None
+            if form is not None and form == surface:
+                kwargs = {"suffix": suffix}
+                key = ("diminutive", lemma, (("suffix", suffix),))
+                if key not in seen:
+                    seen.add(key)
+                    # Segmentasyon: kök + ek
+                    root_part = lemma
+                    if lemma.endswith("k") and suffix == "-CIk":
+                        root_part = lemma[:-1]  # k düştc
+                    suffix_surf = form[len(root_part):]
+                    segs = _segs_to_tuple([
+                        (root_part, "kök"),
+                        (suffix_surf, suffix),
+                    ])
+                    analyses.append(Analysis(
+                        lemma=lemma, pos="adj", kind="diminutive",
+                        kwargs=kwargs, segments=segs, hypothetical=False,
+                    ))

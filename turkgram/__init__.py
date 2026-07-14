@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
-    lexicon, disambiguation, compound, context,
+    lexicon, disambiguation, compound, context, adjective,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -67,6 +67,9 @@ from .voice import apply_voice
 # ── Yapım eki (türetme) ──────────────────────────────────────────────────
 from .derivation import derivations
 
+# ── Sıfat morfolojisi (pekiştirme + küçültme, Faz 3 C2) ────────────────────
+from .adjective import intensify, diminutive
+
 # ── Çözümleme (analysis: yüzey → kök+eksenler, Faz 2a) ──────────────────
 from .analysis import analyze, Analysis, Segment
 
@@ -99,8 +102,10 @@ __all__ = [
     "rank", "disambiguate",
     # cümle-bağlamı disambiguation
     "rank_in_context",
+    # sıfat morfolojisi
+    "intensify", "diminutive",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
-    "analysis", "lexicon", "disambiguation", "compound", "context",
+    "analysis", "lexicon", "disambiguation", "compound", "context", "adjective",
     "__version__",
 ]

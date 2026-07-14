@@ -18,6 +18,7 @@ from __future__ import annotations
 from . import morphology as _m, morphology_noun as _n, derivation as _d
 from . import nonfinite as _nf
 from . import compound as _c
+from . import adjective as _adj
 
 
 # ── Türkçe-duyarlı küçük harf (#10: İ→i, I→ı) ────────────────────────────
@@ -443,3 +444,35 @@ def çözümle(yüzey: str, tür: str | None = None, *,
             hypothetical=a.hypothetical,
         ))
     return çevrilmiş
+
+
+# ── Sıfat morfolojisi (Faz 3 C2) ───────────────────────────────────────────
+
+_EK_TRLESTIR: dict[str, str] = {
+    # Türkçe küçültme ek adı → İngilizce canonical
+    "-cık": "-CIk", "-cik": "-CIk", "-cuk": "-CIk", "-cük": "-CIk", "cik": "-CIk",
+    "-msı": "-ImsI", "-msi": "-ImsI", "-imsi": "-ImsI", "-ımsı": "-ImsI",
+    "-mtırak": "-ImtIrak", "-imtirak": "-ImtIrak", "-ımtırak": "-ImtIrak",
+}
+
+
+def yoğunlaştır(sıfat: str) -> str | None:
+    """Pekiştirme: bembeyaz, kapkara, apaçık. Tabloda yoksa None.
+
+    >>> yoğunlaştır('beyaz')  # 'bembeyaz'
+    >>> yoğunlaştır('açık')   # 'apaçık'
+    """
+    return _adj.intensify(_tr_lower(sıfat))
+
+
+def küçült(sıfat: str, ek: str = "-CIk") -> str | None:
+    """Küçültme eki uygula.
+
+    ek: '-CIk' / '-cık' / '-ImsI' / '-msı' / '-ImtIrak' / '-mtırak'
+
+    >>> küçült('kısa')              # 'kısacık'
+    >>> küçült('yeşil', '-ImsI')    # 'yeşilimsi'
+    >>> küçült('sarı', '-ImtIrak')  # 'sarımtırak'
+    """
+    ek_norm = _EK_TRLESTIR.get(_tr_lower(ek), ek)
+    return _adj.diminutive(_tr_lower(sıfat), ek_norm)
