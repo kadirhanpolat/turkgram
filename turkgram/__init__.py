@@ -82,6 +82,9 @@ from .context import rank_in_context
 # ── Sözdizimi katmanı (öbek üretimi, Faz 4) ──────────────────────────────
 from .syntax import isim_tamlamasi, sifat_tamlamasi, cumle_uret
 
+# ── Sayı morfolojisi (sıra + dağılım, Faz 5 D1) ─────────────────────────
+from .number import ordinal, distributive
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -109,6 +112,8 @@ __all__ = [
     "intensify", "diminutive", "zarf_yap",
     # sözdizimi öbek üretimi
     "isim_tamlamasi", "sifat_tamlamasi", "cumle_uret",
+    # sayı morfolojisi
+    "ordinal", "distributive",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",

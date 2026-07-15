@@ -34,3 +34,18 @@ def test_distributive(kok, beklenen):
 def test_decline(form, durum, beklenen):
     got = decline(form, case=durum)
     assert got == beklenen, f"decline({form!r}, case={durum!r}) -> {got!r}, beklenen {beklenen!r}"
+
+
+# ---------------------------------------------------------------------------
+# TR sarmalayıcı denklik testleri
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("kok,beklenen", G.ORDINAL_CASES)
+def test_tr_sırali_denklik(kok, beklenen):
+    from turkgram.tr import sıralı
+    assert sıralı(kok) == beklenen
+
+
+@pytest.mark.parametrize("kok,beklenen", G.DISTRIBUTIVE_CASES)
+def test_tr_dagitimli_denklik(kok, beklenen):
+    from turkgram.tr import dağıtımlı
+    assert dağıtımlı(kok) == beklenen

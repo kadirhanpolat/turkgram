@@ -19,6 +19,7 @@ from . import morphology as _m, morphology_noun as _n, derivation as _d
 from . import nonfinite as _nf
 from . import compound as _c
 from . import adjective as _adj
+from .number import ordinal as _ordinal, distributive as _distributive
 
 
 # ── Türkçe-duyarlı küçük harf (#10: İ→i, I→ı) ────────────────────────────
@@ -522,6 +523,24 @@ def sifat_tamlamasi(sifat: str, isim: str) -> str:
     >>> sifat_tamlamasi('kırmızı', 'araba')  # 'kırmızı araba'
     """
     return _syn.sifat_tamlamasi(sifat, isim)
+
+
+def sıralı(kök: str) -> str:
+    """Sayı köküne sıra eki ekle: 'bir'→'birinci', 'iki'→'ikinci'.
+
+    >>> sıralı('bir')   # 'birinci'
+    >>> sıralı('üç')    # 'üçüncü'
+    """
+    return _ordinal(kök)
+
+
+def dağıtımlı(kök: str) -> str:
+    """Sayı köküne dağılım eki ekle: 'bir'→'birer', 'iki'→'ikişer'.
+
+    >>> dağıtımlı('bir')  # 'birer'
+    >>> dağıtımlı('üç')   # 'üçer'
+    """
+    return _distributive(kök)
 
 
 def cumle_uret(
