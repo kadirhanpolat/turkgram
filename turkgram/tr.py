@@ -20,6 +20,7 @@ from . import nonfinite as _nf
 from . import compound as _c
 from . import adjective as _adj
 from .number import ordinal as _ordinal, distributive as _distributive
+from .postposition import postposition as _postposition
 
 
 # ── Türkçe-duyarlı küçük harf (#10: İ→i, I→ı) ────────────────────────────
@@ -541,6 +542,21 @@ def dağıtımlı(kök: str) -> str:
     >>> dağıtımlı('üç')   # 'üçer'
     """
     return _distributive(kök)
+
+
+def edat_obeği(isim: str, edat: str, bitişik: bool = False) -> str:
+    """İsim + edat → edat öbeği (Türkçe API).
+
+    edat: 'için' | 'ile' | 'göre' | 'kadar' | 'karşı' | 'rağmen' | 'doğru' |
+          'dek' | 'değin' | 'üzere' | 'önce' | 'sonra' | 'beri' | 'itibaren' |
+          'başka' | 'dolayı' | 'ötürü' | 'gibi' | 'aşkın'
+    bitişik: True yalnız 'ile' için (vasıta eki: evle, arabayla).
+
+    >>> edat_obeği('ev', 'için')              # 'evin için'
+    >>> edat_obeği('araba', 'göre')           # 'arabaya göre'
+    >>> edat_obeği('ev', 'ile', bitişik=True) # 'evle'
+    """
+    return _postposition(isim, edat, bitişik)
 
 
 def cumle_uret(
