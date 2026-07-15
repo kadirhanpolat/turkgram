@@ -3,8 +3,16 @@ from __future__ import annotations
 
 from .morphology_noun import decline
 
+# için özel durum: kişi zamirleri + n-gövde zamirleri genitif (benim için),
+# düz isimler yalın (ev için). onlar→nom (onlar için, onların için değil).
+_ICIN_GEN_PRONOUNS: frozenset[str] = frozenset({
+    "ben", "sen", "o", "biz", "siz", "bu", "şu",
+    "hepsi", "kendi", "kendisi", "hiçbiri", "birisi", "biri",
+    "öteki", "öbürü", "hangisi", "bazısı", "çoğu", "azı",
+})
+
 _POSTPOSITION_CASE: dict[str, str] = {
-    "için":     "gen",
+    "için":     "nom",   # isimler yalın; zamir → _ICIN_GEN_PRONOUNS (gen)
     "ile":      "nom",   # ayrı; bitişik=True ise ins
     "göre":     "dat",
     "kadar":    "dat",
@@ -13,7 +21,7 @@ _POSTPOSITION_CASE: dict[str, str] = {
     "doğru":    "dat",
     "dek":      "dat",
     "değin":    "dat",
-    "üzere":    "dat",
+    "üzere":    "nom",   # bu şart üzere; fiil-mastar tümleci sözdizimsel, kapsam dışı
     "önce":     "abl",
     "sonra":    "abl",
     "beri":     "abl",
@@ -42,7 +50,9 @@ def postposition(lemma: str, edat: str, bitişik: bool = False) -> str:
 
     Examples:
         >>> postposition('ev', 'için')
-        'evin için'
+        'ev için'
+        >>> postposition('ben', 'için')
+        'benim için'
         >>> postposition('ev', 'ile')
         'ev ile'
         >>> postposition('ev', 'ile', bitişik=True)
@@ -62,6 +72,10 @@ def postposition(lemma: str, edat: str, bitişik: bool = False) -> str:
         )
     if bitişik:
         return decline(lemma, case="ins")
-    case = _POSTPOSITION_CASE[edat]
+    # için: kişi/n-gövde zamirleri genitif, düz isimler yalın
+    if edat == "için":
+        case = "gen" if lemma.lower() in _ICIN_GEN_PRONOUNS else "nom"
+    else:
+        case = _POSTPOSITION_CASE[edat]
     declined = decline(lemma, case=case)
     return declined + " " + edat

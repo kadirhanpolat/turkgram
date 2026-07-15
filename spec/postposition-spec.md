@@ -22,7 +22,7 @@ Edat öbeği = `decline(lemma, case=yönetilen_durum) + ' ' + edat`
 
 | Edat | Yönettiği durum | Örnek | Not |
 |------|-----------------|-------|-----|
-| için | gen | evin için | — |
+| için | nom (isim) / gen (zamir) | ev için / benim için | İsimler yalın; kişi+n-gövde zamirleri genitif. onlar → nom (`onlar için`) |
 | ile | nom / ins | ev ile / evle | Bkz. §3 (ayrı vs bitişik) |
 | göre | dat | eve göre | — |
 | kadar | dat | eve kadar | — |
@@ -31,7 +31,7 @@ Edat öbeği = `decline(lemma, case=yönetilen_durum) + ' ' + edat`
 | doğru | dat | eve doğru | — |
 | dek | dat | eve dek | kadar eşanlamlısı |
 | değin | dat | eve değin | kadar eşanlamlısı, yazı dili |
-| üzere | dat | eve üzere | — |
+| üzere | nom | ev üzere | "bu şart üzere"; fiil-mastar tümleci sözdizimsel (kapsam dışı) |
 | önce | abl | evden önce | — |
 | sonra | abl | evden sonra | — |
 | beri | abl | evden beri | — |
@@ -86,7 +86,7 @@ Zamir morfolojisi `decline()` içinde zaten tanımlıdır (bkz. Faz 3 C1 zamir m
 | o | ile (bitişik) | decline('o', 'ins') | onunla |
 | biz | sonra | decline('biz', 'abl') + ' sonra' | bizden sonra |
 | siz | kadar | decline('siz', 'dat') + ' kadar' | size kadar |
-| onlar | için | decline('onlar', 'gen') + ' için' | onların için |
+| onlar | için | decline('onlar', 'nom') + ' için' | onlar için |
 | bu | gibi | decline('bu', 'nom') + ' gibi' | bu gibi |
 | şu | kadar | decline('şu', 'dat') + ' kadar' | şuna kadar |
 | hepsi | için | decline('hepsi', 'gen') + ' için' | hepsinin için |

@@ -1,6 +1,6 @@
 GOLDEN = [
     # --- Her edattan en az bir örnek (ünsüz-final ev) ---
-    {"lemma": "ev", "edat": "için", "bitisik": False, "expected": "evin için"},
+    {"lemma": "ev", "edat": "için", "bitisik": False, "expected": "ev için"},
     {"lemma": "ev", "edat": "ile", "bitisik": False, "expected": "ev ile"},
     {"lemma": "ev", "edat": "ile", "bitisik": True, "expected": "evle"},
     {"lemma": "ev", "edat": "göre", "bitisik": False, "expected": "eve göre"},
@@ -10,7 +10,7 @@ GOLDEN = [
     {"lemma": "ev", "edat": "doğru", "bitisik": False, "expected": "eve doğru"},
     {"lemma": "ev", "edat": "dek", "bitisik": False, "expected": "eve dek"},
     {"lemma": "ev", "edat": "değin", "bitisik": False, "expected": "eve değin"},
-    {"lemma": "ev", "edat": "üzere", "bitisik": False, "expected": "eve üzere"},
+    {"lemma": "ev", "edat": "üzere", "bitisik": False, "expected": "ev üzere"},
     {"lemma": "ev", "edat": "önce", "bitisik": False, "expected": "evden önce"},
     {"lemma": "ev", "edat": "sonra", "bitisik": False, "expected": "evden sonra"},
     {"lemma": "ev", "edat": "beri", "bitisik": False, "expected": "evden beri"},
@@ -22,7 +22,7 @@ GOLDEN = [
     {"lemma": "ev", "edat": "aşkın", "bitisik": False, "expected": "evi aşkın"},
 
     # --- Ünsüz-final: okul (geri ünlü, u) ---
-    {"lemma": "okul", "edat": "için", "bitisik": False, "expected": "okulun için"},
+    {"lemma": "okul", "edat": "için", "bitisik": False, "expected": "okul için"},
     {"lemma": "okul", "edat": "göre", "bitisik": False, "expected": "okula göre"},
     {"lemma": "okul", "edat": "kadar", "bitisik": False, "expected": "okula kadar"},
     {"lemma": "okul", "edat": "önce", "bitisik": False, "expected": "okuldan önce"},
@@ -32,16 +32,16 @@ GOLDEN = [
     {"lemma": "okul", "edat": "ile", "bitisik": True, "expected": "okulla"},
     {"lemma": "okul", "edat": "aşkın", "bitisik": False, "expected": "okulu aşkın"},
 
-    # --- Ünsüz-final: kap (geri ünlü, a; p->b yumuşama, abl=kaptan) ---
-    {"lemma": "kap", "edat": "için", "bitisik": False, "expected": "kabın için"},
+    # --- Ünsüz-final: kap (geri ünlü, a; p→b gen/acc, abl=kaptan) ---
+    {"lemma": "kap", "edat": "için", "bitisik": False, "expected": "kap için"},
     {"lemma": "kap", "edat": "göre", "bitisik": False, "expected": "kaba göre"},
     {"lemma": "kap", "edat": "önce", "bitisik": False, "expected": "kaptan önce"},
     {"lemma": "kap", "edat": "başka", "bitisik": False, "expected": "kaptan başka"},
     {"lemma": "kap", "edat": "aşkın", "bitisik": False, "expected": "kabı aşkın"},
     {"lemma": "kap", "edat": "gibi", "bitisik": False, "expected": "kap gibi"},
 
-    # --- Ünsüz-final: ağaç (geri ünlü, a; ç->c yumuşama, abl=ağaçtan) ---
-    {"lemma": "ağaç", "edat": "için", "bitisik": False, "expected": "ağacın için"},
+    # --- Ünsüz-final: ağaç (geri ünlü, a; ç→c gen/acc, abl=ağaçtan) ---
+    {"lemma": "ağaç", "edat": "için", "bitisik": False, "expected": "ağaç için"},
     {"lemma": "ağaç", "edat": "göre", "bitisik": False, "expected": "ağaca göre"},
     {"lemma": "ağaç", "edat": "kadar", "bitisik": False, "expected": "ağaca kadar"},
     {"lemma": "ağaç", "edat": "önce", "bitisik": False, "expected": "ağaçtan önce"},
@@ -50,7 +50,7 @@ GOLDEN = [
     {"lemma": "ağaç", "edat": "gibi", "bitisik": False, "expected": "ağaç gibi"},
 
     # --- Ünlü-final: araba (geri ünlü, a) ---
-    {"lemma": "araba", "edat": "için", "bitisik": False, "expected": "arabanın için"},
+    {"lemma": "araba", "edat": "için", "bitisik": False, "expected": "araba için"},
     {"lemma": "araba", "edat": "göre", "bitisik": False, "expected": "arabaya göre"},
     {"lemma": "araba", "edat": "kadar", "bitisik": False, "expected": "arabaya kadar"},
     {"lemma": "araba", "edat": "doğru", "bitisik": False, "expected": "arabaya doğru"},
@@ -61,8 +61,8 @@ GOLDEN = [
     {"lemma": "araba", "edat": "ile", "bitisik": True, "expected": "arabayla"},
     {"lemma": "araba", "edat": "aşkın", "bitisik": False, "expected": "arabayı aşkın"},
 
-    # --- köy (ön ünlü ö; y ile biter -> ünsüz-final) ---
-    {"lemma": "köy", "edat": "için", "bitisik": False, "expected": "köyün için"},
+    # --- köy (ön ünlü ö; y ile biter → ünsüz-final) ---
+    {"lemma": "köy", "edat": "için", "bitisik": False, "expected": "köy için"},
     {"lemma": "köy", "edat": "göre", "bitisik": False, "expected": "köye göre"},
     {"lemma": "köy", "edat": "önce", "bitisik": False, "expected": "köyden önce"},
     {"lemma": "köy", "edat": "beri", "bitisik": False, "expected": "köyden beri"},
@@ -71,7 +71,7 @@ GOLDEN = [
     {"lemma": "köy", "edat": "gibi", "bitisik": False, "expected": "köy gibi"},
     {"lemma": "köy", "edat": "aşkın", "bitisik": False, "expected": "köyü aşkın"},
 
-    # --- Zamirler (decline tablosundan) ---
+    # --- Kişi zamirleri: için → genitif; diğer edatlar standart ---
     {"lemma": "ben", "edat": "için", "bitisik": False, "expected": "benim için"},
     {"lemma": "ben", "edat": "göre", "bitisik": False, "expected": "bana göre"},
     {"lemma": "ben", "edat": "ile", "bitisik": False, "expected": "ben ile"},
@@ -86,14 +86,16 @@ GOLDEN = [
     {"lemma": "biz", "edat": "göre", "bitisik": False, "expected": "bize göre"},
     {"lemma": "siz", "edat": "için", "bitisik": False, "expected": "sizin için"},
     {"lemma": "siz", "edat": "kadar", "bitisik": False, "expected": "size kadar"},
-    {"lemma": "onlar", "edat": "için", "bitisik": False, "expected": "onların için"},
+    # onlar → nom ile için (onlar için, onların için değil)
+    {"lemma": "onlar", "edat": "için", "bitisik": False, "expected": "onlar için"},
     {"lemma": "onlar", "edat": "göre", "bitisik": False, "expected": "onlara göre"},
+    # bu, şu → genitif ile için
     {"lemma": "bu", "edat": "için", "bitisik": False, "expected": "bunun için"},
     {"lemma": "bu", "edat": "göre", "bitisik": False, "expected": "buna göre"},
     {"lemma": "bu", "edat": "gibi", "bitisik": False, "expected": "bu gibi"},
     {"lemma": "şu", "edat": "için", "bitisik": False, "expected": "şunun için"},
     {"lemma": "şu", "edat": "önce", "bitisik": False, "expected": "şundan önce"},
 
-    # --- n-gövde zamiri: hepsi (gen=hepsinin) ---
+    # --- n-gövde zamiri: hepsi → genitif ile için ---
     {"lemma": "hepsi", "edat": "için", "bitisik": False, "expected": "hepsinin için"},
 ]
