@@ -312,7 +312,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **3343 test yeşil** (slow hariç; 3227 önceki + 116 number/tr-denklik) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **3453 test yeşil** (slow hariç; 3343 önceki + 86 postposition + 24 sayı analizi) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -339,18 +339,39 @@ Test durumu: son ölçüm **3343 test yeşil** (slow hariç; 3227 önceki + 116 
       (birincinin/birinciye/…) — yeni morfoloji GEREKMEZ (delegasyon, A3 emsali).
     - `tr.py` sarmalayıcı: `sıralı(n)`, `dağıtımlı(n)`. **İngilizce API**: `ordinal(n)`, `distributive(n)`.
     - Golden: bağımsız (motor-körü), elle-doğrulanmış ordinal (1-1000) + distributif + çekim örnekleri.
-  - **D2: Edat/ilgeç yönetimi** (`postposition.py`, SPEC `spec/postposition-spec.md`):
-    - Kapalı küme (~20 edat): `için`(gen), `ile`(nom/ins), `göre`(dat), `kadar`(dat), `karşı`(dat),
-      `önce`(abl), `sonra`(abl), `rağmen`(dat), `doğru`(dat), `beri`(abl), `itibaren`(abl) vb.
-    - `postposition(isim_lemma, edat)` → tam öbek: `ev+için→evin için`, `okul+ile→okulyla` (komitative
-      fark: `ile` ayrı yazılır ya da `-lA` eki olarak bitişir — iki seçenek).
-    - Zamir edatları: `ben+için→benim için`, `o+ile→onunla` (suppletif zamir tablosu ile entegre).
-    - `tr.py` sarmalayıcı: `edat_obeği(isim, edat)`.
-    - Golden: bağımsız, kapalı küme × temsili isimler (ünsüz-final/ünlü-final/zamir).
-  - **D3: Sayı + edat çözümlemesi** (`analysis.py` genişletme):
+  - ✅ **D2: Edat/ilgeç yönetimi** (`postposition.py`, SPEC `spec/postposition-spec.md`):
+    - 19 edat kapalı kümesi: `için`(nom/gen*), `ile`(nom/ins), `göre`(dat), `kadar`(dat), `karşı`(dat),
+      `önce`(abl), `sonra`(abl), `rağmen`(dat), `doğru`(dat), `beri`(abl), `itibaren`(abl),
+      `dek`(dat), `değin`(dat), `üzere`(nom), `başka`(abl), `dolayı`(abl), `ötürü`(abl),
+      `gibi`(nom), `aşkın`(acc).
+    - TUZAK — **`için` asimetrisi:** isimler yalın (nom) → `ev için`; kişi+n-gövde zamirleri
+      (`ben/sen/o/biz/siz/bu/şu/hepsi/kendi/…`) genitif → `benim için`. `onlar+için` → nom (`onlar için`).
+    - TUZAK — **`üzere` nom değil dat:** `ev üzere` doğru; `eve üzere` yanlış.
+    - `postposition(lemma, edat, bitişik=False)` — `bitişik=True` yalnız `ile` (→ ins: `evle`, `okulla`);
+      TUZAK: `okul+ins` → `okulla` (ünsüz-final -la, NOT -yla). Türkçe parametre adı Python 3 destekler.
+    - Zamir entegrasyonu `decline()` delegasyonuyla (sıfır yeni morfoloji): `ben+göre→bana göre`.
+    - `tr.py` sarmalayıcı: `edat_obeği(isim, edat, bitişik=False)`.
+    - Golden: 86 giriş, bağımsız (motor-körü, Opus), 19 edat × ünsüz/ünlü/zamir.
+    - Hakem bulgular giderildi: `için` nom/gen asimetrisi (CRITICAL) + `üzere` nom (MEDIUM).
+  - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
+    - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
+    - Bileşik sayı yüzeyleri (`yirmi birinci`) çok-token dalında `_try_number_all` önce çalışır.
+    - `roots` filtresi doğru çalışır (`roots is not None and root not in roots → atla`).
     - Edat analizi **kapsam dışı** (sözdizimsel bağlam gerektirir, defer).
-    - Golden: D1 üretiminin round-trip'i (analysis-by-generation, D1 motor oracle).
+    - Golden: 24 giriş, bağımsız (motor-körü, Opus): ordinal 1-10+2 bileşik, distributif 1-10+2 bileşik.
+
+Yeni dosyalar (2026-07-16, Faz 5 D2 edat yönetimi + D3 sayı çözümlemesi):
+- `spec/postposition-spec.md` — 19 edat SPEC (için asimetrisi, bitişik ile, üzere nom)
+- `turkgram/postposition.py` — `postposition()`, `_ICIN_GEN_PRONOUNS`, `_POSTPOSITION_CASE`
+- `turkgram/__init__.py` — `postposition` eklendi
+- `turkgram/tr.py` — `edat_obeği()` sarmalayıcı eklendi
+- `tests/golden_postposition.py` — 86-girdi bağımsız golden (motor-körü, Opus)
+- `tests/test_postposition.py` — runner (86 test + ValueError + TR denklik)
+- `turkgram/analysis.py` — `_try_number_all()`, `_NUMBER_SIMPLE_ROOTS`, ordinal/distributive kind desteği
+- `tests/golden_number_analysis.py` — 24-girdi bağımsız golden (motor-körü, Opus)
+- `tests/test_number_analysis.py` — runner (24 test)
+- `docs/superpowers/plans/2026-07-16-faz5-d2-edat-yonetimi.md` — implementasyon planı
 
 Yeni dosyalar (2026-07-16, Faz 5 D1 sayı morfolojisi):
 - `spec/number-spec.md` — ordinal + distributif SPEC
