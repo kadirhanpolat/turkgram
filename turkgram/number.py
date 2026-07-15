@@ -2,6 +2,11 @@
 from __future__ import annotations
 from .morphology import ends_in_vowel, high_vowel, low_vowel
 
+
+def _tr_lower(s: str) -> str:
+    """Türkçe büyük harf duyarlı küçültme: İ→i, I→ı, ardından lower()."""
+    return s.replace("İ", "i").replace("I", "ı").lower()
+
 # Distributif/ordinal gövde-sonu sedalılaşma: YALNIZ sayı sözcükleri için bilinen
 # sedalılaşmalar. Genel ses bilgisi ({ç:c, k:ğ, p:b}) sayı gövdelerine UYGULANMAZ
 # (üç→üçer, kırk→kırkar; yalnız dört→dörd- gibi t→d değişimi gerçekleşir).
@@ -35,7 +40,7 @@ def ordinal(kok: str) -> str:
     Bileşik sayılarda (ör. 'yirmi bir') yalnız son sözcük ek alır;
     önceki sözcükler değişmeden kalır.
     """
-    kok = kok.strip().lower()
+    kok = _tr_lower(kok.strip())
     if not kok:
         raise ValueError("Boş kök")
     prefix, kok = _split_compound(kok)
@@ -53,7 +58,7 @@ def distributive(kok: str) -> str:
     Bileşik sayılarda (ör. 'yirmi bir') yalnız son sözcük ek alır;
     önceki sözcükler değişmeden kalır.
     """
-    kok = kok.strip().lower()
+    kok = _tr_lower(kok.strip())
     if not kok:
         raise ValueError("Boş kök")
     prefix, kok = _split_compound(kok)
