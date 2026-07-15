@@ -312,7 +312,52 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **3372 test yeşil** (3227 önceki + 145 syntax/zarf/c1/c2/analysis) (+round-trip `-m slow`).
+Test durumu: son ölçüm **3343 test yeşil** (slow hariç; 3227 önceki + 116 number/tr-denklik) + slow round-trip ayrıca `-m slow`.
+
+- **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
+  - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
+    - **Ordinal** `ordinal(kök)` — `-(I)ncI`: birinci/ikinci/üçüncü/dördüncü/onuncu; C daima c (n
+      sonrası sedalılaşma yok); ünlü-final → baştaki I düşer (-nCI: ikinci); bileşik: son sözcük
+      kuralı (`yirmi bir→yirmi birinci`); `_tr_lower` büyük harf güvenliği (I→ı, İ→i).
+    - **Distributif** `distributive(kök)` — `-(ş)Ar`: birer/ikişer/dörder/altışar; ünlü-final→+şAr;
+      ünsüz-final→+Ar; sedalılaşma YALNIZ `_VOICE_MAP={"t":"d"}` (dörder; üç/kırk sedalılaşmaz).
+    - `_split_compound` DRY helper (bileşik bölme tek yerde); `_voice_final` boş-gövde guard.
+    - **Çekim delegasyon:** `decline(ordinal("bir"), case="gen")` → `birincinin` — yeni morfoloji
+      GEREKMEZ (isim motoru devralır). 7 durum × temsili ordinal, 0 çökme.
+    - **TR API** (`tr.py`): `sıralı()` + `dağıtımlı()` sarmalayıcılar.
+    - **Hakem bulguları giderildi:** `_tr_lower` HIGH (I→ı), LOW kapsam-dışı t-final SPEC notuna alındı.
+    - 116 yeni test (26 ordinal + 24 distributif + 16 decline + 25×2 TR denklik).
+    - Sırada: D2 edat/ilgeç yönetimi.
+
+- **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 D turu: sayı + edat; Faz 3 C = zamir+sıfat ✅):
+  - ✅ **D1: Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`) — TAMAMLANDI (bkz. §7 Faz 5 ✅):
+    - **Ordinal** `-IncI`: birinci/ikinci/üçüncü/dördüncü/… (I-uyumu + ünsüz sertleşmesi: dört→dördüncü).
+      Sıfır istisnaları: bir→birinci (ünlü-final: birin+ci değil, birinci leksik); onar=onuncu değil onuncu.
+    - **Distributif** `-şAr`: birer/ikişer/üçer/dörder/beşer/altışar/yedişer/sekizer/dokuzar/onar
+      (allomorf: ünlü-final kök + şAr → r+şAr → ikişer; ünsüz-final → doğrudan şAr; kural tabanlı).
+    - **Sayı çekimi**: ordinal/distributif biçimler `decline()` motoruna tam isim olarak girer
+      (birincinin/birinciye/…) — yeni morfoloji GEREKMEZ (delegasyon, A3 emsali).
+    - `tr.py` sarmalayıcı: `sıralı(n)`, `dağıtımlı(n)`. **İngilizce API**: `ordinal(n)`, `distributive(n)`.
+    - Golden: bağımsız (motor-körü), elle-doğrulanmış ordinal (1-1000) + distributif + çekim örnekleri.
+  - **D2: Edat/ilgeç yönetimi** (`postposition.py`, SPEC `spec/postposition-spec.md`):
+    - Kapalı küme (~20 edat): `için`(gen), `ile`(nom/ins), `göre`(dat), `kadar`(dat), `karşı`(dat),
+      `önce`(abl), `sonra`(abl), `rağmen`(dat), `doğru`(dat), `beri`(abl), `itibaren`(abl) vb.
+    - `postposition(isim_lemma, edat)` → tam öbek: `ev+için→evin için`, `okul+ile→okulyla` (komitative
+      fark: `ile` ayrı yazılır ya da `-lA` eki olarak bitişir — iki seçenek).
+    - Zamir edatları: `ben+için→benim için`, `o+ile→onunla` (suppletif zamir tablosu ile entegre).
+    - `tr.py` sarmalayıcı: `edat_obeği(isim, edat)`.
+    - Golden: bağımsız, kapalı küme × temsili isimler (ünsüz-final/ünlü-final/zamir).
+  - **D3: Sayı + edat çözümlemesi** (`analysis.py` genişletme):
+    - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
+    - Edat analizi **kapsam dışı** (sözdizimsel bağlam gerektirir, defer).
+    - Golden: D1 üretiminin round-trip'i (analysis-by-generation, D1 motor oracle).
+
+Yeni dosyalar (2026-07-16, Faz 5 D1 sayı morfolojisi):
+- `spec/number-spec.md` — ordinal + distributif SPEC
+- `turkgram/number.py` — `ordinal()`, `distributive()`, `_tr_lower`, `_split_compound`, `_voice_final`, `_VOICE_MAP`
+- `tests/golden_number.py` — 66-girdi bağımsız golden (26 ordinal + 24 distributif + 16 decline; motor-körü, Opus)
+- `tests/test_number.py` — runner (116 test: parametrik + TR denklik)
+- `docs/superpowers/plans/2026-07-16-faz5-sayi-morfolojisi.md` — implementasyon planı
 
 Yeni dosyalar (2026-07-14):
 - `turkgram/statistical.py` — istatistiksel disambiguation motoru (Art.-1 + Art.-2)
