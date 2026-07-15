@@ -19,13 +19,16 @@ saf-Python, bağımlılıksız bir kütüphane.
 | Fiilimsi | `turkgram.nonfinite` | **`converb`** (8 ulaç), **`participle`** (sıfat-fiil/ad-fiil), **`converb_casina`** (-cAsInA), **`converb_ken`** (-ken) |
 | Bileşik zaman | `turkgram.compound` | **`compound`** (hikaye/rivayet/şart birleşik çekim; 3çoğul geliyorlardı) |
 | Yapım eki (türetme) | `turkgram.derivation` | `derivations` |
-| **Sıfat morfolojisi** | `turkgram.adjective` | **`intensify`** (pekiştirme: bembeyaz, apaçık), **`diminutive`** (-CIk/-ImsI/-ImtIrak) |
-| **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon; fiil/isim/sıfat) |
+| Sıfat morfolojisi | `turkgram.adjective` | **`intensify`** (pekiştirme: bembeyaz, apaçık), **`diminutive`** (-CIk/-ImsI/-ImtIrak) |
+| **Sayı morfolojisi** | `turkgram.number` | **`ordinal`** (birinci/dördüncü), **`distributive`** (birer/dörder) |
+| **Edat öbeği** | `turkgram.postposition` | **`postposition`** (19 edat; ev için / bana göre / evle) |
+| Sözdizimi üretim | `turkgram.syntax` | `isim_tamlamasi`, `sifat_tamlamasi`, `cumle_uret` |
+| **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon; fiil/isim/sıfat/sayı) |
 | Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots), **`load_freq`**, `pos_map` (gömülü; opt-in) |
 | Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
 | Cümle-bağlamı | `turkgram.context` | **`rank_in_context`** (komşuluk kurallarıyla yeniden sıralama; opt-in) |
 | **İstatistiksel disambiguation** | `turkgram.statistical` | **`load_model`**, **`rank_statistical`**, **`viterbi`**, `parse_oflazer_full` (opt-in) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`** |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
@@ -34,12 +37,16 @@ işteş, yığılabilir → dövüştürüldü). İsim: durum × iyelik × çokl
 **sıfat-fiil/ad-fiil + iyelik/durum istifi** (okuduğum/gitmesini) + **biçim-eklenen ulaçlar**
 (-cAsInA gülercesine, -ken gelirken). **Sıfat:** pekiştirme (bembeyaz/apaçık) + küçültme
 (-CIk: kısacık; -ImsI: yeşilimsi; -ImtIrak: sarımtırak). **Zamir çekimi:** suppletif çoğul
-(ben→biz/seni→siz) + n-gövde zamirleri (hepsini/hepsine/hepsiyle).
+(ben→biz/seni→siz) + n-gövde zamirleri (hepsini/hepsine/hepsiyle). **Sayı morfolojisi:**
+ordinal `-(I)ncI` (birinci/dördüncü/onuncu) + distributif `-(ş)Ar` (birer/dörder/altışar);
+çekim delegasyon (`birincinin`). **Edat öbeği:** 19 edat kapalı küme; `için` isim-zamir
+asimetrisi (ev için / benim için), `ile` bitişik (evle/okulla).
 
-**Çözümleme (Faz 2a-3):** üretimin tersi — yüzey biçimden kök + eksen değerleri + pedagojik
-morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı. **Faz 3 ile sıfat
-çözümlemesi eklendi:** `analyze('bembeyaz', roots={'beyaz'})` → `Analysis(kind='intensify')`,
-`analyze('kısacık', roots={'kısa'})` → `Analysis(kind='diminutive', kwargs={'suffix':'-CIk'})`.
+**Çözümleme (Faz 2a-5):** üretimin tersi — yüzey biçimden kök + eksen değerleri + pedagojik
+morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı. Sıfat çözümlemesi:
+`analyze('bembeyaz', roots={'beyaz'})` → `Analysis(kind='intensify')`. **Faz 5 ile sayı
+çözümlemesi eklendi:** `analyze('birinci', roots={'bir'})` → `Analysis(kind='ordinal')`,
+`analyze('dörder', roots={'dört'})` → `Analysis(kind='distributive')`.
 
 ## Durum / Yol haritası
 
@@ -88,8 +95,20 @@ morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı. **
     küçültme `diminutive()` (3 ek: `-CIk`/`-ImsI`/`-ImtIrak`) + sıfat `analyze()` desteği
     (`kind='intensify'|'diminutive'`, pos='adj') + Türkçe API (`yoğunlaştır()`/`küçült()`).
     53 üretim + 28 analiz golden testi.
-- **Faz 4** — sözdizimi: `syntax.py` — `isim_tamlamasi()` + `sifat_tamlamasi()` + `cumle_uret()`;
-  ardından öbek analizi. Boşluk analizi: `docs/faz1-bosluk-analizi.md`.
+- **Faz 4 ✅** — sözdizimi üretim: `syntax.py` — `isim_tamlamasi()` (belirtili/belirtisiz isim
+  tamlaması: evin kapısı/taş köprüsü) + `sifat_tamlamasi()` + `cumle_uret()` (özne+yüklem kip
+  uyumu, pro-drop); `zarf_yap()` (-CA zarfı: güzelce). 57 syntax + 15 zarf golden testi.
+- **Faz 5 ✅ (D1-D3)** — sözcük-sınıfı tamamlama:
+  - **D1 ✅ Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`) — ordinal `-(I)ncI`
+    (birinci/dördüncü; bileşik: yirmi birinci) + distributif `-(ş)Ar` (birer/dörder/altışar;
+    yalnız `t→d` sedalılaşma). `tr.py`: `sıralı()`/`dağıtımlı()`. 116 test.
+  - **D2 ✅ Edat/ilgeç yönetimi** (`postposition.py`, SPEC `spec/postposition-spec.md`) — 19
+    edat kapalı kümesi. Kritik: `için` isim-zamir asimetrisi (`ev için` / `benim için`) +
+    `üzere` nom (`ev üzere`). `bitişik=True` ile `ile` → ins (`evle`/`okulla`). `tr.py`:
+    `edat_obeği()`. 86 test.
+  - **D3 ✅ Sayı çözümlemesi** (`analysis.py` genişleme) — `ordinal`/`distributive` kind;
+    `_NUMBER_SIMPLE_ROOTS` precision garantisi; bileşik yüzeyler çok-token dalında. 24 test.
+  - Sırada: D4+ (Faz 5 devamı).
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -127,6 +146,25 @@ tg.analyze("geliyorken", roots={"gelmek"})     # -ken fiil → converb_ken(base=
 tg.analyze("evdeyken", roots={"ev"})           # -ken nominal → copula(aux='ken', case='loc')
 tg.analyze("gelirken", roots={"gelmek","gelir"})  # belirsiz: converb_ken | copula(gelir+ken)
 tg.analyze("geliyordu", roots={"gelmek"})      # bileşik zaman → conjugate(pres, aux='hikaye')
+
+# Sayı morfolojisi (Faz 5 D1)
+from turkgram.number import ordinal, distributive
+ordinal("dört")                                # 'dördüncü'
+ordinal("yirmi bir")                           # 'yirmi birinci'  (bileşik: son sözcük)
+distributive("altı")                           # 'altışar'
+distributive("dört")                           # 'dörder'  (t→d sedalılaşma)
+tg.decline(ordinal("bir"), case="gen")         # 'birincinin'  (çekim delegasyonu)
+tg.analyze("birinci", roots={"bir"})           # Analysis(kind='ordinal', lemma='bir')
+tg.analyze("yirmi birinci", roots={"yirmi bir"})  # bileşik ordinal
+
+# Edat öbeği (Faz 5 D2)
+from turkgram.postposition import postposition
+postposition("ev", "için")                     # 'ev için'  (isim → nom)
+postposition("ben", "için")                    # 'benim için'  (zamir → gen)
+postposition("okul", "göre")                   # 'okula göre'
+postposition("ev", "önce")                     # 'evden önce'
+postposition("okul", "ile", bitişik=True)      # 'okulla'  (ünsüz-final ins -la)
+postposition("araba", "ile", bitişik=True)     # 'arabayla'  (ünlü-final ins -yla)
 
 # Gömülü kök leksikonu (opt-in) — çıplak-önek gürültüsünü eler
 from turkgram import lexicon
@@ -179,11 +217,18 @@ tr.çekimle("yapmak", "görülen_geçmiş", "3tekil", tasvir="tezlik") # yapıve
 tr.çekimle("dövmek", "geçmiş", "3tekil", çatı=["işteş","ettirgen","edilgen"]) # dövüştürüldü
 tr.fiilimsi("gitmek", "ma", iyelik="3tekil", durum="belirtme")   # gitmesini
 tr.çözümle("dövüştürüldü", kökler={"dövmek"})   # [Analysis(... çatı=[işteş,ettirgen,edilgen])]
+tr.sıralı("dört")                                # dördüncü
+tr.sıralı("yirmi bir")                           # yirmi birinci
+tr.dağıtımlı("altı")                             # altışar
+tr.edat_obeği("ev", "için")                      # ev için
+tr.edat_obeği("ben", "için")                     # benim için
+tr.edat_obeği("okul", "ile", bitişik=True)       # okulla
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
 `ekfiil`/`yüklem`/`ki_ekle`/`eşitlik` · `türet` · **`çözümle`** (çözümleme; Türkçe eksen
-değerleri + segment). Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/`soru`/`birleşik`/**`çatı`** ·
+değerleri + segment) · **`sıralı`**/**`dağıtımlı`** (sayı morfolojisi) · **`edat_obeği`** (edat öbeği).
+Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/`soru`/`birleşik`/**`çatı`** ·
 `durum`/`iyelik`/`sayı`. Çekim tablosu anahtarları da Türkçe (`şimdiki.3tekil`, `çoğul.bulunma`).
 
 ## Testler
@@ -193,10 +238,10 @@ pip install -e ".[test]"
 pytest
 ```
 
-Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı ve
+Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
-kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır. Round-trip tam
-süpürme `-m slow` ile: `pytest -m slow`.
+kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
+**3453 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
