@@ -15,7 +15,8 @@ Beklentiler MOTORDAN BAĞIMSIZ, dilbilgisinden elle doğrulanmıştır (spec/num
   Distributif  -(ş)Ar :
     - ünlü-final → +şAr  (A = alçak 2'li: a/e)
     - ünsüz-final → +Ar  (ş yok)
-    - son ünsüz sedalılaşması SADECE {t:d, ç:c, k:ğ, p:b}: dört → dörder
+    - son ünsüz sedalılaşması YALNIZ {t:d}: dört → dörder
+      (üç, kırk, beş: sedalılaşma OLMAZ — üçer, kırkar, beşer)
     - üç ünsüz-finaldir (ç) → üçer (ş YOK)
 
   Decline round-trip: ordinal biçim ünlü-final (…ncı/…üncü/…uncu) → -y-/-n- kaynaştırma.
