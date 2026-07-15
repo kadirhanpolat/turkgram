@@ -24,6 +24,7 @@ from .morphology import conjugate
 from .morphology_noun import decline, copula
 from .nonfinite import converb, participle, converb_casina, converb_ken
 from .adjective import intensify, diminutive, _VALID_SUFFIXES as _ADJ_SUFFIXES
+from .number import ordinal as _ordinal, distributive as _distributive
 from .analysis_candidates import (
     _VOICE_CHAINS,
     _root_candidates,
@@ -63,10 +64,10 @@ class Analysis:
 # ---------------------------------------------------------------------------
 # Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
-_POS = ("verb", "noun", "adj")
+_POS = ("verb", "noun", "adj", "num")
 _KINDS = ("conjugate", "decline", "copula", "converb",
           "converb_casina", "converb_ken", "participle",
-          "intensify", "diminutive")
+          "intensify", "diminutive", "ordinal", "distributive")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -835,7 +836,7 @@ def analyze(surface: str, pos: str | None = None,
 
     Args:
         surface: Çözümlenecek yüzey biçim (tek ya da çok-token).
-        pos: "verb" | "noun" | None (ikisi de).
+        pos: "verb" | "noun" | "adj" | "num" | None (tümü).
         roots: Lemma kümesi. Verilmişse lemma∉roots elenir (hypothetical=False);
                verilmemişse hepsi hypothetical=True.
 
@@ -859,7 +860,11 @@ def analyze(surface: str, pos: str | None = None,
     # Çok-token: yalnız tanınan kalıplar (soru grubu + birleşik çok-token fiil, SPEC §8/§8.2)
     if len(tokens) > 1:
         results = _analyze_multi_token(tokens, roots)
-        results = sorted(set_dedup(results), key=_sort_key)
+        # Bileşik sayı formları (yirmi birinci, kırk ikişer)
+        num_analyses: list[Analysis] = []
+        num_seen: set[tuple] = set()
+        _try_number_all(surface, num_analyses, num_seen, roots)
+        results = sorted(set_dedup(results + num_analyses), key=_sort_key)
         return results
 
     surface_token = tokens[0]
@@ -895,6 +900,10 @@ def analyze(surface: str, pos: str | None = None,
     # Roots'taki her kök için oracle çağrısı; precision roots-garantili.
     if roots is not None and pos in (None, "adj"):
         _try_adj_all(surface_token, roots, analyses, seen)
+
+    # Adım 5: Sayı çözümlemesi (ordinal + distributive)
+    if pos in (None, "num"):
+        _try_number_all(surface_token, analyses, seen, roots)
 
     return analyses
 
@@ -951,6 +960,98 @@ def _try_noun(surface: str, lemma: str, stem: str,
     hyp = roots is None
     for kind in ("decline", "copula"):
         _process_kind(kind, "noun", surface, lemma, stem, analyses, seen, hyp)
+
+
+# ---------------------------------------------------------------------------
+# Sayı çözümlemesi (Faz 5 D3) — kapalı-küme kök + oracle
+# ---------------------------------------------------------------------------
+_NUMBER_SIMPLE_ROOTS: frozenset[str] = frozenset({
+    "sıfır", "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz",
+    "on", "yirmi", "otuz", "kırk", "elli", "altmış", "yetmiş", "seksen", "doksan",
+    "yüz", "bin", "milyon", "milyar",
+})
+
+_NUM_UNVOICE: dict[str, str] = {"d": "t", "c": "ç", "b": "p", "ğ": "k"}
+
+
+def _num_unvoice(s: str) -> str:
+    """Gövde-sonu sesini sertleştir (distributif/ordinal ters-mutasyonu için)."""
+    if not s:
+        return s
+    return s[:-1] + _NUM_UNVOICE.get(s[-1], s[-1])
+
+
+def _ordinal_root_candidates(last_word: str) -> list[str]:
+    """Son sözcük için olası ordinal kök adayları (sesletim önce/sonra)."""
+    cands = []
+    if re.search(r"nc[ıiuü]$", last_word):           # ünlü-final: ikinci, altıncı
+        cands.append(last_word[:-3])
+    if re.search(r"[ıiuü]nc[ıiuü]$", last_word):     # ünsüz-final: birinci, dördüncü
+        raw = last_word[:-4]
+        cands.extend([raw, _num_unvoice(raw)])
+    return cands
+
+
+def _distributive_root_candidates(last_word: str) -> list[str]:
+    """Son sözcük için olası distributif kök adayları."""
+    cands = []
+    if re.search(r"[şs][ae]r$", last_word):           # ünlü-final: ikişer, altışar
+        cands.append(last_word[:-3])
+    if re.search(r"[ae]r$", last_word):               # ünsüz-final: birer, dörder, onar
+        raw = last_word[:-2]
+        cands.extend([raw, _num_unvoice(raw)])
+    return cands
+
+
+def _try_number_all(
+    surface: str,
+    analyses: list[Analysis],
+    seen: set[tuple],
+    roots: Collection[str] | None = None,
+) -> None:
+    """Ordinal + distributif çözümleme — kapalı küme + oracle.
+
+    Hem tek-token (birinci) hem bileşik (yirmi birinci) çalışır.
+    Bileşik: prefix boşlukla ayrılmış (yirmi), son sözcük ek alır (birinci).
+    Precision: _NUMBER_SIMPLE_ROOTS kapalı-kümesi + oracle ile filtrelenir.
+    roots verilirse compound_root∉roots olan analizler elenir (sıfat analizi sözleşmesiyle tutarlı).
+    """
+    tokens = surface.split()
+    last_word = tokens[-1]
+    prefix = " ".join(tokens[:-1])   # "" for single-token
+
+    for kind, cand_fn, oracle_fn in [
+        ("ordinal", _ordinal_root_candidates, _ordinal),
+        ("distributive", _distributive_root_candidates, _distributive),
+    ]:
+        for cand in cand_fn(last_word):
+            if cand not in _NUMBER_SIMPLE_ROOTS:
+                continue
+            compound_root = (prefix + " " + cand).strip() if prefix else cand
+            if roots is not None and compound_root not in roots:
+                continue
+            try:
+                form = oracle_fn(compound_root)
+            except Exception:
+                continue
+            if form != surface:
+                continue
+            key = (kind, compound_root, frozenset())
+            if key in seen:
+                continue
+            seen.add(key)
+            # Segmentasyon: kök (voiced surface form) + ek
+            root_surf = (prefix + " " + last_word[:len(cand)]).strip() if prefix else last_word[:len(cand)]
+            suffix_surf = last_word[len(cand):]
+            segs = _segs_to_tuple([(root_surf, "kök"), (suffix_surf, kind)])
+            analyses.append(Analysis(
+                lemma=compound_root,
+                pos="num",
+                kind=kind,
+                kwargs={},
+                segments=segs,
+                hypothetical=False,
+            ))
 
 
 def _try_adj_all(
