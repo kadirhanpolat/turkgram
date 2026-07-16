@@ -312,7 +312,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **3453 test yeşil** (slow hariç; 3343 önceki + 86 postposition + 24 sayı analizi) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **3564 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -371,6 +371,36 @@ Test durumu: son ölçüm **3453 test yeşil** (slow hariç; 3343 önceki + 86 p
     - TR API: `bağla(kelime, bağlaç)` / `koordine_et(ögeler, bağlaç)` (`sıralı()` ile çakışmaması için).
       `_BAĞLAÇ`: `"de"`/`"da"` ayrı anahtar; korelatif Türkçe boşluklu → alt-çizgili iç anahtar.
     - 70 yeni test; Hakem: 52.458 korpus çağrısı 0 çökme.
+
+- **Faz 6 ✅** — yapım eki (türetme) analizi (`analysis.py`, SPEC `docs/superpowers/specs/2026-07-16-faz6-derivasyon-design.md`):
+  - **Tek-katman leksik türetme analizi** — oracle analysis-by-generation; fiilimsi + çatı DIŞLI.
+  - `_LEXICAL_SUFFIXES` + `_DERIVED_POS` (`derivation.py`): 27 suffix (isim→isim 8, isim→fiil 8,
+    fiil→isim 11); her eleman (category, label, src_pos) üçlüsü. `-Ar-` çakışması (category, label)
+    çiftiyle çözüldü: `("isim → fiil", "-Ar-")` DAHİL, `("fiil → fiil (çatı)", "-Ar- (ettirgen)")` DIŞLI.
+    `_DERIVED_POS` → adj (−lI/−sIz/−CIl/−CA/−IcI/−gAn/−Ik/−gIn), noun (geri kalan isim çıktıları),
+    verb (isim→fiil tüm).
+  - `_template_to_allomorphs(template)` + `_strip_derivation(surface, label, src_pos)` (`analysis.py`):
+    arşifonem şablonu → tüm olası biçimler (itertools.product); ters suffix soyma + kaynaştırma-y geri alma.
+    Fiil çıktılı suffix (isim→fiil): yüzeyde -mAk sonekini soy → gövde. TUZAK — **fiil→isim gövde vs mastar:**
+    `_strip_derivation` çıplak gövde döner (seç); `_try_derivation_all` mastarı yeniden kurar:
+    `stem + "m" + low_vowel(stem) + "k"` → `seçmek` (oracle + `Analysis.lemma` için).
+  - `_try_derivation_all(surface, analyses, seen, roots)` (`analysis.py`): `_KINDS`'ta `"derivation"` SONA
+    (bağlaç sonrası, çekim önceliklenir). `analyze()` pos∈{None,noun,verb,adj} guard.
+    §8.1 precision: `roots is not None and lemma not in roots → atla`; `hypothetical = (roots is None)`.
+    Segments: `_segs_to_tuple([(stem, "kök"), (suffix_surf, label)])`.
+  - 35 yeni test (32 golden + 3 davranış); Golden: 32 giriş (31 suffix + 1 ek), bağımsız (motor-körü, Opus),
+    tüm 27 suffix kapsandı. Hakem: 500 leksikon lemması × isim+fiil = ~14k biçim, **0 çökme, 0 genuine miss**.
+  - TUZAK — zincirli türetme kapsam dışı (tek katman): `gözlükçü` (göz→gözlük→gözlükçü) çözülmez — bilinçli sınır.
+
+Yeni dosyalar (2026-07-16, Faz 6 yapım eki analizi):
+- `docs/superpowers/specs/2026-07-16-faz6-derivasyon-design.md` — onaylı tasarım dokümanı
+- `docs/superpowers/plans/2026-07-16-faz6-derivasyon-analizi.md` — implementasyon planı
+- `turkgram/derivation.py` — `_LEXICAL_SUFFIXES`, `_DERIVED_POS` eklendi
+- `turkgram/analysis.py` — `_template_to_allomorphs`, `_strip_derivation`, `_try_derivation_all` eklendi;
+  `_KINDS`'a `"derivation"` (sona); `analyze()` entegrasyonu
+- `tests/golden_derivation_analysis.py` — 32-girdi bağımsız golden (motor-körü, Opus)
+- `tests/test_derivation_analysis.py` — runner (35 test)
+- `tools/sweep_derivation_analysis.py` — korpus tarama aracı
 
 Yeni dosyalar (2026-07-16, Faz 5 D4 bağlaç morfolojisi):
 - `spec/conjunction-spec.md` — SPEC (kapalı küme, de/da uyumu, korelatifler, analyze tuzakları)
