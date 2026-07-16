@@ -65,6 +65,12 @@ def _normalize_pos(pos: str | Iterable[str] | None) -> frozenset[str]:
     return wanted
 
 
+@lru_cache(maxsize=16)
+def _load_filtered(wanted: frozenset[str]) -> frozenset[str]:
+    """POS filtreli lemma kümesi — normalize edilmiş frozenset üzerinden cache'lenir."""
+    return frozenset(lemma for lemma, p in _load_raw() if p in wanted)
+
+
 def load(pos: str | Iterable[str] | None = None) -> frozenset[str]:
     """Gömülü leksikonu lemma kümesi olarak döndür (`analyze(roots=...)` için).
 
@@ -79,8 +85,7 @@ def load(pos: str | Iterable[str] | None = None) -> frozenset[str]:
     Raises:
         ValueError: bilinmeyen POS etiketi.
     """
-    wanted = _normalize_pos(pos)
-    return frozenset(lemma for lemma, p in _load_raw() if p in wanted)
+    return _load_filtered(_normalize_pos(pos))
 
 
 @lru_cache(maxsize=1)

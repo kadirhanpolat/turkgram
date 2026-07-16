@@ -100,6 +100,10 @@ from .phonology import to_ipa, ipa_table
 
 __version__ = "0.1.0"
 
+# Gömülü veri sürümü — lexicon/freq/disambig TSV'leri değişince artır.
+# Aynı DATA_VERSION → aynı analyze() çıktısı garantisi.
+DATA_VERSION = "2026-07-16"
+
 __all__ = [
     # fiil
     "conjugate", "paradigm", "parse_verb", "inflect_last_token", "VerbStem",
