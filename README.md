@@ -126,6 +126,14 @@ eki çözümlemesi eklendi (tek katman, fiilimsi+çatı dışlı):** `analyze('g
     yeniden kurar (`seç` + `-mek` → `seçmek`). Zincirli türetme kapsam dışı (tek katman).
   - §8.1 precision: `roots is not None and lemma not in roots → atla`.
   - Hakem: ~14k form (500 lemma × isim+fiil), 0 çökme, 0 genuine miss. 32 golden + 35 test.
+- **Faz 7 ✅** — `_root_candidates` 3 bilinen sınır fix (`analysis_candidates.py`):
+  - **Fix 1 disharmonik alıntı:** hem primary blok hem ters-mutasyon bloğu artık her iki mastar
+    varyantını (`-mak`/`-mek`) üretiyor → `inhimak` gibi disharmonik lemmalar bulunur.
+  - **Fix 2 monosilab -Iyor guard:** `any(c in _VOWELS for c in taban)` guard'ı kaldırıldı →
+    `somak→suyor`, `çomak→çuyor` gibi monosilab ünlü-düşme vakaları kurtarılır.
+  - **Fix 3 "yor"-alt-dizi:** `find("yor")` → `rfind("yor")` → `yorgalamak`, `yorumlamak`
+    gibi gövde-içi "yor" barındıran lemmalar artık doğru kurtarılır.
+  - 5 yeni golden test; 3569 toplam PASS, 0 regresyon.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -275,7 +283,7 @@ pytest
 Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3564 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**3569 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
