@@ -2,7 +2,7 @@
 """Türkçe tokenizasyon: boşluk + noktalama + apostrof bölme."""
 
 _PUNCT = set('.,!?:;"()[]{}')
-_PUNCT.update('…—–')
+_PUNCT.update("…—–")
 
 
 def tokenize(text: str) -> list[str]:

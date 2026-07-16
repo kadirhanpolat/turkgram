@@ -31,7 +31,8 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **İstatistiksel disambiguation** | `turkgram.statistical` | **`load_model`**, **`rank_statistical`**, **`viterbi`**, `parse_oflazer_full` (opt-in) |
 | **Tokenizer + toplu analiz** | `turkgram.tokenize` / `turkgram.analysis` | **`tokenize`** (metin → token listesi: boşluk+noktalama+apostrof), **`parse_text`** (metin → `list[list[Analysis]]`; indeks hizalamalı, H-08 cache, `rank_in_context` entegrasyonu) |
 | **CLI** | `turkgram.__main__` | `python -m turkgram analyze <yüzey> [--format text\|json] [--roots a,b] [--depth N] [--disambiguate] [--lexicon]` · `python -m turkgram version` (sürüm + `DATA_VERSION` + `ANALYSIS_DICT_SCHEMA_VERSION`) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`** |
+| **Hecelemleme + vurgu** | `turkgram.syllabify` | **`syllabify`** (hece listesi: gel·di·ği·miz), **`stress`** (0-tabanlı vurgulu hece indeksi), **`stress_mark`** (AN·ka·ra; Türkçe büyük harf) |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
@@ -184,6 +185,21 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
     `roots is not None` ayrımı) H-08 perf borcunu giderir; `rank_in_context` entegrasyonu
     doğrudan beslenebilir (H-10, `context.py` guard zaten mevcuttu).
   - 35 yeni test (26 tokenizer + 9 parse_text); **toplam: 3724 test**.
+- **Faz 9 ✅** — hecelemleme + vurgu (`turkgram/syllabify.py`):
+  - **`syllabify(word) → list[str]`** — O(n) ünlü-tabanlı hece sınır tespiti; kural kümesi:
+    V·CV (birer ünsüz sağa), VC·CV (iki ünsüz ortadan), VCC·CV (üçlü: ilk ikisi sola) +
+    **`_VALID_ONSETS`** frozenset'i ile maksimal onset (yabancı küme: `tr`/`kr`/`pr`/`kl` vb.)
+    → `elektrik→["e","lek","trik"]`, `kontrol→["kon","trol"]`. Bitişik ünlü → V·V.
+    Circumflex dahil: â/î/û `_VOWELS` kümesinde (kâtip→["kâ","tip"]).
+  - **`stress(word) → int | None`** — 0-tabanlı vurgulu hece indeksi (baştan); varsayılan son
+    hece; `_STRESS_EXCEPTIONS` elle küratörlenmiş 31 giriş (şehir adları + alıntılar):
+    `ankara→0`, `istanbul→1` (is·TAN·bul), `stres→0`, `klima→1`. Boş string → `None`.
+  - **`stress_mark(word) → str`** — vurgulu heceyi Türkçe-duyarlı büyük harfle işaretle
+    (`_tr_upper`: i→İ, ı→I; Python `str.upper()` değil); U+00B7 orta nokta ayıracı:
+    `geldi→"gel·Dİ"`, `ankara→"AN·ka·ra"`, `istanbul→"is·TAN·bul"`.
+  - `turkgram.tr`: `hecele()` / `vurgu()` / `vurgu_işaretle()` sarmalayıcılar.
+  - Hakem: 26.229 leksikon lemması + 31 istisna, 0 çökme.
+  - 101 yeni test (50 syllabify + 39 stress_mark + 12 TR denklik/edge); **toplam: 3825 test**.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -306,6 +322,21 @@ results = parse_text("Ali eve geldi.", roots=lexicon.load())
 # results[-1]  → []  (noktalama)
 # rank_in_context(tokenize(text), parse_text(text, roots=roots))  — H-10 entegrasyonu
 
+# Hecelemleme + vurgu (Faz 9)
+from turkgram.syllabify import syllabify, stress, stress_mark
+syllabify("geldiğimiz")                        # ['gel', 'di', 'ği', 'miz']
+syllabify("elektrik")                          # ['e', 'lek', 'trik']  (maksimal onset: tr)
+syllabify("kontrol")                           # ['kon', 'trol']
+syllabify("kâtip")                             # ['kâ', 'tip']          (circumflex)
+stress("geldi")                                # 1  (son hece, 0-tabanlı)
+stress("ankara")                               # 0  (AN·ka·ra, istisna)
+stress("istanbul")                             # 1  (is·TAN·bul, istisna)
+stress("")                                     # None
+stress_mark("geldi")                           # 'gel·Dİ'
+stress_mark("ankara")                          # 'AN·ka·ra'
+stress_mark("istanbul")                        # 'is·TAN·bul'
+stress_mark("elektrik")                        # 'e·lek·TRİK'
+
 # CLI — python -m turkgram
 # python -m turkgram analyze okudum
 # python -m turkgram analyze okudum --format json
@@ -376,6 +407,9 @@ tr.sayıya_çevir(-42)                            # eksi kırk iki
 tr.normalleştir("42 km yol")                    # kırk iki kilometre yol
 tr.ipa("öğrenci")                               # øːɾendʒi
 tr.ipa("kelime")                                # celime
+tr.hecele("elektrik")                           # ['e', 'lek', 'trik']
+tr.vurgu("ankara")                              # 0
+tr.vurgu_işaretle("istanbul")                   # 'is·TAN·bul'
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
@@ -394,10 +428,10 @@ pip install -e ".[test]"
 pytest
 ```
 
-Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer ve
+Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer/hecelemleme ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3724 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**3825 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 

@@ -36,6 +36,7 @@ def test_parse_text_apostrophe_strip():
 
 def test_parse_text_cache_hit():
     import turkgram.analysis as _mod
+
     _mod._cached_analyze.cache_clear()
     parse_text("geldi geldi geldi")
     info = _mod._cached_analyze.cache_info()
@@ -46,6 +47,7 @@ def test_parse_text_cache_hit():
 def test_parse_text_roots_none_vs_empty_set():
     """roots=None ve roots=set() farklı cache slotları kullanmalı."""
     import turkgram.analysis as _mod
+
     _mod._cached_analyze.cache_clear()
 
     r1 = parse_text("geldi", roots=None)
