@@ -701,7 +701,7 @@ def vurgu_işaretle(kelime: str) -> str:
 # ── Yazım denetimi (Faz 9b) ──────────────────────────────────────────────
 def yazım_geçerli(kelime: str, *, kökler: "frozenset[str] | None" = None) -> bool:
     """Kelimenin geçerli Türkçe olup olmadığını döner."""
-    return _spellcheck.is_valid(_tr_lower(kelime), roots=kökler)
+    return _spellcheck.is_valid(kelime, roots=kökler)
 
 
 def öneri(
@@ -713,7 +713,7 @@ def öneri(
 ) -> list[str]:
     """Yanlış yazılmış kelime için kök önerileri (V1: lemma listesi)."""
     return _spellcheck.suggest(
-        _tr_lower(kelime), roots=kökler, max_suggestions=maksimum, max_distance=uzaklık
+        kelime, roots=kökler, max_suggestions=maksimum, max_distance=uzaklık
     )
 
 
@@ -726,5 +726,5 @@ def denetle(
 ) -> "_spellcheck.SpellResult":
     """Geçerlilik + öneri — SpellResult döner."""
     return _spellcheck.check(
-        _tr_lower(kelime), roots=kökler, max_suggestions=maksimum, max_distance=uzaklık
+        kelime, roots=kökler, max_suggestions=maksimum, max_distance=uzaklık
     )
