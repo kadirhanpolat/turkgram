@@ -580,6 +580,12 @@ def cumle_uret(
 
 
 from .conjunction import conjoin as _conjoin, coordinate as _coordinate  # noqa: E402
+from .normalization import (
+    number_to_words as _nw, float_to_words as _fw,
+    date_to_words as _dw, time_to_words as _tw,
+    expand_abbreviation as _ea, normalize as _norm,
+)
+from .phonology import to_ipa as _to_ipa
 
 _BAĞLAÇ: dict[str, str] = {
     # Koordinatifler
@@ -634,3 +640,40 @@ def koordine_et(ögeler: list[str], bağlaç: str) -> str:
             f"Bilinmeyen bağlaç: {bağlaç!r}. Geçerliler: {sorted(_BAĞLAÇ)}"
         )
     return _coordinate(ögeler, _BAĞLAÇ[norm])
+
+
+# ── Normalleştirme + IPA (Faz 8) ──────────────────────────────────────────
+
+def sayıya_çevir(n: int) -> str:
+    """Tam sayıyı Türkçe sözel gösterimine çevirir."""
+    return _nw(n)
+
+
+def ondalığa_çevir(n: float) -> str:
+    """Ondalık sayıyı Türkçe sözel gösterimine çevirir."""
+    return _fw(n)
+
+
+def tarihe_çevir(gün: int, ay: "int | str", yıl: int) -> str:
+    """Tarih bileşenlerini Türkçe sözel biçime çevirir."""
+    return _dw(gün, ay, yıl)
+
+
+def saate_çevir(saat: int, dakika: int) -> str:
+    """Saat ve dakikayı Türkçe sözel biçime çevirir."""
+    return _tw(saat, dakika)
+
+
+def kısaltma_aç(token: str) -> str:
+    """Kapalı tabloda kısaltmayı genişletir; bilinmeyen → aynen döner."""
+    return _ea(token)
+
+
+def normalleştir(text: str) -> str:
+    """Token bazlı pipeline: sayı + kısaltma + sembol genişletme."""
+    return _norm(text)
+
+
+def ipa(text: str) -> str:
+    """Türkçe metin → IPA transkripsiyon dizesi."""
+    return _to_ipa(text)

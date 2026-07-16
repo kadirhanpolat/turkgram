@@ -91,6 +91,13 @@ from .postposition import postposition
 # ── Bağlaç yönetimi (Faz 5 D4) ──────────────────────────────────────────
 from .conjunction import conjoin, coordinate, CONJUNCTIONS
 
+# ── Normalleştirme + IPA (Faz 8) ──────────────────────────────────────────
+from .normalization import (
+    number_to_words, float_to_words, date_to_words,
+    time_to_words, expand_abbreviation, normalize,
+)
+from .phonology import to_ipa, ipa_table
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -124,8 +131,13 @@ __all__ = [
     "postposition",
     # bağlaç yönetimi
     "conjunction", "conjoin", "coordinate", "CONJUNCTIONS",
+    # normalleştirme + IPA
+    "number_to_words", "float_to_words", "date_to_words",
+    "time_to_words", "expand_abbreviation", "normalize",
+    "to_ipa", "ipa_table",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",
+    "normalization", "phonology",
     "__version__",
 ]
