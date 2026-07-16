@@ -21,6 +21,7 @@ from . import compound as _c
 from . import adjective as _adj
 from .number import ordinal as _ordinal, distributive as _distributive
 from .postposition import postposition as _postposition
+from .syllabify import syllabify as _syllabify, stress as _stress, stress_mark as _stress_mark
 
 
 # ── Türkçe-duyarlı küçük harf (#10: İ→i, I→ı) ────────────────────────────
@@ -677,3 +678,20 @@ def normalleştir(text: str) -> str:
 def ipa(text: str) -> str:
     """Türkçe metin → IPA transkripsiyon dizesi."""
     return _to_ipa(text)
+
+
+# ── Heceleme + vurgu (Faz 9) ──────────────────────────────────────────────
+
+def hecele(kelime: str) -> list[str]:
+    """syllabify() Türkçe sarmalayıcı."""
+    return _syllabify(kelime)
+
+
+def vurgu(kelime: str) -> int | None:
+    """stress() Türkçe sarmalayıcı."""
+    return _stress(kelime)
+
+
+def vurgu_işaretle(kelime: str) -> str:
+    """stress_mark() Türkçe sarmalayıcı."""
+    return _stress_mark(kelime)

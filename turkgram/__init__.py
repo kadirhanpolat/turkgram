@@ -94,6 +94,9 @@ from .conjunction import conjoin, coordinate, CONJUNCTIONS
 # ── Tokenizasyon (Faz 9) ─────────────────────────────────────────────────
 from .tokenize import tokenize
 
+# ── Heceleme + vurgu (Faz 9) ─────────────────────────────────────────────
+from .syllabify import syllabify, stress, stress_mark
+
 # ── Normalleştirme + IPA (Faz 8) ──────────────────────────────────────────
 from .normalization import (
     number_to_words, float_to_words, date_to_words,
