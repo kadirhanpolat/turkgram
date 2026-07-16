@@ -54,7 +54,7 @@ GOLDEN_COORDINATE = [
     (["geldi", "gitti"], "fakat", "geldi fakat gitti"),
     (["büyük", "küçük"], "ya da", "büyük ya da küçük"),
     (["ev", "araba"], "veya", "ev veya araba"),
-    (["yedi", "içti"], "sonra", "yedi sonra içti"),  # sonra koordinatif değil ama API dener
+    (["yedi", "içti"], "bile", "yedi bile içti"),    # bile koordinatif
     # Üçlü koordinatif
     (["elma", "armut", "kiraz"], "ve", "elma, armut ve kiraz"),
     (["kırmızı", "mavi", "yeşil"], "ya da", "kırmızı, mavi ya da yeşil"),
