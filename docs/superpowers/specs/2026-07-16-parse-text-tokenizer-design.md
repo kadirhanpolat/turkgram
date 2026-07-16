@@ -113,7 +113,7 @@ apostrof sonrası eki çözümlemeyi garanti etmez.
 from functools import lru_cache
 
 @lru_cache(maxsize=4096)
-def _cached_analyze(surface: str, roots_key: frozenset | None, depth: int) -> tuple[Analysis, ...]:
+def _cached_analyze(surface: str, roots_key: frozenset[str] | None, depth: int) -> tuple[Analysis, ...]:
     roots = set(roots_key) if roots_key is not None else None
     return tuple(analyze(surface, roots=roots, max_derivation_depth=depth))
 ```
@@ -125,7 +125,14 @@ Key: `(surface, frozenset(roots) if roots is not None else None, depth)` —
 CPython GIL altında tek-iş parçacıklı etkin kullanım güvenlidir; çoklu iş parçacığı
 durumunda benign duplicate compute mümkündür, kilit gerekmez (M2 notu).
 
-`parse_text` içinde her token için `_cached_analyze(surface, roots_key, depth)` çağrılır.
+`parse_text` içinde dönüşüm ve çağrı:
+```python
+roots_key = frozenset(roots) if roots is not None else None
+result = list(_cached_analyze(surface, roots_key, depth))
+```
+
+**Cache güvenliği:** `Analysis` dataclass'ı `frozen=True` ile tanımlanmıştır — döndürülen
+`tuple[Analysis, ...]` elemanları değiştirilemez, cache koruması sağlanmıştır.
 
 ### H-10 Entegrasyonu
 
@@ -176,7 +183,11 @@ Bağımsız golden (motor-körü) yalnız `tokenize` için — `parse_text` içi
 
 `rank_in_context` bağlam pencereleri noktalama slotlarını (`[]`) **gracefully atlar**
 (boş aday listesi context kuralı oluşturmaz). Bu `parse_text` tasarım hatası değil,
-mevcut `rank_in_context` davranışıdır. Doğrulanması implementasyon aşamasında yapılır.
+mevcut `rank_in_context` davranışıdır.
+
+**Zorunlu doğrulama:** `rank_in_context` implementasyonunda K1-K5 kural gövdelerinin
+her birinde `analyses[i]` için `len(analyses[i]) == 0` guard'ı mevcut olmalıdır.
+Bu entegrasyonun tamamlanmış sayılabilmesi için guard varlığı doğrulanmalı veya eksikse eklenmelidir.
 
 ---
 
