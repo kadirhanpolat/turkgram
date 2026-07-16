@@ -40,6 +40,7 @@ _NOUN_TO_NOUN: tuple[_Suffix, ...] = (
     ("isim → isim", "-DAş", "DAş", False, False),
     ("isim → isim", "-CA", "CA", False, False),      # Türkçe, Çamlıca
     ("isim → isim", "-CIl", "CIl", False, False),    # evcil, bencil, ölümcül
+    ("isim → isim", "-sAl", "sAl", False, False),   # toplumsal, ulusal, evrensel
 )
 # İsimden fiil (fiil üretir → mastar)
 _NOUN_TO_VERB: tuple[_Suffix, ...] = (
@@ -118,6 +119,7 @@ _LEXICAL_SUFFIXES: tuple[tuple[str, str, str], ...] = (
     ("isim → isim", "-DAş",  "noun"),
     ("isim → isim", "-CA",   "noun"),
     ("isim → isim", "-CIl",  "noun"),
+    ("isim → isim", "-sAl",  "noun"),
     # isim → fiil
     ("isim → fiil", "-lA-",   "noun"),
     ("isim → fiil", "-lAn-",  "noun"),
@@ -148,6 +150,7 @@ _DERIVED_POS: dict[str, str] = {
     "-sIz":  "adj",
     "-CIl":  "adj",
     "-CA":   "adj",
+    "-sAl":  "adj",
     "-lIk":  "noun",
     "-CI":   "noun",
     "-CIk":  "noun",
