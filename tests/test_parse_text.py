@@ -1,6 +1,6 @@
 # tests/test_parse_text.py
 from turkgram import tokenize, parse_text
-from turkgram.analysis import Analysis, _cached_analyze
+from turkgram.analysis import Analysis
 
 
 def test_parse_text_empty():
