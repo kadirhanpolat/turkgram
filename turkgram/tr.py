@@ -22,6 +22,7 @@ from . import adjective as _adj
 from .number import ordinal as _ordinal, distributive as _distributive
 from .postposition import postposition as _postposition
 from .syllabify import syllabify as _syllabify, stress as _stress, stress_mark as _stress_mark
+from . import spellcheck as _spellcheck
 
 
 # ── Türkçe-duyarlı küçük harf (#10: İ→i, I→ı) ────────────────────────────
@@ -695,3 +696,35 @@ def vurgu(kelime: str) -> int | None:
 def vurgu_işaretle(kelime: str) -> str:
     """stress_mark() Türkçe sarmalayıcı."""
     return _stress_mark(kelime)
+
+
+# ── Yazım denetimi (Faz 9b) ──────────────────────────────────────────────
+def yazım_geçerli(kelime: str, *, kökler: "frozenset[str] | None" = None) -> bool:
+    """Kelimenin geçerli Türkçe olup olmadığını döner."""
+    return _spellcheck.is_valid(_tr_lower(kelime), roots=kökler)
+
+
+def öneri(
+    kelime: str,
+    *,
+    kökler: "frozenset[str] | None" = None,
+    maksimum: int = 5,
+    uzaklık: float = 2.0,
+) -> list[str]:
+    """Yanlış yazılmış kelime için kök önerileri (V1: lemma listesi)."""
+    return _spellcheck.suggest(
+        _tr_lower(kelime), roots=kökler, max_suggestions=maksimum, max_distance=uzaklık
+    )
+
+
+def denetle(
+    kelime: str,
+    *,
+    kökler: "frozenset[str] | None" = None,
+    maksimum: int = 5,
+    uzaklık: float = 2.0,
+) -> "_spellcheck.SpellResult":
+    """Geçerlilik + öneri — SpellResult döner."""
+    return _spellcheck.check(
+        _tr_lower(kelime), roots=kökler, max_suggestions=maksimum, max_distance=uzaklık
+    )
