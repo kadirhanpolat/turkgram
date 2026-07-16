@@ -24,11 +24,12 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Edat öbeği** | `turkgram.postposition` | **`postposition`** (19 edat; ev için / bana göre / evle) |
 | **Bağlaç morfolojisi** | `turkgram.conjunction` | **`conjoin`** (de/da ses uyumu), **`coordinate`** (ikili/üçlü/korelatif) |
 | Sözdizimi üretim | `turkgram.syntax` | `isim_tamlamasi`, `sifat_tamlamasi`, `cumle_uret` |
-| **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon; fiil/isim/sıfat/sayı/bağlaç/yapım eki; `max_derivation_depth` ile **zincirli türetme** + `Analysis.chain`) |
-| Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots), **`load_freq`**, `pos_map` (gömülü; opt-in) |
+| **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon; fiil/isim/sıfat/sayı/bağlaç/yapım eki; `max_derivation_depth` ile **zincirli türetme** + `Analysis.chain`), **`analysis_to_dict`** (JSON serileştirme; `schema_version`/`confidence`/`hypothetical`) |
+| Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots; lazy-cached), **`load_freq`**, `pos_map` (gömülü; opt-in) |
 | Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
 | Cümle-bağlamı | `turkgram.context` | **`rank_in_context`** (komşuluk kurallarıyla yeniden sıralama; opt-in) |
 | **İstatistiksel disambiguation** | `turkgram.statistical` | **`load_model`**, **`rank_statistical`**, **`viterbi`**, `parse_oflazer_full` (opt-in) |
+| **CLI** | `turkgram.__main__` | `python -m turkgram analyze <yüzey> [--format text\|json] [--roots a,b] [--depth N] [--disambiguate] [--lexicon]` · `python -m turkgram version` (sürüm + `DATA_VERSION` + `ANALYSIS_DICT_SCHEMA_VERSION`) |
 | Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
@@ -155,6 +156,23 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - **`tr.py`** sarmalayıcılar: `sayıya_çevir()` / `ondalığa_çevir()` / `tarihe_çevir()` /
     `saate_çevir()` / `kısaltma_aç()` / `normalleştir()` / `ipa()`.
   - 82 yeni test; 3651 toplam PASS, 0 regresyon.
+- **2026-07-16 ✅** — mimari inceleme + LLM çıktı API + CLI:
+  - **Mimari inceleme** — 5 bağımsız Opus-4.8 ajan adversarial critique (42 bulgu;
+    `docs/architecture-critique-genisletme.md`). Kimlik kararı: turkgram = bağımsız
+    saf-Python gramer kütüphanesi; spaCy entegrasyonu kapsam dışı; NER/dependency-parsing
+    kalıcı defer.
+  - **H-09 ✅ `lexicon.load()` lazy singleton** — `_load_filtered(frozenset)` +
+    `@lru_cache(maxsize=16)`; tekrar çağrılarda 26k TSV yeniden parse edilmez.
+  - **H-03 ✅ `analysis_to_dict()`** (`turkgram.analysis`) — `Analysis` → versioned JSON
+    dict; alanlar: `schema_version`, `lemma`, `pos`, `kind`, `kwargs`, `hypothetical`,
+    `confidence` (dışarıdan; `disambiguate()` çifti), `segments`, `chain` (rekürsif).
+    `voice_chain` tuple → list. `ANALYSIS_DICT_SCHEMA_VERSION = "1"`.
+  - **H-04 ✅ `DATA_VERSION`** (`turkgram.__init__`) — `"2026-07-16"` sabit; veri
+    bütünlüğü testi + CLI sürüm çıktısı.
+  - **CLI ✅** (`turkgram/__main__.py`) — `python -m turkgram analyze <yüzey>` (text/json
+    format, `--roots`, `--depth`, `--disambiguate`, `--lexicon`) + `version` komutu;
+    Windows UTF-8 zorlaması; DoS koruması (200 karakter).
+  - 31 yeni test (19 `analysis_to_dict` + 12 CLI); **toplam: 3689 test**.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -254,6 +272,28 @@ to_ipa("kelime")                               # 'celime'     (k ön-ünlü → 
 to_ipa("kırk")                                 # 'kɯɾk'       (k art-ünlü → /k/)
 to_ipa("çay")                                  # 'tʃaj'
 
+# JSON serileştirme (H-03) — analysis_to_dict + ANALYSIS_DICT_SCHEMA_VERSION
+from turkgram import analysis_to_dict, ANALYSIS_DICT_SCHEMA_VERSION
+a = tg.analyze("okuduğum", roots={"okumak"})[0]
+analysis_to_dict(a)
+# {'schema_version': '1', 'lemma': 'okumak', 'pos': 'verb', 'kind': 'participle',
+#  'kwargs': {'ptype': 'dik', 'possessive': '1sg'}, 'hypothetical': False,
+#  'confidence': None, 'segments': [...], 'chain': []}
+#
+# Disambiguation güveniyle:
+from turkgram.disambiguation import disambiguate
+cands = tg.analyze("gelin", roots=lexicon.load())
+for a, conf in disambiguate(cands):
+    d = analysis_to_dict(a, confidence=conf)  # d['confidence'] ∈ [0,1]
+
+# CLI — python -m turkgram
+# python -m turkgram analyze okudum
+# python -m turkgram analyze okudum --format json
+# python -m turkgram analyze gözlükçülük --roots göz --depth 5
+# python -m turkgram analyze okudum --disambiguate --lexicon
+# python -m turkgram version
+# → turkgram 0.X.X  |  data: 2026-07-16  |  dict schema: 1
+
 # Gömülü kök leksikonu (opt-in) — çıplak-önek gürültüsünü eler
 from turkgram import lexicon
 roots = lexicon.load()                         # ~26k lemma (Zemberek, Apache-2.0)
@@ -337,7 +377,7 @@ pytest
 Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3658 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**3689 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
