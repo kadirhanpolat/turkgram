@@ -90,7 +90,9 @@ CHECK_CASES = [
     ("okudum", True, ()),     # çekimli geçerli
 
     # --- Geçersiz: kök önerisi beklenir ---
-    ("seker", False, ("şeker",)),   # ş/s
+    # NOT: "seker" = sekmek fiili geniş zaman 3sg → morfolojik olarak GEÇERLİ
+    # Bu yüzden CHECK_CASES'te "dag" (dağ konfüzyonu) kullanıyoruz:
+    ("dag", False, ("dağ",)),       # ğ/g (dağ isim/fiil kökü)
     ("cok", False, ("çok",)),       # ç/c
     ("kapi", False, ("kapı",)),     # ı/i ; kapı isim kökü (lemma)
     ("gozluk", False, ("gözlük",)), # ö/o + ü/u ; gözlük isim kökü
