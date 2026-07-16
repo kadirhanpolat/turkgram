@@ -1,21 +1,10 @@
-"""Yapım eki analizi runner — golden_derivation_analysis.py karşı doğrular.
-
-Bilinen motor sınırı (xfail):
-  meslektaş: Türkçede lexikalize düzensiz biçim. Gerçek sözcük 'meslektaş' iken
-  motoru düzenli 4'lü uyumla 'meslekteş' üretir (meslek son ünlü e → ön → -teş).
-  Bu bir motor açığıdır (leksik istisna); golden doğrudur, motor düzensizi kapsamaz.
-"""
+"""Yapım eki analizi runner — golden_derivation_analysis.py karşı doğrular."""
 
 import pytest
 from turkgram.analysis import analyze
 from turkgram.lexicon import load
 
 from tests.golden_derivation_analysis import GOLDEN_ANALYSIS
-
-# Motor tarafından üretilemeyen bilinen düzensiz/leksikalize biçimler
-_KNOWN_ENGINE_GAPS: set[str] = {
-    "meslektaş",  # Düzenli harmoni: meslekteş (e→ön); gerçek sözcük: meslektaş (leksik istisna)
-}
 
 
 @pytest.fixture(scope="module")
@@ -37,8 +26,6 @@ def test_derivation_golden(
     expected_src_pos: str,
 ) -> None:
     """Her golden girişi için türetme analizinin sonuçlar listesinde olduğunu doğrular."""
-    if surface in _KNOWN_ENGINE_GAPS:
-        pytest.xfail(f"{surface!r}: bilinen motor açığı (leksik düzensiz biçim, golden doğru)")
 
     # Lemma leksikonda yoksa genişletilmiş root kümesi kullan
     extended_roots = roots | {expected_lemma}

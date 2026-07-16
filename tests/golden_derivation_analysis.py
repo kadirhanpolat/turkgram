@@ -30,8 +30,8 @@ GOLDEN_ANALYSIS: list[tuple[str, str, str, str, str]] = [
     ("sessiz",     "ses",     "adj",  "-sIz",   "noun"),  # i uyumu (e)
     # -CIk (pos=noun); isim küçültme
     ("köycük",     "köy",     "noun", "-CIk",   "noun"),  # y sedalı→c, ü
-    # -DAş (pos=noun); D: sedasızdan sonra t
-    ("meslektaş",  "meslek",  "noun", "-DAş",   "noun"),  # k sedasız→t, a
+    # -DAş (pos=noun); D: sedalıdan sonra d
+    ("vatandaş",   "vatan",   "noun", "-DAş",   "noun"),  # n sedalı→d, a
     # -CA (pos=adj); C sedasızdan sonra ç
     ("türkçe",     "türk",    "adj",  "-CA",    "noun"),  # k sedasız→ç, e
     ("çocukça",    "çocuk",   "adj",  "-CA",    "noun"),  # k sedasız→ç, a
