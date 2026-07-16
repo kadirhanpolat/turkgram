@@ -1195,14 +1195,14 @@ def _build_chain_analysis(
     """
     from .derivation import _DERIVED_POS  # noqa: F401
 
-    stem_surface = surface[: len(surface) - len(top_suffix_surface)]
     flat_segs: list[tuple[str, str]] = []
     if chain:
+        # chain[0] = en derin kök; yalnız onun kök segmenti + her katmandan suffix segmenti
+        flat_segs.append((chain[0].segments[0].surface, "kök"))
         for a in chain:
-            flat_segs.extend((seg.surface, seg.label) for seg in a.segments)
-        flat_segs.append((stem_surface, top_label))
-        flat_segs.append((top_suffix_surface, top_label))
+            flat_segs.append((a.segments[1].surface, a.segments[1].label))
     else:
+        stem_surface = surface[: len(surface) - len(top_suffix_surface)]
         flat_segs = [(stem_surface, "kök"), (top_suffix_surface, top_label)]
 
     return Analysis(
