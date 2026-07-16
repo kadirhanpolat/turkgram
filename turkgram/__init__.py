@@ -71,7 +71,7 @@ from .derivation import derivations
 from .adjective import intensify, diminutive, zarf_yap
 
 # ── Çözümleme (analysis: yüzey → kök+eksenler, Faz 2a) ──────────────────
-from .analysis import analyze, Analysis, Segment
+from .analysis import analyze, Analysis, Segment, analysis_to_dict, ANALYSIS_DICT_SCHEMA_VERSION
 
 # ── Disambiguation (aday sıralama + güven, Faz 2b) ──────────────────────
 from .disambiguation import rank, disambiguate

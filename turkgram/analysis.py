@@ -63,6 +63,55 @@ class Analysis:
 
 
 # ---------------------------------------------------------------------------
+# Serileştirme
+# ---------------------------------------------------------------------------
+ANALYSIS_DICT_SCHEMA_VERSION = "1"
+
+
+def _to_json_safe(val: Any) -> Any:
+    """kwargs değerlerini JSON-serileştirilebilir tipe çevir."""
+    if isinstance(val, tuple):
+        return [_to_json_safe(v) for v in val]
+    if isinstance(val, (str, bool, int, float)) or val is None:
+        return val
+    return str(val)
+
+
+def analysis_to_dict(
+    analysis: "Analysis",
+    confidence: float | None = None,
+) -> dict[str, Any]:
+    """Analysis nesnesini JSON-uyumlu sözlüğe çevir.
+
+    Args:
+        analysis: Çözümlenecek nesne.
+        confidence: disambiguation.disambiguate() çıktısından gelen güven skoru
+                    (∈ [0,1]). Disambiguation yapılmamışsa None.
+
+    Returns:
+        schema_version, lemma, pos, kind, kwargs, hypothetical, confidence,
+        segments ve chain içeren sözlük.
+
+    Schema değişirse ANALYSIS_DICT_SCHEMA_VERSION artırılır;
+    kapalı kind kümesi: analysis._KINDS.
+    """
+    return {
+        "schema_version": ANALYSIS_DICT_SCHEMA_VERSION,
+        "lemma": analysis.lemma,
+        "pos": analysis.pos,
+        "kind": analysis.kind,
+        "kwargs": {k: _to_json_safe(v) for k, v in analysis.kwargs.items()},
+        "hypothetical": analysis.hypothetical,
+        "confidence": confidence,
+        "segments": [
+            {"surface": s.surface, "label": s.label, "span": list(s.span)}
+            for s in analysis.segments
+        ],
+        "chain": [analysis_to_dict(a) for a in analysis.chain],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
 _POS = ("verb", "noun", "adj", "num", "conj")
