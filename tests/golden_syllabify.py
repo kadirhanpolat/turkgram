@@ -150,7 +150,9 @@ STRESS_MARK_CASES = [
     ("kâtip",    "kâ·TİP"),
 
     # Büyük harf girişi (normaliser tolere eder)
-    ("GELDI",    "gel·Dİ"),
+    # ASCII "I" (U+0049) → _tr_lower → "ı" (undotted) → _tr_upper → "I" (undotted)
+    # "GELDI" burada "I" undotted-I olduğundan çıktısı gel·DI (İ değil)
+    ("GELDI",    "gel·DI"),
     ("ARABA",    "a·ra·BA"),
 
     # Kenar durumlar

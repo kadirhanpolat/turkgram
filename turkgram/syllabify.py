@@ -19,7 +19,7 @@ def _tr_upper(s: str) -> str:
 
 
 def _tr_lower(s: str) -> str:
-    return s.replace("İ", "i").replace("I", "i").lower()
+    return s.replace("İ", "i").replace("I", "ı").lower()
 
 
 # Anahtar: _tr_lower() normalize edilmiş; Değer: 0-tabanlı vurgulu hece (baştan)
