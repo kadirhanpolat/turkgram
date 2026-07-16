@@ -698,6 +698,39 @@ def vurgu_işaretle(kelime: str) -> str:
     return _stress_mark(kelime)
 
 
+# ── Lemmatizer (Faz 9c) ───────────────────────────────────────────────────
+from . import lemmatize as _lem
+
+
+def temel_biçim(kelime: str, *, kökler=None, sıklık=None) -> str | None:
+    """Kelime → lemma (sözlük biçimi). Çözümsüz → None.
+
+    NOT: _tr_lower ÇAĞIRILMAZ — içeride analyze + spellcheck normalize eder.
+
+    >>> temel_biçim('geliyorum')  # 'gelmek'
+    >>> temel_biçim('evlerde')    # 'ev'
+    """
+    return _lem.lemmatize(kelime, roots=kökler, freq=sıklık)
+
+
+def temel_biçim_metin(metin: str, *, kökler=None, sıklık=None) -> list[str | None]:
+    """Metin → token başına lemma listesi.
+
+    >>> temel_biçim_metin('Ali eve geldi')  # ['ali', 'ev', 'gelmek']
+    """
+    return _lem.lemmatize_text(metin, roots=kökler, freq=sıklık)
+
+
+def temel_biçim_detay(kelime: str, *, kökler=None, sıklık=None):
+    """Kelime → LemmaResult. Çözümsüz → None."""
+    return _lem.lemmatize_detail(kelime, roots=kökler, freq=sıklık)
+
+
+def temel_biçim_metin_detay(metin: str, *, kökler=None, sıklık=None):
+    """Metin → token başına LemmaResult listesi."""
+    return _lem.lemmatize_text_detail(metin, roots=kökler, freq=sıklık)
+
+
 # ── Yazım denetimi (Faz 9b) ──────────────────────────────────────────────
 def yazım_geçerli(kelime: str, *, kökler: "frozenset[str] | None" = None) -> bool:
     """Kelimenin geçerli Türkçe olup olmadığını döner."""

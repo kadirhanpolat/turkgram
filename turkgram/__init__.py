@@ -101,6 +101,9 @@ from .syllabify import syllabify, stress, stress_mark
 # ── Yazım denetimi (Faz 9b) ──────────────────────────────────────────────
 from .spellcheck import SpellResult
 
+# ── Lemmatizer (Faz 9c) ───────────────────────────────────────────────────
+from .lemmatize import lemmatize, lemmatize_text, lemmatize_detail, lemmatize_text_detail, LemmaResult
+
 # ── Normalleştirme + IPA (Faz 8) ──────────────────────────────────────────
 from .normalization import (
     number_to_words, float_to_words, date_to_words,
@@ -151,6 +154,8 @@ __all__ = [
     "to_ipa", "ipa_table",
     # yazım denetimi
     "spellcheck", "SpellResult",
+    # lemmatizer
+    "lemmatize", "lemmatize_text", "lemmatize_detail", "lemmatize_text_detail", "LemmaResult",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",
