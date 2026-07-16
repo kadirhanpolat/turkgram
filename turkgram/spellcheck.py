@@ -95,13 +95,17 @@ class _BKTree:
 
     def __init__(self) -> None:
         self._root: tuple[str, dict] | None = None
+        self._frozen: bool = False  # build() sonrası True
 
     def build(self, words: Iterable[str]) -> "_BKTree":
         for w in words:
             self._insert(w)
+        self._frozen = True  # artık değiştirilemez
         return self
 
     def _insert(self, word: str) -> None:
+        if self._frozen:
+            raise RuntimeError("_BKTree: build() tamamlandıktan sonra insert yapılamaz")
         if self._root is None:
             self._root = (word, {})
             return
@@ -137,7 +141,7 @@ class _BKTree:
     ) -> None:
         d_float = _tr_distance(node_word, word)
         d_int = int(round(d_float * 2))
-        if d_float <= max_d_int / 2:
+        if d_int <= max_d_int:
             results.append((d_float, node_word))
         lo = max(0, d_int - max_d_int)
         hi = d_int + max_d_int
