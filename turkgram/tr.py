@@ -577,3 +577,60 @@ def cumle_uret(
     """
     kip_norm = _map(_KIP, kip, "kip") if _tr_lower(kip) in _KIP else kip
     return _syn.cumle_uret(ozne, yuklem, kip=kip_norm, olumsuz=olumsuz, soru=soru)
+
+
+from .conjunction import conjoin as _conjoin, coordinate as _coordinate  # noqa: E402
+
+_BAĞLAÇ: dict[str, str] = {
+    # Koordinatifler
+    "ve": "ve", "ama": "ama", "fakat": "fakat", "lakin": "lakin",
+    "ancak": "ancak", "çünkü": "çünkü", "oysa": "oysa",
+    "halbuki": "halbuki", "yoksa": "yoksa", "ya da": "ya da",
+    "veya": "veya", "yahut": "yahut", "üstelik": "üstelik",
+    "hatta": "hatta", "bile": "bile", "dahi": "dahi", "ise": "ise",
+    # Klitik — iki ayrı anahtar; conjoin() içinde ses uyumu çözülür
+    "de": "de",
+    "da": "da",
+    # Korelatifler (Türkçe boşluklu → iç alt-çizgili)
+    "hem hem": "hem_hem",
+    "ya ya": "ya_ya",
+    "ne ne": "ne_ne",
+    "ister ister": "ister_ister",
+    "gerek gerek": "gerek_gerek",
+    "hem hem de": "hem_hem_de",
+}
+
+
+def bağla(kelime: str, bağlaç: str) -> str:
+    """Kelimeye bağlaç ekle (Türkçe API).
+
+    bağlaç: 've' | 'ama' | 'de' | 'da' | 'hem hem' | 'ya ya' | 'ne ne' | ...
+    de/da klitik: ses uyumu otomatik uygulanır.
+
+    >>> bağla('eve', 'de')        # 'eve de'
+    >>> bağla('okula', 'da')      # 'okula da'
+    >>> bağla('elma', 've')       # 'elma ve'
+    """
+    norm = _tr_lower(bağlaç.strip())
+    if norm not in _BAĞLAÇ:
+        raise ValueError(
+            f"Bilinmeyen bağlaç: {bağlaç!r}. Geçerliler: {sorted(_BAĞLAÇ)}"
+        )
+    return _conjoin(kelime, _BAĞLAÇ[norm])
+
+
+def koordine_et(ögeler: list[str], bağlaç: str) -> str:
+    """Öğe listesini bağlaçla koordine et (Türkçe API).
+
+    Not: tr.sıralı() (sayı sıra eki) ile karışmaması için 'koordine_et' seçildi.
+
+    >>> koordine_et(['elma', 'armut'], 've')           # 'elma ve armut'
+    >>> koordine_et(['elma', 'armut', 'kiraz'], 've')  # 'elma, armut ve kiraz'
+    >>> koordine_et(['hızlı', 'güçlü'], 'hem hem')    # 'hem hızlı hem güçlü'
+    """
+    norm = _tr_lower(bağlaç.strip())
+    if norm not in _BAĞLAÇ:
+        raise ValueError(
+            f"Bilinmeyen bağlaç: {bağlaç!r}. Geçerliler: {sorted(_BAĞLAÇ)}"
+        )
+    return _coordinate(ögeler, _BAĞLAÇ[norm])

@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
-    lexicon, disambiguation, compound, context, adjective, syntax, postposition,
+    lexicon, disambiguation, compound, context, adjective, syntax, postposition, conjunction,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -88,6 +88,9 @@ from .number import ordinal, distributive
 # ── Edat/ilgeç yönetimi (Faz 5 D2) ──────────────────────────────────────
 from .postposition import postposition
 
+# ── Bağlaç yönetimi (Faz 5 D4) ──────────────────────────────────────────
+from .conjunction import conjoin, coordinate, CONJUNCTIONS
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -119,6 +122,8 @@ __all__ = [
     "ordinal", "distributive",
     # edat/ilgeç yönetimi
     "postposition",
+    # bağlaç yönetimi
+    "conjunction", "conjoin", "coordinate", "CONJUNCTIONS",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",
