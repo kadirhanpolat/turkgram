@@ -134,6 +134,20 @@ eki çözümlemesi eklendi (tek katman, fiilimsi+çatı dışlı):** `analyze('g
   - **Fix 3 "yor"-alt-dizi:** `find("yor")` → `rfind("yor")` → `yorgalamak`, `yorumlamak`
     gibi gövde-içi "yor" barındıran lemmalar artık doğru kurtarılır.
   - 5 yeni golden test; 3569 toplam PASS, 0 regresyon.
+- **Faz 8 ✅** — metin normalleştirme + IPA transkripsiyon:
+  - **`normalization.py`**: `number_to_words` (0–999 milyar aralığı; `1000→"bin"` DEĞİL "bir bin";
+    negatif: "eksi kırk iki"; `bool` guard; IEEE 754 `-0.0` fix), `float_to_words` ("üç virgül bir
+    dört"), `date_to_words` (ay int/str, validasyon), `time_to_words` (saat/dakika validasyon),
+    `expand_abbreviation` (30+ kısaltma tablosu: TL/km/vb/%), `normalize` (token pipeline:
+    sayı + kısaltma + sembol genişletme).
+  - **`phonology.py`**: `to_ipa` — 28 Türkçe harf → IPA tam eşleme + bağlam-duyarlı kurallar:
+    **ğ** (kelime-ortası ünlü-uzama `øː`, kelime-sonu sessiz), **k** (ön-ünlü yanında `/c/`,
+    art-ünlü / bağımsız `/k/`), **l** (art-ünlü yanında `/ɫ/`, ön-ünlü / bağımsız `/l/`).
+    `ipa_table()` temel eşleme tablosu. Örnekler: `öğrenci→"øːɾendʒi"`, `dağ→"da"`,
+    `kelime→"celime"`, `kırk→"kɯɾk"`, `çay→"tʃaj"`.
+  - **`tr.py`** sarmalayıcılar: `sayıya_çevir()` / `ondalığa_çevir()` / `tarihe_çevir()` /
+    `saate_çevir()` / `kısaltma_aç()` / `normalleştir()` / `ipa()`.
+  - 82 yeni test; 3651 toplam PASS, 0 regresyon.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -207,6 +221,22 @@ coordinate(["Ali", "Ayşe", "Fatma"], "ve")    # 'Ali, Ayşe ve Fatma'
 coordinate(["Ali", "Ayşe"], "hem_hem")         # 'hem Ali hem Ayşe'  (korelatif)
 tg.analyze("da", roots={"da"})                 # kind='conjunction' (belirsizlik: "da" hem bağlaç)
 
+# Normalleştirme + IPA (Faz 8)
+from turkgram.normalization import number_to_words, normalize, expand_abbreviation
+number_to_words(1000)                          # 'bin'  (NOT "bir bin")
+number_to_words(2026)                          # 'iki bin yirmi altı'
+number_to_words(-42)                           # 'eksi kırk iki'
+normalize("42 km yol")                         # 'kırk iki kilometre yol'
+normalize("TL 100")                            # 'türk lirası yüz'
+expand_abbreviation("vb")                      # 've benzeri'
+
+from turkgram.phonology import to_ipa, ipa_table
+to_ipa("öğrenci")                              # 'øːɾendʒi'  (ğ → ünlü uzar)
+to_ipa("dağ")                                  # 'da'         (kelime-sonu ğ sessiz)
+to_ipa("kelime")                               # 'celime'     (k ön-ünlü → /c/)
+to_ipa("kırk")                                 # 'kɯɾk'       (k art-ünlü → /k/)
+to_ipa("çay")                                  # 'tʃaj'
+
 # Gömülü kök leksikonu (opt-in) — çıplak-önek gürültüsünü eler
 from turkgram import lexicon
 roots = lexicon.load()                         # ~26k lemma (Zemberek, Apache-2.0)
@@ -264,12 +294,19 @@ tr.dağıtımlı("altı")                             # altışar
 tr.edat_obeği("ev", "için")                      # ev için
 tr.edat_obeği("ben", "için")                     # benim için
 tr.edat_obeği("okul", "ile", bitişik=True)       # okulla
+tr.sayıya_çevir(1000)                           # bin
+tr.sayıya_çevir(-42)                            # eksi kırk iki
+tr.normalleştir("42 km yol")                    # kırk iki kilometre yol
+tr.ipa("öğrenci")                               # øːɾendʒi
+tr.ipa("kelime")                                # celime
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
 `ekfiil`/`yüklem`/`ki_ekle`/`eşitlik` · `türet` · **`çözümle`** (çözümleme; Türkçe eksen
 değerleri + segment) · **`sıralı`**/**`dağıtımlı`** (sayı morfolojisi) · **`edat_obeği`** (edat öbeği) ·
-**`bağla`** (de/da ses uyumu) / **`koordine_et`** (ikili/üçlü/korelatif).
+**`bağla`** (de/da ses uyumu) / **`koordine_et`** (ikili/üçlü/korelatif) ·
+**`sayıya_çevir`**/**`ondalığa_çevir`**/**`tarihe_çevir`**/**`saate_çevir`** (normalleştirme) ·
+**`kısaltma_aç`**/**`normalleştir`** (pipeline) · **`ipa`** (IPA transkripsiyon).
 Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/`soru`/`birleşik`/**`çatı`** ·
 `durum`/`iyelik`/`sayı`. Çekim tablosu anahtarları da Türkçe (`şimdiki.3tekil`, `çoğul.bulunma`).
 
@@ -283,7 +320,7 @@ pytest
 Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3569 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**3651 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
