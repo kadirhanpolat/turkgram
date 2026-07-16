@@ -360,19 +360,28 @@ Test durumu: son ölçüm **3453 test yeşil** (slow hariç; 3343 önceki + 86 p
     - `roots` filtresi doğru çalışır (`roots is not None and root not in roots → atla`).
     - Edat analizi **kapsam dışı** (sözdizimsel bağlam gerektirir, defer).
     - Golden: 24 giriş, bağımsız (motor-körü, Opus): ordinal 1-10+2 bileşik, distributif 1-10+2 bileşik.
-  - **D4: Bağlaç morfolojisi** — tasarım onaylandı (`docs/superpowers/specs/2026-07-16-conjunction-design.md`):
+  - ✅ **D4: Bağlaç morfolojisi** (`conjunction.py`, SPEC `spec/conjunction-spec.md`) — TAMAMLANDI:
     - `turkgram/conjunction.py` — `conjoin(word, conj)` (de/da ses uyumu; ise ayrı yazılır, harmoni yok;
-      fallback `_last_vowel()==None → "de"`), `coordinate(items, conj)` (ikili/üçlü/korelatif; boş→ValueError,
-      tek→aynen; korelatifler 2 öğe zorunlu: `hem_hem`/`ya_ya`/`ne_ne`/`ister_ister`/`gerek_gerek`/`hem_hem_de`).
+      fallback `_last_vowel()==None → "de"`; korelatif anahtar → ValueError), `coordinate(items, conj)`
+      (ikili/üçlü/korelatif; boş→ValueError, tek→aynen; korelatifler yalnız 2 öğe:
+      `hem_hem`/`ya_ya`/`ne_ne`/`ister_ister`/`gerek_gerek`/`hem_hem_de`).
     - `analyze()` genişletme — `_try_conjunction_all()` oracle-dışı kapalı-liste dalı: `"de"/"da"` tam-token
-      → `kind="conjunction"`, `pos="conj"`. `_KINDS`'a `"conjunction"`, `_POS`'a `"conj"` eklenir.
+      → `kind="conjunction"`, `pos="conj"`. `_KINDS`'a `"conjunction"` (SONA), `_POS`'a `"conj"` eklendi.
       TUZAK: `analyze("de")` **bilinçli belirsizlik** — hem bağlaç hem `demek` imp-2sg; disambiguation sıralar.
-    - TR API: `bağla(kelime, bağlaç)` / `koordine_et(ögeler, bağlaç)` (`sırala` ile çakışmaması için).
-      `_BAĞLAÇ`: `"de"`/`"da"` ayrı anahtar → `"de/da"` iç key; korelatif Türkçe boşluklu → alt-çizgili.
-    - ~80 test; SPEC→golden(Opus,motor-körü)→motor→hakem iş akışı.
+    - TR API: `bağla(kelime, bağlaç)` / `koordine_et(ögeler, bağlaç)` (`sıralı()` ile çakışmaması için).
+      `_BAĞLAÇ`: `"de"`/`"da"` ayrı anahtar; korelatif Türkçe boşluklu → alt-çizgili iç anahtar.
+    - 70 yeni test; Hakem: 52.458 korpus çağrısı 0 çökme.
 
-Yeni dosyalar (2026-07-16, Faz 5 D4 bağlaç morfolojisi tasarımı):
+Yeni dosyalar (2026-07-16, Faz 5 D4 bağlaç morfolojisi):
+- `spec/conjunction-spec.md` — SPEC (kapalı küme, de/da uyumu, korelatifler, analyze tuzakları)
+- `turkgram/conjunction.py` — `conjoin()`, `coordinate()`, `CONJUNCTIONS`, `_VALID_CONJ`
+- `turkgram/__init__.py` — `conjunction`, `conjoin`, `coordinate`, `CONJUNCTIONS` export eklendi
+- `turkgram/tr.py` — `bağla()`, `koordine_et()`, `_BAĞLAÇ` eklendi
+- `turkgram/analysis.py` — `_try_conjunction_all()`, `_KINDS`+`"conjunction"`, `_POS`+`"conj"` eklendi
+- `tests/golden_conjunction.py` — 104-satır bağımsız golden (motor-körü, Opus)
+- `tests/test_conjunction.py` — runner (70 test)
 - `docs/superpowers/specs/2026-07-16-conjunction-design.md` — onaylı tasarım dokümanı
+- `docs/superpowers/plans/2026-07-16-faz5-d4-baglac-morfolojisi.md` — implementasyon planı
 
 Yeni dosyalar (2026-07-16, Faz 5 D2 edat yönetimi + D3 sayı çözümlemesi):
 - `spec/postposition-spec.md` — 19 edat SPEC (için asimetrisi, bitişik ile, üzere nom)
