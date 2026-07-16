@@ -1492,3 +1492,51 @@ def _try_adj_all(
                         lemma=lemma, pos="adj", kind="diminutive",
                         kwargs=kwargs, segments=segs, hypothetical=False,
                     ))
+
+
+# ---------------------------------------------------------------------------
+# parse_text — toplu analiz
+# ---------------------------------------------------------------------------
+
+from .tokenize import tokenize as _tokenize  # noqa: E402
+from typing import Collection  # noqa: E402
+
+
+@functools.lru_cache(maxsize=4096)
+def _cached_analyze(
+    surface: str,
+    roots_key: "frozenset[str] | None",
+    depth: int,
+) -> "tuple[Analysis, ...]":
+    """analyze() sonucunu önbellekler. Analysis frozen=True → cache güvenli.
+
+    Not: pos filtresi iletilmez — parse_text genel amaçlı API'dir.
+    pos filtresi gerekirse analyze() doğrudan çağrılmalı.
+    """
+    roots = set(roots_key) if roots_key is not None else None
+    return tuple(analyze(surface, roots=roots, max_derivation_depth=depth))
+
+
+def parse_text(
+    text: str,
+    roots: "Collection[str] | None" = None,
+    *,
+    max_derivation_depth: int = 1,
+) -> "list[list[Analysis]]":
+    """Metni tokenize edip her token için analyze() döndürür.
+
+    Dönüş uzunluğu == len(tokenize(text)) — indeks hizalaması garantili.
+    Noktalama tokenları için boş liste döner.
+    """
+    roots_key: "frozenset[str] | None" = (
+        frozenset(roots) if roots is not None else None
+    )
+    result: list[list[Analysis]] = []
+    for token in _tokenize(text):
+        # Apostrof-başlı token: tam olarak bir düz apostrof (U+0027) soy
+        surface = token[1:] if token and token[0] == "'" else token
+        if not surface:
+            result.append([])
+            continue
+        result.append(list(_cached_analyze(surface, roots_key, max_derivation_depth)))
+    return result
