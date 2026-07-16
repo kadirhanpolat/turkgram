@@ -19,6 +19,8 @@ from .tokenize import tokenize as _tokenize
 from .spellcheck import suggest as _suggest
 from . import lexicon as _lexicon
 
+_FALLBACK_CONFIDENCE: float = 1.0
+
 
 def _resolve_roots(roots: Collection[str] | None) -> frozenset[str]:
     """roots=None → lexicon.load() (spellcheck semantiği ile tutarlı).
@@ -62,6 +64,9 @@ def _lemmatize_inner(
             confidence=confidence,
             corrected=corrected,
         )
+    # Sonsuz özyineleme koruması: spellcheck sonrası gelen çağrıda tekrar deneme
+    if corrected:
+        return None
     # Fallback: spellcheck (roots=None → lexicon.load() — suggest kendi içinde halleder)
     suggestions = _suggest(word, roots=resolved_roots if resolved_roots else None)
     if suggestions:
@@ -121,6 +126,26 @@ def lemmatize_text(
     return [r.lemma if r is not None else None for r in results]
 
 
+def _pick_confidence(
+    best: object,
+    all_analyses: list,
+    freq: dict[str, int] | None,
+) -> float:
+    """Bağlam sıralaması sonrası güven skorunu belirler.
+
+    TAM aday listesi üzerinden disambiguate ederek best'e ait skoru döner.
+    (Tek-elemanlı [best] göndermek softmax=1.0 garantisi verir; anlamsız.)
+    all_analyses boşsa _FALLBACK_CONFIDENCE döner.
+    """
+    if not all_analyses:
+        return _FALLBACK_CONFIDENCE
+    all_ranked = _disambiguate(all_analyses, freq=freq)
+    return next(
+        (conf for a, conf in all_ranked if a.lemma == best.lemma and a.kind == best.kind),  # type: ignore[union-attr]
+        all_ranked[0][1],
+    )
+
+
 def lemmatize_text_detail(
     text: str,
     *,
@@ -130,7 +155,7 @@ def lemmatize_text_detail(
     """Metin → token başına LemmaResult listesi. Çözümsüz token → None.
 
     Raises:
-        ValueError: Boş string.
+        ValueError: Boş string veya boşluk-only string.
     """
     if not isinstance(text, str) or not text.strip():
         raise ValueError(f"geçersiz text: {text!r}")
@@ -147,16 +172,7 @@ def lemmatize_text_detail(
     for i, (ranked, all_analyses) in enumerate(zip(ranked_per_token, analyses_per_token)):
         if ranked:
             best = ranked[0]
-            # Güven skoru: TAM aday listesi üzerinden disambiguate et
-            # (tek-elemanlı [best] göndermek → softmax=1.0 garantili, anlamsız)
-            if all_analyses:
-                all_ranked = _disambiguate(all_analyses, freq=freq)
-                confidence = next(
-                    (conf for a, conf in all_ranked if a.lemma == best.lemma and a.kind == best.kind),
-                    all_ranked[0][1],
-                )
-            else:
-                confidence = 1.0
+            confidence = _pick_confidence(best, all_analyses, freq)
             output.append(LemmaResult(
                 lemma=best.lemma,
                 pos=best.pos,
