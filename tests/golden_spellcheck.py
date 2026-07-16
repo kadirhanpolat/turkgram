@@ -36,7 +36,7 @@ IS_VALID_CASES = [
 
     # --- Karmaşık çekim (True) ---
     ("öğrenciyim", True),  # öğrenci + ekfiil 1sg (kaynaştırma -y-)
-    ("çalışmalarım", True),# çalış + -mA + çoğul + iyelik 1sg
+    ("kitabımda", True),   # kitap + iyelik 1sg + bulunma (durum çekimi)
 
     # --- Bozuk / geçersiz (False) ---
     ("evdte", False),      # bozuk: fazla/yanlış ünsüz kümesi
