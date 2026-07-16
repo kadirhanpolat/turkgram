@@ -59,3 +59,97 @@ _STRESS_EXCEPTIONS: dict[str, int] = {
     "otobüs": 1,
     "trafik": 0,
 }
+
+
+def syllabify(word: str) -> list[str]:
+    """Sözcüğü hecelerine böl.
+
+    syllabify("geldiğimiz")  # → ["gel", "di", "ği", "miz"]
+    syllabify("Türkçe")      # → ["Türk", "çe"]
+    syllabify("ait")         # → ["a", "it"]   (VV → V·V)
+    syllabify("")            # → []
+    syllabify("krt")         # → ["krt"]        (ünlüsüz pasif geçiş)
+    """
+    if not word:
+        return []
+
+    vowel_positions = [i for i, c in enumerate(word) if c in _VOWELS]
+
+    if not vowel_positions:
+        return [word]
+
+    syllables: list[str] = []
+    start = 0
+
+    for idx, vpos in enumerate(vowel_positions[:-1]):
+        next_vpos = vowel_positions[idx + 1]
+        consonants_start = vpos + 1
+        n_consonants = next_vpos - consonants_start
+
+        if n_consonants == 0:
+            # VV: ikinci ünlü yeni hece başlatır
+            cut = next_vpos
+        elif n_consonants == 1:
+            # V·CV: ünsüz sağa
+            cut = consonants_start
+        elif n_consonants == 2:
+            # VC·CV: ortadan
+            cut = consonants_start + 1
+        else:
+            # VCC·CV (ve daha uzun kümeler): maksimal onset — son ünsüz sağa kalır
+            cut = consonants_start + (n_consonants - 1)
+
+        syllables.append(word[start:cut])
+        start = cut
+
+    syllables.append(word[start:])
+    return syllables
+
+
+def stress(word: str) -> int | None:
+    """Vurgulu heceye 0-tabanlı indeks (baştan). Boş string için None.
+
+    stress("geldi")    # → 1  (son hece)
+    stress("ankara")   # → 0  (istisna)
+    stress("istanbul") # → 1  (istisna: is·TAN·bul)
+    stress("")         # → None
+    stress("krt")      # → 0  (ünlüsüz: tek "hece"; anlamlı vurgu yok,
+                       #        yalnız indeks tutarlılığı)
+    """
+    if not word:
+        return None
+    syllables = syllabify(word)
+    if not syllables:
+        return None
+    key = _tr_lower(word)
+    if key in _STRESS_EXCEPTIONS:
+        return _STRESS_EXCEPTIONS[key]
+    return len(syllables) - 1
+
+
+def stress_mark(word: str) -> str:
+    """Vurgulu heceyi büyük harfle + U+00B7 ayracıyla göster.
+
+    Girdi _tr_lower ile normalize edilir; her iki iç çağrı (syllabify + stress)
+    normalize edilmiş string üzerinden yapılır.
+
+    stress_mark("geldi")    # → "gel·Dİ"
+    stress_mark("istanbul") # → "is·TAN·bul"
+    stress_mark("ankara")   # → "AN·ka·ra"
+    stress_mark("")         # → ""
+    stress_mark("krt")      # → "KRT"
+    """
+    if not word:
+        return ""
+    normalized = _tr_lower(word)          # tek normalize noktası
+    syllables = syllabify(normalized)     # normalize üzerinden
+    if not syllables:
+        return ""
+    idx = stress(normalized)              # normalize üzerinden (istisna tablosu aynı key)
+    if idx is None:
+        return ""
+    marked = [
+        _tr_upper(s) if i == idx else s
+        for i, s in enumerate(syllables)
+    ]
+    return _SYLLABLE_SEP.join(marked)
