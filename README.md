@@ -32,7 +32,8 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Tokenizer + toplu analiz** | `turkgram.tokenize` / `turkgram.analysis` | **`tokenize`** (metin → token listesi: boşluk+noktalama+apostrof), **`parse_text`** (metin → `list[list[Analysis]]`; indeks hizalamalı, H-08 cache, `rank_in_context` entegrasyonu) |
 | **CLI** | `turkgram.__main__` | `python -m turkgram analyze <yüzey> [--format text\|json] [--roots a,b] [--depth N] [--disambiguate] [--lexicon]` · `python -m turkgram version` (sürüm + `DATA_VERSION` + `ANALYSIS_DICT_SCHEMA_VERSION`) |
 | **Hecelemleme + vurgu** | `turkgram.syllabify` | **`syllabify`** (hece listesi: gel·di·ği·miz), **`stress`** (0-tabanlı vurgulu hece indeksi), **`stress_mark`** (AN·ka·ra; Türkçe büyük harf) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`** |
+| **Yazım denetimi** | `turkgram.spellcheck` | **`is_valid`** (morfoloji tabanlı geçerlilik), **`suggest`** (BK-tree + Türkçe-ağırlıklı Levenshtein; kök önerir), **`check`** → `SpellResult(word, is_valid, suggestions)` |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
@@ -200,6 +201,14 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - `turkgram.tr`: `hecele()` / `vurgu()` / `vurgu_işaretle()` sarmalayıcılar.
   - Hakem: 26.229 leksikon lemması + 31 istisna, 0 çökme.
   - 101 yeni test (50 syllabify + 39 stress_mark + 12 TR denklik/edge); **toplam: 3825 test**.
+- **Faz 9b ✅** — yazım denetimi (`turkgram/spellcheck.py`):
+  - **`is_valid(word)`** — morfoloji tabanlı geçerlilik: `analyze()` + `lexicon.load()` (opt-in ters); agglütinatif biçimler tam kapsanır (`evlerde`, `gelmişti` → True).
+  - **`_BKTree` + Türkçe-ağırlıklı Levenshtein** — 6 Türkçe karakter karfüzyon çifti (ı↔i, ö↔o, ü↔u, ş↔s, ç↔c, ğ↔g) → maliyet 0.5; diğer op 1.0. BK-tree `_frozen` kilidi (lru_cache singleton güvenliği).
+  - **`suggest(word, *, max_suggestions=5, max_distance=2.0)`** — V1: **kök (lemma) döner** (`"seker"→["şeker"]`); sıralama: (uzaklık, -frekans, alfabe). `roots=None` → `lexicon.load()` otomatik.
+  - **`check(word)`** → `SpellResult(frozen=True)` — `is_valid=True` → kısa-devre (BK-tree atlanır).
+  - **Türkçe API**: `yazım_geçerli()` / `öneri()` / `denetle()`. **CLI**: `python -m turkgram check <kelime>`.
+  - TUZAK: `seker` = `sekmek` geniş 3sg → GEÇERLİ; golden `dag` (dağ) kullandı.
+  - Hakem: 26k leksikon, 0 çökme. 58 yeni test; **toplam: 3883 test**.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -337,6 +346,21 @@ stress_mark("ankara")                          # 'AN·ka·ra'
 stress_mark("istanbul")                        # 'is·TAN·bul'
 stress_mark("elektrik")                        # 'e·lek·TRİK'
 
+# Yazım denetimi (Faz 9b)
+from turkgram import spellcheck, SpellResult
+spellcheck.is_valid("evde")                    # True
+spellcheck.is_valid("evdte")                   # False
+spellcheck.suggest("seker")                    # ['şeker']  (ş/s = distance 0.5)
+spellcheck.suggest("gozluk")                   # ['gözlük']  (ö/o + ü/u = distance 1.0)
+result = spellcheck.check("dag")
+# SpellResult(word='dag', is_valid=False, suggestions=('dağ',))
+import turkgram.tr as tr
+tr.yazım_geçerli("geliyorum")                  # True
+tr.öneri("kapi")                               # ['kapı']
+tr.denetle("cok")                              # SpellResult(word='cok', is_valid=False, ...)
+# python -m turkgram check evdte
+# python -m turkgram check evde
+
 # CLI — python -m turkgram
 # python -m turkgram analyze okudum
 # python -m turkgram analyze okudum --format json
@@ -417,7 +441,7 @@ Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_
 değerleri + segment) · **`sıralı`**/**`dağıtımlı`** (sayı morfolojisi) · **`edat_obeği`** (edat öbeği) ·
 **`bağla`** (de/da ses uyumu) / **`koordine_et`** (ikili/üçlü/korelatif) ·
 **`sayıya_çevir`**/**`ondalığa_çevir`**/**`tarihe_çevir`**/**`saate_çevir`** (normalleştirme) ·
-**`kısaltma_aç`**/**`normalleştir`** (pipeline) · **`ipa`** (IPA transkripsiyon).
+**`kısaltma_aç`**/**`normalleştir`** (pipeline) · **`ipa`** (IPA transkripsiyon) · **`yazım_geçerli`**/**`öneri`**/**`denetle`** (yazım denetimi).
 Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/`soru`/`birleşik`/**`çatı`** ·
 `durum`/`iyelik`/`sayı`. Çekim tablosu anahtarları da Türkçe (`şimdiki.3tekil`, `çoğul.bulunma`).
 
@@ -431,7 +455,7 @@ pytest
 Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer/hecelemleme ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3825 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**3883 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
@@ -443,3 +467,5 @@ Gömülü referans verisi türetilmiş **olgu** içerir (ham kaynak kopyalanmaz)
 - İstatistiksel model (`data/disambig_*_tr.tsv`) — **TrMor2018** (ai-ku/TrMor2018, MIT) 460k-token eğitim verisinden türetilmiş log-olasılık sayımları; ham metin pakete girmez.
 
 Atıf ve değişiklik beyanı: [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+
+

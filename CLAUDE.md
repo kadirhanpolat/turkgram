@@ -479,3 +479,55 @@ Yeni dosyalar (2026-07-16, parse_text + tokenizer):
 - `tests/golden_tokenize.py` — 26-girdi bağımsız golden (motor-körü, elle-doğrulanmış)
 - `tests/test_tokenize.py` — runner (26 test)
 - `tests/test_parse_text.py` — parse_text davranış + H-10 entegrasyon testleri (9 test)
+
+- **Faz 9 ✅** — hecelemleme + vurgu (`turkgram/syllabify.py`):
+  - **`syllabify(word) → list[str]`** — O(n) ünlü-tabanlı hece sınır tespiti; kural kümesi:
+    V·CV (birer ünsüz sağa), VC·CV (iki ünsüz ortadan), VCC·CV (üçlü: ilk ikisi sola) +
+    **`_VALID_ONSETS`** frozenset'i ile maksimal onset (yabancı küme: `tr`/`kr`/`pr`/`kl` vb.)
+    → `elektrik→["e","lek","trik"]`, `kontrol→["kon","trol"]`. Bitişik ünlü → V·V.
+    Circumflex dahil: â/î/û `_VOWELS` kümesinde (kâtip→["kâ","tip"]).
+  - **`stress(word) → int | None`** — 0-tabanlı vurgulu hece indeksi (baştan); varsayılan son
+    hece; `_STRESS_EXCEPTIONS` elle küratörlenmiş 31 giriş (şehir adları + alıntılar):
+    `ankara→0`, `istanbul→1` (is·TAN·bul), `stres→0`, `klima→1`. Boş string → `None`.
+  - **`stress_mark(word) → str`** — vurgulu heceyi Türkçe-duyarlı büyük harfle işaretle
+    (`_tr_upper`: i→İ, ı→I; Python `str.upper()` değil); U+00B7 orta nokta ayıracı:
+    `geldi→"gel·Dİ"`, `ankara→"AN·ka·ra"`, `istanbul→"is·TAN·bul"`.
+  - `turkgram.tr`: `hecele()` / `vurgu()` / `vurgu_işaretle()` sarmalayıcılar.
+  - Hakem: 26.229 leksikon lemması + 31 istisna, 0 çökme.
+  - 101 yeni test (50 syllabify + 39 stress_mark + 12 TR denklik/edge); **toplam: 3825 test**.
+- **Faz 9b ✅** — yazım denetimi (`turkgram/spellcheck.py`, SPEC `docs/superpowers/specs/2026-07-16-spellcheck-design.md`):
+  - **`is_valid(word, *, roots=None)`** — morfoloji tabanlı geçerlilik: `analyze()` + `lexicon.load()`
+    (opt-in semantik inversiyonu: `roots=None` → leksikon, `analyze`'ın gürültü modunun TERSİ).
+    Agglütinatif biçimler tam kapsanır; DoS koruması 200 karakter.
+  - **`_BKTree`** iç sınıfı — metric-space indeks; `_frozen` kilidi (`lru_cache` singleton güvenliği;
+    `build()` sonrası `_insert()` `RuntimeError` fırlatır). ×2 tam-sayı ölçekleme (0.5 mesafe float-safe).
+  - **`_tr_distance(a, b) → float`** — Türkçe-ağırlıklı Levenshtein: 6 konfüzyon çifti
+    (ı↔i / ö↔o / ü↔u / ş↔s / ç↔c / ğ↔g) maliyet 0.5; `_TR_PAIRS: frozenset[frozenset[str]]` O(1) simetrik.
+  - **`suggest(word, *, roots=None, max_suggestions=5, max_distance=2.0)`** — V1: **kök (lemma)**
+    döner (`"seker"→["şeker"]`, `"gozluk"→["gözlük"]`); sıralama: (uzaklık, -frekans, alfabe).
+  - **`check(word)`** → `SpellResult(frozen=True)` — `is_valid=True` → kısa-devre (BK-tree atlanır).
+  - **Türkçe API** (`tr.py`): `yazım_geçerli()` / `öneri()` / `denetle()`.
+  - **CLI**: `python -m turkgram check <kelime>` — `evdte: GEÇERSİZ` / `evde: GEÇERLİ`.
+  - TUZAK: `seker` = `sekmek` geniş 3sg → GEÇERLİ; golden `dag` (dağ) kullandı (V1 seker tuzağı).
+  - TUZAK: `tr.py` sarmalayıcılar `_tr_lower` ÇAĞIRMAZ — `spellcheck` modülü içeride zaten normalize eder.
+  - Hakem: 26k leksikon, 0 çökme. 58 yeni test; **toplam: 3883 test**.
+
+Yeni dosyalar (2026-07-16, Faz 9 hecelemleme+vurgu):
+- `docs/superpowers/specs/2026-07-16-syllabify-design.md` — onaylı tasarım dokümanı
+- `docs/superpowers/plans/2026-07-16-faz9-syllabify.md` — implementasyon planı
+- `turkgram/syllabify.py` — `syllabify`, `stress`, `stress_mark`, `_VALID_ONSETS`, `_STRESS_EXCEPTIONS`, `_tr_upper`
+- `turkgram/__init__.py` — `syllabify`, `stress`, `stress_mark` export eklendi
+- `turkgram/tr.py` — `hecele()`, `vurgu()`, `vurgu_işaretle()` Türkçe sarmalayıcılar eklendi
+- `tests/golden_syllabify.py` — 101-girdi bağımsız golden (motor-körü, Opus)
+- `tests/test_syllabify.py` — runner (101 test)
+
+Yeni dosyalar (2026-07-17, Faz 9b yazım denetimi):
+- `docs/superpowers/specs/2026-07-16-spellcheck-design.md` — onaylı tasarım dokümanı
+- `docs/superpowers/plans/2026-07-16-faz9b-spellcheck.md` — implementasyon planı
+- `turkgram/spellcheck.py` — `_BKTree`, `_tr_distance`, `_TR_PAIRS`, `SpellResult`, `is_valid`, `suggest`, `check`
+- `turkgram/__init__.py` — `spellcheck` modülü + `SpellResult` export eklendi
+- `turkgram/tr.py` — `yazım_geçerli()`, `öneri()`, `denetle()` Türkçe sarmalayıcılar eklendi
+- `turkgram/__main__.py` — `cmd_check()` + `check` alt-komutu eklendi
+- `tests/golden_spellcheck.py` — 40-girdi bağımsız golden (motor-körü, Opus); NOT: seker→dag tuzağı
+- `tests/test_spellcheck.py` — runner (58 test)
+- `tools/sweep_spellcheck.py` — korpus tarama aracı (26k leksikon, 0 çökme)
