@@ -59,3 +59,25 @@ def test_parse_text_roots_none_vs_empty_set():
 def test_parse_text_all_punctuation():
     result = parse_text("...")
     assert result == [[], [], []]
+
+
+def test_parse_text_rank_in_context_integration():
+    """parse_text çıktısı rank_in_context'e doğrudan beslenebilmeli (H-10)."""
+    from turkgram.context import rank_in_context
+    from turkgram.lexicon import load as load_lexicon
+
+    text = "Ali eve geldi."
+    tokens = tokenize(text)
+    roots = load_lexicon()
+    analyses = parse_text(text, roots=roots)
+
+    # Uzunluk eşleşmeli
+    assert len(tokens) == len(analyses)
+
+    # rank_in_context çökmemeli (noktalama slotları [] → guard var)
+    result = rank_in_context(tokens, analyses)
+    assert len(result) == len(tokens)
+
+    # Noktalama slotu boş kalmalı
+    dot_idx = tokens.index(".")
+    assert result[dot_idx] == []
