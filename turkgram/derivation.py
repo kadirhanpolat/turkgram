@@ -104,6 +104,77 @@ _FIILIMSI: tuple[_Suffix, ...] = (
     ("fiilimsi · zarf-fiil (ulaç)", "-DIkçA", "DIkçA", False, False),
 )
 
+# ── Analiz için leksik suffix kümesi (fiilimsi + çatı DIŞLANMIŞ) ────────────
+# Her eleman: (category, label, src_pos)
+# Exclusion (category, label) çiftiyle yapılır — -Ar- çakışmasını doğru çözer:
+#   ("isim → fiil", "-Ar-") DAHİL; ("fiil → fiil (çatı)", "-Ar- (ettirgen)") DIŞLI.
+_LEXICAL_SUFFIXES: tuple[tuple[str, str, str], ...] = (
+    # isim → isim
+    ("isim → isim", "-lIk",  "noun"),
+    ("isim → isim", "-CI",   "noun"),
+    ("isim → isim", "-lI",   "noun"),
+    ("isim → isim", "-sIz",  "noun"),
+    ("isim → isim", "-CIk",  "noun"),
+    ("isim → isim", "-DAş",  "noun"),
+    ("isim → isim", "-CA",   "noun"),
+    ("isim → isim", "-CIl",  "noun"),
+    # isim → fiil
+    ("isim → fiil", "-lA-",   "noun"),
+    ("isim → fiil", "-lAn-",  "noun"),
+    ("isim → fiil", "-lAş-",  "noun"),
+    ("isim → fiil", "-Al-",   "noun"),
+    ("isim → fiil", "-A-",    "noun"),
+    ("isim → fiil", "-sA-",   "noun"),
+    ("isim → fiil", "-ImsA-", "noun"),
+    ("isim → fiil", "-Ar-",   "noun"),   # isim→fiil: morar-, sarar- (DIŞLI DEĞİL)
+    # fiil → isim (leksik; fiilimsi DIŞLI)
+    ("fiil → isim", "-Im",   "verb"),
+    ("fiil → isim", "-gI",   "verb"),
+    ("fiil → isim", "-gIn",  "verb"),
+    ("fiil → isim", "-gAn",  "verb"),
+    ("fiil → isim", "-Ak",   "verb"),
+    ("fiil → isim", "-I",    "verb"),
+    ("fiil → isim", "-mAn",  "verb"),
+    ("fiil → isim", "-IcI",  "verb"),
+    ("fiil → isim", "-Ik",   "verb"),
+    ("fiil → isim", "-Inç",  "verb"),
+    ("fiil → isim", "-IntI", "verb"),
+)
+
+# Türetilmiş sözcüğün POS'u — suffix etiketine göre
+_DERIVED_POS: dict[str, str] = {
+    # isim → isim (sıfat üretenler adj)
+    "-lI":   "adj",
+    "-sIz":  "adj",
+    "-CIl":  "adj",
+    "-CA":   "adj",
+    "-lIk":  "noun",
+    "-CI":   "noun",
+    "-CIk":  "noun",
+    "-DAş":  "noun",
+    # isim → fiil
+    "-lA-":   "verb",
+    "-lAn-":  "verb",
+    "-lAş-":  "verb",
+    "-Al-":   "verb",
+    "-A-":    "verb",
+    "-sA-":   "verb",
+    "-ImsA-": "verb",
+    "-Ar-":   "verb",
+    # fiil → isim / fiil → sıfat
+    "-IcI":  "adj",
+    "-gAn":  "adj",
+    "-Ik":   "adj",
+    "-gIn":  "adj",
+    "-Im":   "noun",
+    "-gI":   "noun",
+    "-Ak":   "noun",
+    "-I":    "noun",
+    "-mAn":  "noun",
+    "-Inç":  "noun",
+    "-IntI": "noun",
+}
+
 
 def _expand(root: str, template: str, vowel_initial: bool) -> str | None:
     """Kök + şablonu mekanik gerçekle (harmoni/sertleşme). Başarısız → None."""

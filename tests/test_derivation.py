@@ -143,3 +143,51 @@ def test_categories_present():
     cats = {r["category"] for r in d}
     assert "fiil → isim" in cats
     assert "fiil → fiil (çatı)" in cats
+
+
+from turkgram.derivation import _LEXICAL_SUFFIXES, _DERIVED_POS
+
+
+def test_lexical_suffixes_structure():
+    """Her eleman (category, label, src_pos) üçlüsü olmalı."""
+    for item in _LEXICAL_SUFFIXES:
+        assert len(item) == 3, f"Beklenen 3-tuple, alınan: {item}"
+        cat, label, src_pos = item
+        assert src_pos in ("noun", "verb"), f"Geçersiz src_pos: {src_pos}"
+
+
+def test_lexical_suffixes_fiilimsi_excluded():
+    """Fiilimsi ekleri _LEXICAL_SUFFIXES'te OLMAMALI."""
+    excluded_labels = {"-mA", "-Iş", "-An", "-mAz", "-DIk", "-AcAk", "-mIş",
+                       "-AsI", "-ArAk", "-Ip", "-IncA", "-mAdAn", "-AlI", "-DIkçA"}
+    labels_in = {label for (_, label, _) in _LEXICAL_SUFFIXES}
+    overlap = excluded_labels & labels_in
+    assert not overlap, f"Fiilimsi ekleri dışlanmalı: {overlap}"
+
+
+def test_lexical_suffixes_voice_excluded():
+    """Çatı ekleri (fiil→fiil) _LEXICAL_SUFFIXES'te OLMAMALI."""
+    voice_cats = {"fiil → fiil (çatı)"}
+    cats_in = {cat for (cat, _, _) in _LEXICAL_SUFFIXES}
+    assert not (voice_cats & cats_in), "Çatı kategorisi dışlanmalı"
+
+
+def test_ar_collision_resolution():
+    """-Ar- yalnız isim→fiil olarak dahil, fiil→fiil(çatı) dışarıda."""
+    ar_entries = [(cat, label) for (cat, label, _) in _LEXICAL_SUFFIXES
+                  if "-Ar-" in label or "-Ar" == label]
+    for cat, label in ar_entries:
+        assert cat == "isim → fiil", f"-Ar- yalnız isim→fiil'de olmalı: ({cat}, {label})"
+
+
+def test_derived_pos_adj_suffixes():
+    """-lI, -sIz, -CIl, -IcI, -gAn, -Ik vb. sıfat üretmeli."""
+    adj_suffixes = {"-lI", "-sIz", "-CIl", "-CA", "-IcI", "-gAn", "-Ik", "-gIn"}
+    for sfx in adj_suffixes:
+        assert _DERIVED_POS.get(sfx) == "adj", f"{sfx} → 'adj' olmalı, alınan: {_DERIVED_POS.get(sfx)}"
+
+
+def test_derived_pos_covers_all_lexical():
+    """_LEXICAL_SUFFIXES'teki her label _DERIVED_POS'ta olmalı."""
+    missing = [label for (_, label, _) in _LEXICAL_SUFFIXES if label not in _DERIVED_POS]
+    assert not missing, f"_DERIVED_POS'ta eksik label'lar: {missing}"
