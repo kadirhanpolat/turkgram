@@ -6,8 +6,10 @@ and coordinate() for building coordinated lists.
 
 from .morphology import last_vowel as _last_vowel
 
+__all__ = ["conjoin", "coordinate", "CONJUNCTIONS"]
+
 # All Turkish conjunctions recognized by this module
-CONJUNCTIONS: frozenset = frozenset({
+CONJUNCTIONS: frozenset[str] = frozenset({
     "ve", "ama", "fakat", "lakin", "ancak", "çünkü", "oysa", "halbuki",
     "yoksa", "ya da", "veya", "yahut", "üstelik", "hatta", "bile", "dahi",
     "ise", "ki", "de", "da",
@@ -15,7 +17,7 @@ CONJUNCTIONS: frozenset = frozenset({
 })
 
 # Valid values for conjoin(conj=) and coordinate(conj=)
-_VALID_CONJ: frozenset = frozenset({
+_VALID_CONJ: frozenset[str] = frozenset({
     # Coordinatives
     "ve", "ama", "fakat", "lakin", "ancak", "çünkü", "oysa", "halbuki",
     "yoksa", "ya da", "veya", "yahut", "üstelik", "hatta", "bile", "dahi",
@@ -26,12 +28,12 @@ _VALID_CONJ: frozenset = frozenset({
     "hem_hem", "ya_ya", "ne_ne", "ister_ister", "gerek_gerek", "hem_hem_de",
 })
 
-_CORRELATIVES: frozenset = frozenset({
+_CORRELATIVES: frozenset[str] = frozenset({
     "hem_hem", "ya_ya", "ne_ne", "ister_ister", "gerek_gerek", "hem_hem_de",
 })
 
-_FRONT_VOWELS = frozenset("eiöü")
-_BACK_VOWELS = frozenset("aıou")
+_FRONT_VOWELS: frozenset[str] = frozenset("eiöü")
+_BACK_VOWELS: frozenset[str] = frozenset("aıou")
 
 
 def _de_da(word: str) -> str:
