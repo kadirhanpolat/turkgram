@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from turkgram.derivation import derivations
+from turkgram.derivation import derivations, _LEXICAL_SUFFIXES, _DERIVED_POS
 
 
 def _forms(hw, pos):
@@ -143,9 +143,6 @@ def test_categories_present():
     cats = {r["category"] for r in d}
     assert "fiil → isim" in cats
     assert "fiil → fiil (çatı)" in cats
-
-
-from turkgram.derivation import _LEXICAL_SUFFIXES, _DERIVED_POS
 
 
 def test_lexical_suffixes_structure():
