@@ -53,7 +53,57 @@ def is_valid(word: str, *, roots: frozenset[str] | None = None) -> bool:
     return any(not a.hypothetical for a in _analyze(word, roots=r))
 
 
-# suggest() ve check() bir sonraki görevde eklenecek — placeholder yok.
+def suggest(
+    word: str,
+    *,
+    roots: frozenset[str] | None = None,
+    max_suggestions: int = 5,
+    max_distance: float = 2.0,
+) -> list[str]:
+    """Yanlış yazılmış kelime için kök (lemma) önerileri — V1.
+
+    V1: kök (lemma) listesi döner; "evte" → ["ev"] (inflected değil).
+    V2'de yüzey yeniden üretimi eklenir (API değişmez, davranış değişir).
+    """
+    if max_suggestions < 1:
+        raise ValueError(f"max_suggestions en az 1 olmalı, verildi: {max_suggestions}")
+    if max_distance <= 0:
+        raise ValueError(f"max_distance 0'dan büyük olmalı, verildi: {max_distance}")
+
+    word = _tr_lower(word.strip())
+    if not word or len(word) > _MAX_WORD_LEN:
+        return []
+
+    r = _roots(roots)
+    tree = _get_tree(r)
+    hits = tree.query(word, max_distance)  # [(distance, lemma), ...] SIRASIZ
+
+    try:
+        freq: dict[str, int] = _lexicon.load_freq()
+    except Exception:
+        freq = {}
+
+    # Sırala: distance artan, eşitte frekans azalan, sonra alfabetik (deterministik)
+    hits.sort(key=lambda x: (x[0], -freq.get(x[1], 0), x[1]))
+
+    return [lemma for _, lemma in hits[:max_suggestions]]
+
+
+def check(
+    word: str,
+    *,
+    roots: frozenset[str] | None = None,
+    max_suggestions: int = 5,
+    max_distance: float = 2.0,
+) -> SpellResult:
+    """Geçerlilik + öneri — SpellResult döner.
+
+    is_valid=True ise suggestions=() (BK-tree sorgusu yapılmaz, hızlı yol).
+    """
+    if is_valid(word, roots=roots):
+        return SpellResult(word=word, is_valid=True, suggestions=())
+    sugs = suggest(word, roots=roots, max_suggestions=max_suggestions, max_distance=max_distance)
+    return SpellResult(word=word, is_valid=False, suggestions=tuple(sugs))
 
 
 def _tr_distance(a: str, b: str) -> float:
