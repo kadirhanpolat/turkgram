@@ -1088,6 +1088,27 @@ def _strip_derivation(
     return candidates
 
 
+def _strip_one_layer(
+    surface: str,
+) -> list[tuple[str, str, str, str]]:
+    """Verilen yüzeyden tek katman leksik suffix soy.
+
+    Returns:
+        List of (stem, label, suffix_surface, src_pos).
+        Boş liste = hiç eşleşme yok.
+    """
+    from .derivation import _LEXICAL_SUFFIXES
+
+    results: list[tuple[str, str, str, str]] = []
+    for (cat, label, src_pos) in _LEXICAL_SUFFIXES:
+        for stem in _strip_derivation(surface, label, src_pos):
+            if not stem:
+                continue
+            suffix_surface = surface[len(stem):]
+            results.append((stem, label, suffix_surface, src_pos))
+    return results
+
+
 def _try_derivation_all(
     surface: str,
     analyses: list,
@@ -1104,53 +1125,48 @@ def _try_derivation_all(
     """
     from .derivation import (
         derivations as _derivations,
-        _LEXICAL_SUFFIXES,
         _DERIVED_POS,
     )
     from .morphology import low_vowel
 
-    for (cat, label, src_pos) in _LEXICAL_SUFFIXES:
-        for stem in _strip_derivation(surface, label, src_pos):
-            if not stem:
-                continue
-            # Fiil-kaynaklı → mastar yeniden kur (seç → seçmek)
-            if src_pos == "verb":
-                try:
-                    lemma = stem + "m" + low_vowel(stem) + "k"
-                except (ValueError, IndexError):
-                    continue
-            else:
-                lemma = stem
-            # §8.1 precision filtresi
-            if roots is not None and lemma not in roots:
-                continue
-            # Oracle: derivations() ile doğrula
+    for (stem, label, suffix_surface, src_pos) in _strip_one_layer(surface):
+        # Fiil-kaynaklı → mastar yeniden kur (seç → seçmek)
+        if src_pos == "verb":
             try:
-                derived = _derivations(lemma, src_pos)
-            except Exception:
+                lemma = stem + "m" + low_vowel(stem) + "k"
+            except (ValueError, IndexError):
                 continue
-            if not derived:
+        else:
+            lemma = stem
+        # §8.1 precision filtresi
+        if roots is not None and lemma not in roots:
+            continue
+        # Oracle: derivations() ile doğrula
+        try:
+            derived = _derivations(lemma, src_pos)
+        except Exception:
+            continue
+        if not derived:
+            continue
+        for r in derived:
+            if r["form"] != surface or r["suffix"] != label:
                 continue
-            for r in derived:
-                if r["form"] != surface or r["suffix"] != label:
-                    continue
-                key = ("derivation", lemma, label)
-                if key in seen:
-                    continue
-                seen.add(key)
-                derived_pos = _DERIVED_POS.get(label, "noun")
-                suffix_surf = surface[len(stem):]
-                segs = _segs_to_tuple([(stem, "kök"), (suffix_surf, label)])
-                analyses.append(
-                    Analysis(
-                        kind="derivation",
-                        lemma=lemma,
-                        pos=derived_pos,
-                        kwargs={"suffix": label, "src_pos": src_pos},
-                        segments=segs,
-                        hypothetical=(roots is None),
-                    )
+            key = ("derivation", lemma, label)
+            if key in seen:
+                continue
+            seen.add(key)
+            derived_pos = _DERIVED_POS.get(label, "noun")
+            segs = _segs_to_tuple([(stem, "kök"), (suffix_surface, label)])
+            analyses.append(
+                Analysis(
+                    kind="derivation",
+                    lemma=lemma,
+                    pos=derived_pos,
+                    kwargs={"suffix": label, "src_pos": src_pos},
+                    segments=segs,
+                    hypothetical=(roots is None),
                 )
+            )
 
 
 def _try_number_all(
