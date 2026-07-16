@@ -1169,6 +1169,143 @@ def _try_derivation_all(
             )
 
 
+def _build_chain_analysis(
+    surface: str,
+    chain: list,   # list[Analysis], chain[0] = en derin kök (ilk soyulan), chain[-1] = yüzeye en yakın
+    top_label: str,
+    top_suffix_surface: str,
+    top_src_pos: str,
+    top_pos: str,
+    top_lemma: str,
+    hypothetical: bool,
+) -> "Analysis":
+    """BFS zincirinden Analysis üret.
+
+    segments: tüm katmanların segmentleri art arda düzleştirilir.
+    chain: düz Analysis listesi (chain[0] = en derin kök).
+    """
+    from .derivation import _DERIVED_POS  # noqa: F401
+
+    stem_surface = surface[: len(surface) - len(top_suffix_surface)]
+    flat_segs: list[tuple[str, str]] = []
+    if chain:
+        for a in chain:
+            flat_segs.extend(list(a.segments))
+        flat_segs.append((stem_surface, top_label))
+        flat_segs.append((top_suffix_surface, top_label))
+    else:
+        flat_segs = [(stem_surface, "kök"), (top_suffix_surface, top_label)]
+
+    return Analysis(
+        kind="derivation",
+        lemma=top_lemma,
+        pos=top_pos,
+        kwargs={"suffix": top_label, "src_pos": top_src_pos},
+        segments=_segs_to_tuple(flat_segs),
+        hypothetical=hypothetical,
+        chain=tuple(chain),
+    )
+
+
+def _try_derivation_chain(
+    surface: str,
+    analyses: list,
+    seen: set,
+    roots: "set[str] | None" = None,
+    max_depth: int = 5,
+) -> None:
+    """Zincirli leksik türetme analizi — BFS, max_depth katmana kadar.
+
+    Tek katman (_try_derivation_all) sonuçlarını tekrar üretmez (min 2 katman).
+    seen anahtarı: ("derivation_chain", surface, chain_key) — mevcut seen ile çakışmaz.
+    ZİNCİR YÖN: chain[0] = en derin kök (ilk soyulan), chain[-1] = yüzeye en yakın.
+    Çatı ekleri _LEXICAL_SUFFIXES dışında olduğundan otomatik dışlanır.
+    """
+    from collections import deque
+    from .derivation import _DERIVED_POS
+    from .morphology import low_vowel
+
+    if max_depth < 2:
+        return
+
+    queue: deque = deque([(surface, [], max_depth)])
+
+    while queue:
+        current, chain_so_far, depth = queue.popleft()
+
+        if depth == 0:
+            continue
+
+        for (stem, label, suffix_surface, src_pos) in _strip_one_layer(current):
+            # Fiil-kaynaklı → mastar yeniden kur
+            if src_pos == "verb":
+                try:
+                    lemma = stem + "m" + low_vowel(stem) + "k"
+                except (ValueError, IndexError):
+                    continue
+            else:
+                lemma = stem
+
+            # Döngü tespiti: stem + lemma her ikisi de kontrol
+            chain_lemmas = {a.lemma for a in chain_so_far}
+            chain_stems = set()
+            for a in chain_so_far:
+                chain_stems.add(a.lemma)
+                if a.kwargs.get("src_pos") == "verb" and a.lemma.endswith(("mak", "mek")):
+                    chain_stems.add(a.lemma[:-3])
+            if stem in chain_lemmas or lemma in chain_lemmas or stem in chain_stems:
+                continue
+
+            # Precision kontrolü
+            is_hypothetical = (roots is not None and lemma not in roots)
+
+            # Oracle doğrulama
+            from .derivation import derivations as _derivations
+            try:
+                derived = _derivations(lemma, src_pos)
+            except Exception:
+                continue
+            oracle_ok = any(
+                r["form"] == current and r["suffix"] == label
+                for r in (derived or [])
+            )
+            if not oracle_ok:
+                continue
+
+            # Yeni chain: bu katman + önceki zincir
+            derived_pos = _DERIVED_POS.get(label, "noun")
+            leaf = Analysis(
+                kind="derivation",
+                lemma=lemma,
+                pos=derived_pos,
+                kwargs={"suffix": label, "src_pos": src_pos},
+                segments=_segs_to_tuple([(stem, "kök"), (suffix_surface, label)]),
+                hypothetical=is_hypothetical,
+            )
+            new_chain = [leaf] + chain_so_far  # chain[0] = en derin (ilk soyulan)
+
+            # Zincir en az 2 katmansa → tam analiz üret
+            if len(new_chain) >= 2:
+                chain_key = tuple(a.lemma for a in new_chain)
+                seen_key = ("derivation_chain", surface, chain_key)
+                if seen_key not in seen:
+                    seen.add(seen_key)
+                    top = _build_chain_analysis(
+                        surface=surface,
+                        chain=new_chain,
+                        top_label=label,
+                        top_suffix_surface=suffix_surface,
+                        top_src_pos=src_pos,
+                        top_pos=derived_pos,
+                        top_lemma=lemma,
+                        hypothetical=is_hypothetical or (roots is None),
+                    )
+                    analyses.append(top)
+
+            # Daha derin araştır
+            queue.append((stem, new_chain, depth - 1))
+
+
 def _try_number_all(
     surface: str,
     analyses: list[Analysis],
