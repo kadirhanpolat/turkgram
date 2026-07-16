@@ -5,12 +5,18 @@ __all__ = ["syllabify", "stress", "stress_mark"]
 
 _VOWELS = frozenset("aeıioöuüâîû")
 
+# Türkçede (çoğunlukla alıntı sözcüklerde) geçerli iki-ünsüzlü onset kümeleri
+_VALID_ONSETS = frozenset({
+    "tr", "kr", "pr", "pl", "kl", "bl", "br", "gr", "gl",
+    "fr", "fl", "dr", "sp", "st", "sk", "şt", "şp", "çr",
+})
+
 _SYLLABLE_SEP = "·"  # U+00B7 MIDDLE DOT
 
 # str.upper() kullanılmaz: i→I (hatalı). _tr_upper i→İ, ı→I yapar.
 _TR_UPPER_MAP = str.maketrans(
-    "aeıioöuübcçdfgğhjklmnprsştvyz",
-    "AEIİOÖUÜBCÇDFGĞHJKLMNPRSŞTVYZ",
+    "aeıioöuüâîûbcçdfgğhjklmnprsştvyz",
+    "AEIİOÖUÜÂÎÛBCÇDFGĞHJKLMNPRSŞTVYZ",
 )
 
 
@@ -96,8 +102,13 @@ def syllabify(word: str) -> list[str]:
             # VC·CV: ortadan
             cut = consonants_start + 1
         else:
-            # VCC·CV (ve daha uzun kümeler): maksimal onset — son ünsüz sağa kalır
-            cut = consonants_start + (n_consonants - 1)
+            # VCC·CV ve daha uzun kümeler: maksimal onset
+            # Son iki ünsüz geçerli onset kümesi oluşturuyorsa ikisi sağa, aksi hâlde son bir sağa
+            last_two = word[consonants_start + n_consonants - 2 : consonants_start + n_consonants]
+            if last_two in _VALID_ONSETS:
+                cut = consonants_start + (n_consonants - 2)
+            else:
+                cut = consonants_start + (n_consonants - 1)
 
         syllables.append(word[start:cut])
         start = cut

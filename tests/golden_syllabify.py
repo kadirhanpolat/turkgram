@@ -83,6 +83,11 @@ SYLLABIFY_CASES = [
     ("tren",     ["tren"],           0),   # TREN
     ("spor",     ["spor"],           0),   # SPOR
 
+    # --- Yabancı onset kümeleri (tr, kr vb.) — maksimal onset C1 düzeltmesi ---
+    ("elektrik", ["e", "lek", "trik"],       2),   # e·lek·TRİK  (tr geçerli onset)
+    ("kontrol",  ["kon", "trol"],            1),   # kon·TROL    (tr geçerli onset)
+    ("endüstri", ["en", "düs", "tri"],       2),   # en·düs·TRİ  (tr geçerli onset)
+
     # --- Şapkalı (circumflex) ünlüler ---
     ("kâtip",    ["kâ", "tip"],      1),   # kâ·TİP
     ("rûh",      ["rûh"],            0),   # RÛH
@@ -148,6 +153,9 @@ STRESS_MARK_CASES = [
 
     # Şapkalı
     ("kâtip",    "kâ·TİP"),
+
+    # Yabancı onset kümeleri — C1 düzeltmesi
+    ("elektrik", "e·lek·TRİK"),
 
     # Büyük harf girişi (normaliser tolere eder)
     # ASCII "I" (U+0049) → _tr_lower → "ı" (undotted) → _tr_upper → "I" (undotted)
