@@ -24,6 +24,10 @@ Motor **çekilmiş biçimleri** RUNTIME ÜRETİR, SAKLAMAZ. Kök + morfofonoloji
   `compound`), `voice.py` (çatı `apply_voice`), `derivation.py` (yapım eki). Genel API `__init__.py`.
 - **Çözümleme (Faz 2a):** `analysis.py` (`analyze`: yüzey→kök+eksen+segment) +
   `analysis_candidates.py` (öneri üretimi). Analysis-by-generation: üreteç oracle (bkz. #6).
+- **Tokenizer + toplu analiz:** `tokenize.py` (`tokenize`: boşluk+noktalama+apostrof; ASCII U+0027
+  ortada → ikiye böler, sağ parçada kalır; kıvrık apostrof bölünmez) + `analysis.py`'de `parse_text`
+  (`list[list[Analysis]]`; indeks hizalamalı; `_cached_analyze` lru_cache H-08; `rank_in_context`
+  entegrasyonu H-10).
 - **Kök leksikonu + frekans (Faz 2b, opt-in):** `lexicon.py` — gömülü `data/lexicon_tr.tsv`
   (Zemberek Apache-2.0'dan lemma+POS) ve `data/lemma_freq_tr.tsv` (hermitdave MIT'ten türetilmiş
   lemma-frekans). `load()` → `analyze(roots=…)` için lemma kümesi (gürültü eler); `load_freq()`
@@ -465,3 +469,13 @@ Yeni dosyalar (2026-07-14, Faz 3 C2 sıfat analiz):
 - `turkgram/tr.py` — `yoğunlaştır()`, `küçült()` Türkçe sarmalayıcılar + `_EK_TRLESTIR` eklendi
 - `tests/golden_adjective_analysis.py` — 28-girdi bağımsız analiz golden
 - `tests/test_adjective_analysis.py` — runner (28 test)
+
+Yeni dosyalar (2026-07-16, parse_text + tokenizer):
+- `docs/superpowers/specs/2026-07-16-parse-text-tokenizer-design.md` — onaylı tasarım dokümanı
+- `docs/superpowers/plans/2026-07-16-parse-text-tokenizer.md` — implementasyon planı
+- `turkgram/tokenize.py` — `tokenize(text) → list[str]`: boşluk+noktalama+apostrof; kıvrık apostrof bölünmez
+- `turkgram/analysis.py` — `_cached_analyze` (lru_cache 4096) + `parse_text` eklendi
+- `turkgram/__init__.py` — `tokenize` + `parse_text` export eklendi
+- `tests/golden_tokenize.py` — 26-girdi bağımsız golden (motor-körü, elle-doğrulanmış)
+- `tests/test_tokenize.py` — runner (26 test)
+- `tests/test_parse_text.py` — parse_text davranış + H-10 entegrasyon testleri (9 test)

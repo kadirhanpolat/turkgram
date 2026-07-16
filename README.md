@@ -29,6 +29,7 @@ saf-Python, bağımlılıksız bir kütüphane.
 | Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
 | Cümle-bağlamı | `turkgram.context` | **`rank_in_context`** (komşuluk kurallarıyla yeniden sıralama; opt-in) |
 | **İstatistiksel disambiguation** | `turkgram.statistical` | **`load_model`**, **`rank_statistical`**, **`viterbi`**, `parse_oflazer_full` (opt-in) |
+| **Tokenizer + toplu analiz** | `turkgram.tokenize` / `turkgram.analysis` | **`tokenize`** (metin → token listesi: boşluk+noktalama+apostrof), **`parse_text`** (metin → `list[list[Analysis]]`; indeks hizalamalı, H-08 cache, `rank_in_context` entegrasyonu) |
 | **CLI** | `turkgram.__main__` | `python -m turkgram analyze <yüzey> [--format text\|json] [--roots a,b] [--depth N] [--disambiguate] [--lexicon]` · `python -m turkgram version` (sürüm + `DATA_VERSION` + `ANALYSIS_DICT_SCHEMA_VERSION`) |
 | Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`** |
 
@@ -172,7 +173,17 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - **CLI ✅** (`turkgram/__main__.py`) — `python -m turkgram analyze <yüzey>` (text/json
     format, `--roots`, `--depth`, `--disambiguate`, `--lexicon`) + `version` komutu;
     Windows UTF-8 zorlaması; DoS koruması (200 karakter).
-  - 31 yeni test (19 `analysis_to_dict` + 12 CLI); **toplam: 3689 test**.
+  - 31 yeni test (19 `analysis_to_dict` + 12 CLI); toplam: 3689 test.
+- **2026-07-16 ✅** — tokenizer + toplu analiz:
+  - **`tokenize(text) → list[str]`** (`turkgram/tokenize.py`) — boşluk + noktalama ayrıştırma +
+    apostrof bölme (ASCII U+0027, sağ parçada kalır: `Ankara'nın → ["Ankara", "'nın"]`);
+    kıvrık apostrof (U+2019) bölünmez.
+  - **`parse_text(text, roots=None, *, max_derivation_depth=1) → list[list[Analysis]]`**
+    (`turkgram/analysis.py`) — her token için `analyze()` çağırır; noktalama → `[]` (indeks
+    hizalaması korunur); `_cached_analyze` (`lru_cache(maxsize=4096)`, `frozenset` key,
+    `roots is not None` ayrımı) H-08 perf borcunu giderir; `rank_in_context` entegrasyonu
+    doğrudan beslenebilir (H-10, `context.py` guard zaten mevcuttu).
+  - 35 yeni test (26 tokenizer + 9 parse_text); **toplam: 3724 test**.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -286,6 +297,15 @@ cands = tg.analyze("gelin", roots=lexicon.load())
 for a, conf in disambiguate(cands):
     d = analysis_to_dict(a, confidence=conf)  # d['confidence'] ∈ [0,1]
 
+# Tokenizer + toplu analiz
+from turkgram import tokenize, parse_text
+tokenize("Ali geldi.")                         # ['Ali', 'geldi', '.']
+tokenize("Ankara'nın sınırı")                 # ['Ankara', "'nın", 'sınırı']
+results = parse_text("Ali eve geldi.", roots=lexicon.load())
+# len(results) == len(tokenize("Ali eve geldi."))  — indeks hizalamalı
+# results[-1]  → []  (noktalama)
+# rank_in_context(tokenize(text), parse_text(text, roots=roots))  — H-10 entegrasyonu
+
 # CLI — python -m turkgram
 # python -m turkgram analyze okudum
 # python -m turkgram analyze okudum --format json
@@ -374,10 +394,10 @@ pip install -e ".[test]"
 pytest
 ```
 
-Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat ve
+Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3689 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**3724 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
