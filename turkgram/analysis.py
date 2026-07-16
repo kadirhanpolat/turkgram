@@ -1008,6 +1008,81 @@ def _distributive_root_candidates(last_word: str) -> list[str]:
     return cands
 
 
+def _template_to_allomorphs(template: str) -> list[str]:
+    """Arşifonem template → tüm olası realize biçimler.
+
+    Birden fazla arşifonem içeren template'ler için kartezyen çarpım:
+    I→[ı,i,u,ü], A→[a,e], C→[c,ç], D→[d,t], G→[g,k].
+    Küçük küme (max ~32 varyant / suffix) — performans sorunu yok.
+    """
+    import itertools
+    _ARCH: dict[str, list[str]] = {
+        "I": ["ı", "i", "u", "ü"],
+        "A": ["a", "e"],
+        "C": ["c", "ç"],
+        "D": ["d", "t"],
+        "G": ["g", "k"],
+    }
+    positions: list[list[str]] = []
+    for ch in template:
+        positions.append(_ARCH.get(ch, [ch]))
+    return ["".join(combo) for combo in itertools.product(*positions)]
+
+
+def _strip_derivation(
+    surface: str,
+    label: str,
+    src_pos: str,
+) -> list[str]:
+    """Yüzeyden derivasyon suffix'ini soy → olası kök adayları listesi.
+
+    Ters harmoni: suffix'in her ünlü alloformunu dener.
+    Fiil çıktılı suffix (is_verb_output=True, isim→fiil): mastar -mAk soyulur → gövde.
+    Ünlü-başlı suffix + kaynaştırma -y-: son -y de atılır.
+    Başarısız soyma → boş liste (oracle zaten false döner → precision güvenli).
+    """
+    from .derivation import _NOUN_TO_NOUN, _NOUN_TO_VERB, _VERB_TO_NOUN
+
+    # Suffix tablolarından template + meta bul (label ile eşleştir)
+    all_specs = _NOUN_TO_NOUN + _NOUN_TO_VERB + _VERB_TO_NOUN
+    template: str | None = None
+    vowel_initial: bool = False
+    is_verb_output: bool = False
+    for (cat, lbl, tmpl, vinit, pv) in all_specs:
+        if lbl == label:
+            template = tmpl
+            vowel_initial = vinit
+            is_verb_output = pv
+            break
+    if template is None:
+        return []
+
+    # isim→fiil suffix (is_verb_output=True): surface mastar biçiminde (-mAk)
+    work = surface
+    if is_verb_output:
+        for ending in ("mak", "mek"):
+            if work.endswith(ending):
+                work = work[: -len(ending)]
+                break
+        else:
+            return []  # -mAk yoksa bu surface fiil türevi olamaz
+
+    suffixes: list[str] = _template_to_allomorphs(template)
+
+    candidates: list[str] = []
+    for suf in suffixes:
+        if not work.endswith(suf):
+            continue
+        root = work[: -len(suf)]
+        if not root:
+            continue
+        # Kaynaştırma -y- geri al (ünlü-başlı suffix + ünlü-final kök)
+        if vowel_initial and root.endswith("y"):
+            candidates.append(root[:-1])  # y'siz kök
+        candidates.append(root)
+    return candidates
+
+
 def _try_number_all(
     surface: str,
     analyses: list[Analysis],
