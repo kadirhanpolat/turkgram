@@ -68,7 +68,7 @@ _POS = ("verb", "noun", "adj", "num", "conj")
 _KINDS = ("conjugate", "decline", "copula", "converb",
           "converb_casina", "converb_ken", "participle",
           "intensify", "diminutive", "ordinal", "distributive",
-          "conjunction")
+          "conjunction", "derivation")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -910,6 +910,10 @@ def analyze(surface: str, pos: str | None = None,
     if pos in (None, "num"):
         _try_number_all(surface_token, analyses, seen, roots)
 
+    # Adım 7: Yapım eki çözümlemesi (tek katman, fiilimsi + çatı dışlı)
+    if pos in (None, "noun", "verb", "adj"):
+        _try_derivation_all(surface_token, analyses, seen, roots=roots)
+
     return analyses
 
 
@@ -1081,6 +1085,71 @@ def _strip_derivation(
             candidates.append(root[:-1])  # y'siz kök
         candidates.append(root)
     return candidates
+
+
+def _try_derivation_all(
+    surface: str,
+    analyses: list,
+    seen: set,
+    roots: "set[str] | None" = None,
+) -> None:
+    """Tek-katman yapım eki analizi — oracle analysis-by-generation.
+
+    _LEXICAL_SUFFIXES üzerinden döner (fiilimsi + çatı DIŞLI).
+    Kök adayı → oracle doğrular (derivations() çıktısı == surface) → Analysis ekler.
+    Fiil-kaynaklı isim (src_pos=verb): gövde → mastar yeniden kurulur (seç → seçmek).
+    Kök filtresi §8.1: roots is not None → lemma ∉ roots → atla.
+    Zincirli türetme kapsam dışı (tek katman).
+    """
+    from .derivation import (
+        derivations as _derivations,
+        _LEXICAL_SUFFIXES,
+        _DERIVED_POS,
+    )
+    from .morphology import low_vowel
+
+    for (cat, label, src_pos) in _LEXICAL_SUFFIXES:
+        for stem in _strip_derivation(surface, label, src_pos):
+            if not stem:
+                continue
+            # Fiil-kaynaklı → mastar yeniden kur (seç → seçmek)
+            if src_pos == "verb":
+                try:
+                    lemma = stem + "m" + low_vowel(stem) + "k"
+                except (ValueError, IndexError):
+                    continue
+            else:
+                lemma = stem
+            # §8.1 precision filtresi
+            if roots is not None and lemma not in roots:
+                continue
+            # Oracle: derivations() ile doğrula
+            try:
+                derived = _derivations(lemma, src_pos)
+            except Exception:
+                continue
+            if not derived:
+                continue
+            for r in derived:
+                if r["form"] != surface or r["suffix"] != label:
+                    continue
+                key = ("derivation", lemma, label)
+                if key in seen:
+                    continue
+                seen.add(key)
+                derived_pos = _DERIVED_POS.get(label, "noun")
+                suffix_surf = surface[len(stem):]
+                segs = _segs_to_tuple([(stem, "kök"), (suffix_surf, label)])
+                analyses.append(
+                    Analysis(
+                        kind="derivation",
+                        lemma=lemma,
+                        pos=derived_pos,
+                        kwargs={"suffix": label, "src_pos": src_pos},
+                        segments=segs,
+                        hypothetical=(roots is None),
+                    )
+                )
 
 
 def _try_number_all(
