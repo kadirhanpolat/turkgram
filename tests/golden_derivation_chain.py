@@ -6,7 +6,7 @@
 # NOT: Zincir uzunluğu mevcut motor davranışına göre kalibre edilmiştir.
 # chain_len=1 → flat derivation (tek katman), chain boş → test SKIP edilir.
 # Bazı teorik 3-katman zincirler (güzelleşme, biçimsizleşme) motor kapsamı dışı
-# (-leş eki _LEXICAL_SUFFIXES'te yok) → bu golden'a dahil edilmedi.
+# → dış ek -mA (fiilimsi) _LEXICAL_SUFFIXES'te değil (kapsam dışı by design).
 
 CHAIN_CASES: list[tuple] = [
     # (yüzey, en_derin_kök, zincir_uzunluğu, [ara_lemmalar], roots_modu)
