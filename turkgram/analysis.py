@@ -64,10 +64,11 @@ class Analysis:
 # ---------------------------------------------------------------------------
 # Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
-_POS = ("verb", "noun", "adj", "num")
+_POS = ("verb", "noun", "adj", "num", "conj")
 _KINDS = ("conjugate", "decline", "copula", "converb",
           "converb_casina", "converb_ken", "participle",
-          "intensify", "diminutive", "ordinal", "distributive")
+          "intensify", "diminutive", "ordinal", "distributive",
+          "conjunction")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -901,7 +902,11 @@ def analyze(surface: str, pos: str | None = None,
     if roots is not None and pos in (None, "adj"):
         _try_adj_all(surface_token, roots, analyses, seen)
 
-    # Adım 5: Sayı çözümlemesi (ordinal + distributive)
+    # Adım 5: Bağlaç çözümlemesi (kapalı liste, oracle dışı)
+    if pos in (None, "conj"):
+        _try_conjunction_all(surface_token, analyses, seen)
+
+    # Adım 6: Sayı çözümlemesi (ordinal + distributive)
     if pos in (None, "num"):
         _try_number_all(surface_token, analyses, seen, roots)
 
@@ -1052,6 +1057,28 @@ def _try_number_all(
                 segments=segs,
                 hypothetical=False,
             ))
+
+
+def _try_conjunction_all(surface: str, analyses: list[Analysis], seen: set[tuple]) -> None:
+    """Bağlaç çözümlemesi — oracle dışı, kapalı-liste.
+
+    Yalnız 'de' ve 'da' tam-token eşleşmesinde tetiklenir.
+    Bilinçli belirsizlik: 'de' = bağlaç VE demek imp-2sg.
+    """
+    if surface not in ("de", "da"):
+        return
+    key = ("conjunction", "de", frozenset())
+    if key in seen:
+        return
+    seen.add(key)
+    analyses.append(Analysis(
+        lemma="de",
+        pos="conj",
+        kind="conjunction",
+        kwargs={},
+        segments=_segs_to_tuple([(surface, "conj")]),
+        hypothetical=False,
+    ))
 
 
 def _try_adj_all(
