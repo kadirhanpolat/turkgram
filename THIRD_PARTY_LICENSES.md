@@ -73,6 +73,13 @@ pay distinct lemmalara bölünür). Ham liste KOPYALANMADI; yalnız türetilmiş
 Frekans OLGUsu telif konusu değildir (CLAUDE.md §3); bu türetme turkgram'ın MIT dağıtımına
 dâhil edilebilir. MIT gereği bu atıf ve telif bildirimi korunur.
 
+> **Ticari kullanım uyarısı:** hermitdave/FrequencyWords'ün ham verisi OpenSubtitles 2018
+> altyazı derlemesinden türetilmiştir. hermitdave'nin scriptleri MIT lisanslı olsa da
+> OpenSubtitles'ın kaynak altyazıları bireysel telif haklarına ve AB sui generis veri tabanı
+> hakkına tabi olabilir. Ticari bir ürüne dahil edecekseniz OpenSubtitles'ın lisans durumunu
+> bağımsız olarak doğrulamanız önerilir. Alternatif olarak BOUN CC0 Türkçe derlemesinden
+> türetilmiş bir frekans tablosu kullanılabilir (gelecekte rebuild planlanmaktadır).
+
 ```
 MIT License — Copyright (c) 2016 Hermit Dave
 Permission is hereby granted, free of charge, to any person obtaining a copy
