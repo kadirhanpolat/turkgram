@@ -26,6 +26,7 @@ from __future__ import annotations
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
     lexicon, disambiguation, compound, context, adjective, syntax, postposition, conjunction,
+    spellcheck,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -97,6 +98,9 @@ from .tokenize import tokenize
 # ── Heceleme + vurgu (Faz 9) ─────────────────────────────────────────────
 from .syllabify import syllabify, stress, stress_mark
 
+# ── Yazım denetimi (Faz 9b) ──────────────────────────────────────────────
+from .spellcheck import SpellResult
+
 # ── Normalleştirme + IPA (Faz 8) ──────────────────────────────────────────
 from .normalization import (
     number_to_words, float_to_words, date_to_words,
@@ -145,6 +149,8 @@ __all__ = [
     "number_to_words", "float_to_words", "date_to_words",
     "time_to_words", "expand_abbreviation", "normalize",
     "to_ipa", "ipa_table",
+    # yazım denetimi
+    "spellcheck", "SpellResult",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",
