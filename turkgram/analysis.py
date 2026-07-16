@@ -832,7 +832,8 @@ def _analyze_multi_token(tokens: list[str], roots: Collection[str] | None) -> li
 # Ana giriş noktası
 # ---------------------------------------------------------------------------
 def analyze(surface: str, pos: str | None = None,
-            *, roots: Collection[str] | None = None) -> list[Analysis]:
+            *, roots: Collection[str] | None = None,
+            max_derivation_depth: int = 1) -> list[Analysis]:
     """
     Yüzey biçimi → olası Analysis listesi.
 
@@ -841,6 +842,9 @@ def analyze(surface: str, pos: str | None = None,
         pos: "verb" | "noun" | "adj" | "num" | None (tümü).
         roots: Lemma kümesi. Verilmişse lemma∉roots elenir (hypothetical=False);
                verilmemişse hepsi hypothetical=True.
+        max_derivation_depth: Zincirli türetme derinliği. 1=tek katman (varsayılan,
+            mevcut davranış). 2+ → _try_derivation_chain devreye girer. Araştırma
+            modu için 10+ verilebilir.
 
     Returns:
         Deterministik sıralı Analysis listesi. Çözümsüz → [].
@@ -914,6 +918,11 @@ def analyze(surface: str, pos: str | None = None,
     # Adım 7: Yapım eki çözümlemesi (tek katman, fiilimsi + çatı dışlı)
     if pos in (None, "noun", "verb", "adj"):
         _try_derivation_all(surface_token, analyses, seen, roots=roots)
+        if max_derivation_depth >= 2:
+            _try_derivation_chain(
+                surface_token, analyses, seen,
+                roots=roots, max_depth=max_derivation_depth,
+            )
 
     return analyses
 
@@ -1190,7 +1199,7 @@ def _build_chain_analysis(
     flat_segs: list[tuple[str, str]] = []
     if chain:
         for a in chain:
-            flat_segs.extend(list(a.segments))
+            flat_segs.extend((seg.surface, seg.label) for seg in a.segments)
         flat_segs.append((stem_surface, top_label))
         flat_segs.append((top_suffix_surface, top_label))
     else:
