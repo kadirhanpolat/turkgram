@@ -189,26 +189,18 @@ def _root_candidates(surface_token: str) -> dict[str, list[str]]:
         # İsim kökü: doğrudan
         _add(prefix, "noun")
 
-        # Fiil kökü: mastar eki (harmoni: son ünlüye göre)
-        last_v = next((c for c in reversed(prefix) if c in _VOWELS), None)
-        # Türkçe ünlü harmoni: ön-ünlü → mek, arka → mak
-        if last_v in ("e", "i", "ü", "ö"):
-            suffix = "mek"
-        else:
-            suffix = "mak"
-        _add(prefix + suffix, "verb")
+        # Her iki mastar varyantı — disharmonik alıntılar için (primary)
+        for suffix in ("mak", "mek"):
+            _add(prefix + suffix, "verb")
 
         # Ters-mutasyonlar
         for mutated in _reverse_mutations(prefix):
             if not any(c in _VOWELS for c in mutated):
                 continue
             _add(mutated, "noun")
-            last_mv = next((c for c in reversed(mutated) if c in _VOWELS), None)
-            if last_mv in ("e", "i", "ü", "ö"):
-                msuffix = "mek"
-            else:
-                msuffix = "mak"
-            _add(mutated + msuffix, "verb")
+            # Her iki mastar varyantı — disharmonik alıntılar için (ters-mutasyon)
+            for msuffix in ("mak", "mek"):
+                _add(mutated + msuffix, "verb")
 
     # ---------------------------------------------------------------------------
     # -Iyor ünlü-düşme kurtarma (hedefli — yalnız -Iyor yüzeylerinde)
@@ -220,14 +212,14 @@ def _root_candidates(surface_token: str) -> dict[str, list[str]]:
     # Oracle tüm adayları doğrular; gerçek kök "oyna" "oynuyor" üretir → kabul.
     _HIGH_VOWELS = "ıiuü"
     _ALL_VOWELS_TR = "aeıioöuü"
-    yor_idx = surface_token.find("yor")
+    yor_idx = surface_token.rfind("yor")  # son oluşum — ek her zaman sonda
     if yor_idx > 1:
         # "yor"dan hemen önce yüksek ünlü mü?
         pre_yor = surface_token[yor_idx - 1]
         if pre_yor in _HIGH_VOWELS:
             # Tabanı al: "yor"dan önce, yüksek ünlüyü de çıkar
             taban = surface_token[: yor_idx - 1]
-            if taban and any(c in _VOWELS for c in taban):
+            if taban:  # monosilab (ünlüsüz) tabanlar da 8-ünlü denemeden geçebilir
                 for v in _ALL_VOWELS_TR:
                     root_cand = taban + v
                     # Harmoni: son ünlü ön-ünlüyse mek, aksi mak
