@@ -102,6 +102,10 @@ def conjoin(word: str, conj: str) -> str:
         raise ValueError(
             f"Unknown conjunction: {conj!r}. Valid values: {valid}"
         )
+    if conj in _CORRELATIVES:
+        raise ValueError(
+            f"Correlative {conj!r} is not valid for conjoin(); use coordinate() instead."
+        )
     if conj in ("de", "da"):
         return word + " " + _de_da(word)
     return word + " " + conj
