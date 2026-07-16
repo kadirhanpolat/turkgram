@@ -94,17 +94,38 @@ def parse_text(
 - Apostrof-başlı token (`'nın`) → baştaki `'` soyulur → `analyze("nın", ...)`
 - Dönüş uzunluğu = `len(tokenize(text))` (indeks hizalaması garantili)
 
+### Apostrof Strip Kuralı (C1 + H1 düzeltmesi)
+
+Apostrof-başlı tokendan **tam olarak bir düz apostrof** (`'`, U+0027) soyulur —
+`lstrip("'")` DEĞİL; `token[1:]` if `token[0] == "'"` else `token`.
+Bu kural yalnız ASCII düz apostrof için geçerlidir; kıvrık apostrof (`'`, U+2018/U+2019)
+aynı şekilde işlenmez (girdi normalleştirilmemiş kabul edilir, tokenizer tarafından bölünmez).
+`analyze()` içinde `_tr_lower(surface.strip())` uygulandığından büyük harf normalizasyonu
+bu strip'ten bağımsız olarak `analyze()` içinde gerçekleşir.
+
+**Bilinen sınır:** `"Ankara'nın"` → `analyze("nın")` → `roots` verilmişse muhtemelen
+`hypothetical=True` (özel isim kökleri leksikonda yok). Bu beklenen davranıştır; `parse_text`
+apostrof sonrası eki çözümlemeyi garanti etmez.
+
 ### H-08 Cache (Performans Borcu Giderimi)
 
 ```python
-_parse_cache: dict[tuple[str, frozenset | None], list[Analysis]] = {}
+from functools import lru_cache
+
+@lru_cache(maxsize=4096)
+def _cached_analyze(surface: str, roots_key: frozenset | None, depth: int) -> tuple[Analysis, ...]:
+    roots = set(roots_key) if roots_key is not None else None
+    return tuple(analyze(surface, roots=roots, max_derivation_depth=depth))
 ```
 
-Key: `(surface, frozenset(roots) if roots else None)`
+Key: `(surface, frozenset(roots) if roots is not None else None, depth)` —
+`if roots is not None` (C1 düzeltmesi: boş `set()` ile `None` çakışmasını önler).
 
-`parse_text` içinde her token çağrısından önce cache kontrol edilir.
-Aynı token aynı roots ile tekrar gelirse (uzun metin, tekrarlayan kelimeler)
-`analyze()` yeniden çağrılmaz.
+`lru_cache(maxsize=4096)` sınırlı boyut garantisi sağlar (M1 düzeltmesi).
+CPython GIL altında tek-iş parçacıklı etkin kullanım güvenlidir; çoklu iş parçacığı
+durumunda benign duplicate compute mümkündür, kilit gerekmez (M2 notu).
+
+`parse_text` içinde her token için `_cached_analyze(surface, roots_key, depth)` çağrılır.
 
 ### H-10 Entegrasyonu
 
@@ -137,12 +158,25 @@ CLI genişleme (`python -m turkgram parse-text`) → defer (API önce).
 
 | Dosya | İçerik |
 |---|---|
-| `tests/golden_tokenize.py` | 20-30 giriş: apostrof, noktalama, karma cümle (bağımsız, elle-doğrulanmış) |
+| `tests/golden_tokenize.py` | 20-30 giriş: apostrof, noktalama, karma cümle, boş dizi, saf noktalama (bağımsız, elle-doğrulanmış) |
 | `tests/test_tokenize.py` | golden runner |
 | `tests/test_parse_text.py` | davranış testleri: noktalama→`[]`, apostrof strip, cache hit, uzunluk garantisi |
 
 Bağımsız golden (motor-körü) yalnız `tokenize` için — `parse_text` için
 `analyze()` davranış garantileri zaten mevcut golden'larda, burada entegrasyon sınır davranışları test edilir.
+
+**Zorunlu edge case'ler golden'da:**
+- `tokenize("")` → `[]`
+- `tokenize("...")` → `[".", ".", "."]`
+- `parse_text("", roots=set())` → `[]` (C1: boş roots, None değil)
+- Apostrof-başlı token: tam olarak bir `'` soyulur
+- `rank_in_context` bağlamı: `parse_text` çıktısı doğrudan beslenebilir (H2: noktalama slotları `[]` → context kuralları gracefully atlar)
+
+### H-10 / rank_in_context Notu (H2)
+
+`rank_in_context` bağlam pencereleri noktalama slotlarını (`[]`) **gracefully atlar**
+(boş aday listesi context kuralı oluşturmaz). Bu `parse_text` tasarım hatası değil,
+mevcut `rank_in_context` davranışıdır. Doğrulanması implementasyon aşamasında yapılır.
 
 ---
 
@@ -154,4 +188,4 @@ Bağımsız golden (motor-körü) yalnız `tokenize` için — `parse_text` içi
 | `parse_text` yeri | `analysis.py` | `analyze()` ile aynı modül, doğal sınır |
 | Noktalama | `[]` döner, atlanmaz | `tokens[i]↔analyses[i]` indeks korunur |
 | Apostrof | Sağ parçada kalır, `parse_text` soyar | Tokenizer saf; strip mantığı tek yerde |
-| Cache tipi | `dict` (module-level) | `lru_cache` frozenset key'i destekler |
+| Cache tipi | `lru_cache(maxsize=4096)` | frozenset hashable → key olarak kullanılabilir; sınırlı boyut |
