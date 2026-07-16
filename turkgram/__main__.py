@@ -131,6 +131,40 @@ def cmd_analyze(args: list[str]) -> None:
         print(_fmt_text(analyses, disambiguated=disambiguated))
 
 
+def cmd_check(args: list[str]) -> None:
+    import argparse
+    from turkgram.spellcheck import check
+
+    p = argparse.ArgumentParser(
+        prog="python -m turkgram check",
+        description="Türkçe kelime yazım denetimi.",
+    )
+    p.add_argument("word", help="Denetlenecek kelime")
+    p.add_argument(
+        "--max-suggestions", type=int, default=5, dest="max_sug",
+        help="Maksimum öneri sayısı (varsayılan: 5)"
+    )
+    p.add_argument(
+        "--max-distance", type=float, default=2.0, dest="max_dist",
+        help="Maksimum edit-distance eşiği (varsayılan: 2.0)"
+    )
+    ns = p.parse_args(args)
+
+    word: str = ns.word
+    if len(word) > _MAX_SURFACE_LEN:
+        _die(f"kelime çok uzun (max {_MAX_SURFACE_LEN} karakter)")
+
+    result = check(word, max_suggestions=ns.max_sug, max_distance=ns.max_dist)
+    if result.is_valid:
+        print(f"{word}: GEÇERLİ")
+    else:
+        print(f"{word}: GEÇERSİZ")
+        if result.suggestions:
+            print(f"Öneriler: {', '.join(result.suggestions)}")
+        else:
+            print("Öneri bulunamadı.")
+
+
 def cmd_version() -> None:
     from turkgram import __version__, DATA_VERSION, ANALYSIS_DICT_SCHEMA_VERSION
     print(f"turkgram {__version__}")
@@ -145,6 +179,7 @@ def main() -> None:
         print()
         print("Komutlar:")
         print("  analyze <yüzey>  Yüzey biçimini çözümle")
+        print("  check <kelime>   Yazım denetimi (geçerlilik + öneri)")
         print("  version          Sürüm bilgisi")
         print()
         print("Örnek:")
@@ -157,6 +192,8 @@ def main() -> None:
     cmd, *rest = args
     if cmd == "analyze":
         cmd_analyze(rest)
+    elif cmd == "check":
+        cmd_check(rest)
     elif cmd == "version":
         cmd_version()
     else:

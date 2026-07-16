@@ -90,7 +90,7 @@ def test_tr_api():
 
 def test_cli_check_invalid(capsys):
     from turkgram.__main__ import cmd_check
-    cmd_check(["seker"])
+    cmd_check(["cok"])  # "seker" sekmek 3sg aorist olduğu için geçerli; "cok" geçersiz
     out = capsys.readouterr().out
     assert "GEÇERSİZ" in out
 
