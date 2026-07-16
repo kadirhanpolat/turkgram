@@ -59,6 +59,7 @@ class Analysis:
     kwargs: Mapping[str, Any]
     segments: tuple[Segment, ...]
     hypothetical: bool
+    chain: tuple = ()   # tuple["Analysis", ...] — pedagoji zinciri; boş = tek katman
 
 
 # ---------------------------------------------------------------------------
