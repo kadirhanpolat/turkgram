@@ -17,14 +17,9 @@ from . import lexicon as _lexicon
 _MAX_WORD_LEN = 200
 
 # Türkçe karakter konfüzyon çiftleri: her çift 0.5 maliyet taşır.
-_TR_CONFUSIONS: dict[str, str] = {
-    "ı": "i", "i": "ı",
-    "ö": "o", "o": "ö",
-    "ü": "u", "u": "ü",
-    "ş": "s", "s": "ş",
-    "ç": "c", "c": "ç",
-    "ğ": "g", "g": "ğ",
-}
+_TR_PAIRS: frozenset[frozenset[str]] = frozenset(
+    frozenset(pair) for pair in [("ı", "i"), ("ö", "o"), ("ü", "u"), ("ş", "s"), ("ç", "c"), ("ğ", "g")]
+)
 
 
 def _tr_lower(s: str) -> str:
