@@ -92,6 +92,9 @@ GOLDEN_TOKENIZE = [
     # Sayı + noktalama
     ("3.", ["3", "."]),
     ("2026'da", ["2026", "'da"]),
+
+    # Kıvrık apostrof (U+2019) bölünmez — tek token olarak kalır (bilinen sınır)
+    ("Türkiye’de", ["Türkiye’de"]),
 ]
 ```
 
@@ -342,12 +345,10 @@ Beklenen: `ImportError: cannot import name 'parse_text' from 'turkgram'`
 
 - [ ] **Step 3: `analysis.py`'e `_cached_analyze` + `parse_text` ekle**
 
-`turkgram/analysis.py` dosyasının en üstündeki import bloğuna ekle:
-
-```python
-from functools import lru_cache
-from .tokenize import tokenize as _tokenize
-```
+`turkgram/analysis.py` dosyasının en üstündeki import bloğunu kontrol et:
+- `lru_cache` zaten import edilmişse `from functools import lru_cache` EKLEME, mevcut import'u koru.
+- Yoksa ekle: `from functools import lru_cache`
+- Her durumda ekle: `from .tokenize import tokenize as _tokenize`
 
 Ardından dosyanın sonuna (tüm mevcut koddan sonra) şunları ekle:
 
@@ -362,7 +363,11 @@ def _cached_analyze(
     roots_key: "frozenset[str] | None",
     depth: int,
 ) -> "tuple[Analysis, ...]":
-    """analyze() sonucunu önbellekler. Analysis frozen=True → cache güvenli."""
+    """analyze() sonucunu önbellekler. Analysis frozen=True → cache güvenli.
+
+    Not: pos filtresi iletilmez — parse_text genel amaçlı API'dir.
+    pos filtresi gerekirse analyze() doğrudan çağrılmalı.
+    """
     roots = set(roots_key) if roots_key is not None else None
     return tuple(analyze(surface, roots=roots, max_derivation_depth=depth))
 
@@ -519,6 +524,6 @@ print(result[0][0].lemma if result[0] else 'boş')
 - [ ] **Step 4: Final commit (gerekirse)**
 
 ```bash
-git add -A
+git add turkgram/tokenize.py turkgram/analysis.py turkgram/__init__.py tests/golden_tokenize.py tests/test_tokenize.py tests/test_parse_text.py
 git commit -m "chore: parse_text + tokenizer tamamlandı"
 ```
