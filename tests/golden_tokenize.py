@@ -57,5 +57,5 @@ GOLDEN_TOKENIZE = [
     ("2026'da", ["2026", "'da"]),
 
     # Kıvrık apostrof (U+2019) bölünmez — tek token olarak kalır (bilinen sınır)
-    ("Türkiye'de", ["Türkiye'de"]),
+    ("Türkiye’de", ["Türkiye’de"]),
 ]

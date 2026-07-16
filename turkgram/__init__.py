@@ -91,6 +91,9 @@ from .postposition import postposition
 # ── Bağlaç yönetimi (Faz 5 D4) ──────────────────────────────────────────
 from .conjunction import conjoin, coordinate, CONJUNCTIONS
 
+# ── Tokenizasyon (Faz 9) ─────────────────────────────────────────────────
+from .tokenize import tokenize
+
 # ── Normalleştirme + IPA (Faz 8) ──────────────────────────────────────────
 from .normalization import (
     number_to_words, float_to_words, date_to_words,
