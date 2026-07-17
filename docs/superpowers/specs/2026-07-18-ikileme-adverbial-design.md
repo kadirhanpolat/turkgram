@@ -111,9 +111,13 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
 
 **Gerekli açık değişiklikler:**
 1. `_child_deprel` VP/S dalına: `if child_tag in ("AdjP", "AdvP"): return "advmod"` (mevcut AdjP dalını genişlet).
-2. `_find_head_leaf`'e AdvP dalı: `if tag == "AdvP": return _find_head_leaf(children[0])` (ilk yaprak baş;
+   → AdvP **başı** (ilk yaprak) fiile `advmod`.
+2. `_child_deprel`'e **AdvP-ebeveyn dalı** (iç ilişki): AdvP'nin İKİ yaprağı var; ikinci token (tekrar) birinciye
+   bağlanır. UD standardı: `if parent_tag == "AdvP": return "compound:redup"`. Aksi halde ikinci yaprak `"dep"`
+   alır (belirsiz). Bu, ikileme için doğru UD ilişkisidir.
+3. `_find_head_leaf`'e AdvP dalı: `if tag == "AdvP": return _find_head_leaf(children[0])` (ilk yaprak baş;
    özdeş yüzey olduğundan children[0]/[-1] farkı görünmez ama açık kayıt için ilk).
-3. Dependency golden: AdvP başının `advmod` (NOT `dep`) aldığını sabitle.
+4. Dependency golden: AdvP başının `advmod` (NOT `dep`) + ikinci tokenin `compound:redup` aldığını sabitle.
 
 ---
 
