@@ -495,6 +495,28 @@ Yeni dosyalar (2026-07-16, parse_text + tokenizer):
   - `turkgram.tr`: `hecele()` / `vurgu()` / `vurgu_işaretle()` sarmalayıcılar.
   - Hakem: 26.229 leksikon lemması + 31 istisna, 0 çökme.
   - 101 yeni test (50 syllabify + 39 stress_mark + 12 TR denklik/edge); **toplam: 3825 test**.
+- **Faz 9d ✅** — ikileme (reduplication) (`turkgram/reduplication.py`, SPEC `docs/superpowers/specs/2026-07-17-reduplication-design.md`):
+  - **Üç tür:** tam ikileme (`yavaş yavaş`), -A ulaç ikilemesi (`koşa koşa`), m-ikileme (`kitap mitap`).
+  - **`full_reduplicate(word)`** — sözcük tekrarı; her POS geçerli; boş → ValueError.
+  - **`converb_reduplicate(lemma)`** — fiil mastarından -A ulaç biçimi × 2; `_a_converb` iç yardımcısı
+    `_stem_before_suffix` + `low_vowel` kullanır (`converb(lemma,"optative")` MEVCUT DEĞİL). ye_de +
+    glide-y ünlü-final: gitmek→gide gide, yemek→yiye yiye, okumak→okuya okuya.
+  - **`m_reduplicate(word)`** — ünsüz-final: ilk ünsüz→m (kitap→mitap); ünlü-final: başa m (araba→maraba);
+    m-başlı sözcük → ValueError (p-ikileme kapsam dışı).
+  - **Türkçe API** (`tr.py`): `tam_ikile()` / `ulaç_ikile()` / `m_ikile()`; `_tr_lower` normalizasyonu.
+  - **Analiz entegrasyonu** (`analysis.py`, `_analyze_multi_token`): 3 yeni kind —
+    `reduplication_full` / `reduplication_converb` / `reduplication_m`. `_try_reduplication_all`
+    `_KINDS` zincirinden değil, `_analyze_multi_token`'dan çağrılır (tüm türler çift-token yüzey).
+    TUZAK — **`reduplication_converb` `roots=None` → analizi YOK:** kök listesi olmadan -A biçiminden
+    fiil mastarı kurtarılamaz. `roots` sağlanırsa tüm köklerde `converb_reduplicate(lemma)==surface`
+    oracle denenır. `güle güle` belirsizliği: `güle` roots'ta varsa hem `reduplication_full` hem
+    `reduplication_converb`; yoksa yalnız converb.
+    TUZAK — **POS gürültü modu:** `_cached_analyze(token1, roots=None)` full/m için pos tespitinde
+    kullanılır; gürültü modunda her zaman "verb" döner → test golden'ı `pos=None` kullanır (pos
+    doğrulaması atlanır). Converb'de `pos="verb"` sabit (hardcoded).
+  - Hakem: 26.229 lemma × full/m + 3.220 fiil × converb = 0 çökme.
+  - 97 yeni test; **toplam: 4015 test**.
+
 - **Faz 9b ✅** — yazım denetimi (`turkgram/spellcheck.py`, SPEC `docs/superpowers/specs/2026-07-16-spellcheck-design.md`):
   - **`is_valid(word, *, roots=None)`** — morfoloji tabanlı geçerlilik: `analyze()` + `lexicon.load()`
     (opt-in semantik inversiyonu: `roots=None` → leksikon, `analyze`'ın gürültü modunun TERSİ).
@@ -520,6 +542,21 @@ Yeni dosyalar (2026-07-16, Faz 9 hecelemleme+vurgu):
 - `turkgram/tr.py` — `hecele()`, `vurgu()`, `vurgu_işaretle()` Türkçe sarmalayıcılar eklendi
 - `tests/golden_syllabify.py` — 101-girdi bağımsız golden (motor-körü, Opus)
 - `tests/test_syllabify.py` — runner (101 test)
+
+Yeni dosyalar (2026-07-17, Faz 9d ikileme):
+- `docs/superpowers/specs/2026-07-17-reduplication-design.md` — onaylı tasarım dokümanı
+- `docs/superpowers/plans/2026-07-17-faz9d-reduplication.md` — implementasyon planı
+- `turkgram/reduplication.py` — `full_reduplicate`, `converb_reduplicate`, `m_reduplicate`, `_a_converb`
+- `turkgram/__init__.py` — reduplication modülü + 3 fonksiyon export eklendi
+- `turkgram/tr.py` — `tam_ikile()`, `ulaç_ikile()`, `m_ikile()` Türkçe sarmalayıcılar eklendi
+- `turkgram/analysis.py` — `_try_reduplication_all()` + `_analyze_multi_token` genişletme;
+  `_KINDS`'a `"reduplication_full"/"reduplication_converb"/"reduplication_m"` (sona)
+- `tests/golden_reduplication.py` — 56-girdi bağımsız golden (16 full + 20 converb + 20 m; motor-körü, Opus)
+- `tests/test_reduplication.py` — üretim runner (61 test: parametrik + ValueError + boş string)
+- `tests/golden_reduplication_analysis.py` — 33-girdi bağımsız analiz golden (motor-körü, Opus);
+  NOT: pos=None sınırı (gürültü modu)
+- `tests/test_reduplication_analysis.py` — analiz runner + TR API denklik (36 test)
+- `tools/sweep_reduplication.py` — korpus tarama aracı (26k lemma, 0 çökme)
 
 Yeni dosyalar (2026-07-17, Faz 9b yazım denetimi):
 - `docs/superpowers/specs/2026-07-16-spellcheck-design.md` — onaylı tasarım dokümanı
