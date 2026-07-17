@@ -8,18 +8,21 @@
 
 ## 1. Genel Mimari
 
-Faz E dört art arda alt-fazdan oluşur. Her alt-faz bir öncekinin çıktısını girdi olarak alır.
+Faz E iki bağımsız koldan oluşur:
+
+- **Üretim kolu (E1):** Morfoloji primitiflerini birleştirerek karmaşık yüzey öbekleri üretir. Bağımsız yardımcılar — E2/E5/E6 tarafından tüketilmez.
+- **Analiz kolu (E2→E5→E6):** Yüzey cümle → constituency ağacı → dependency graph → CoNLL-U. Her adım bir öncekinin çıktısını alır.
 
 ```
 [Morfoloji katmanı]  decline / conjugate / postposition / conjunction  (dokunulmaz)
-       ↓
-[E1]  Zengin öbek üretimi   →  syntax.py genişletme
-       ↓
-[E2]  Constituency parser   →  parse.py  (yeni)
-       ↓
-[E5]  Dependency çıkarımı   →  dependency.py  (yeni)
-       ↓
-[E6]  UD/CoNLL-U export     →  dependency.py içinde to_conllu()
+       │
+       ├──[E1]  Zengin öbek üretimi   →  syntax.py genişletme  (üretim yardımcıları)
+       │
+       └──[E2]  Constituency parser   →  parse.py  (yeni)
+                       ↓
+               [E5]  Dependency çıkarımı   →  dependency.py  (yeni)
+                       ↓
+               [E6]  UD/CoNLL-U export     →  dependency.py içinde to_conllu()
 ```
 
 **Temel kararlar:**
@@ -51,7 +54,7 @@ Faz E dört art arda alt-fazdan oluşur. Her alt-faz bir öncekinin çıktısın
 def np_uret(
     head: str,
     *,
-    on_sifatlar: list[str] = [],
+    on_sifatlar: tuple[str, ...] = (),   # değişmez — list[] DEĞİL
     tamlayan: str | None = None,
     miktar: str | None = None,
     durum: str = "nom",
@@ -87,18 +90,20 @@ pp_uret('ev', 'göre')   → 'eve göre'
 pp_uret('okul', 'ile', bitişik=True)  → 'okulla'
 ```
 
-### 3.3 `advp_uret` — Zarf Öbeği
+### 3.3 `degmod_uret` — Derece Değiştiricili Öbek
 
 ```python
-def advp_uret(zarf: str, *, derece: str | None = None) -> str
+def degmod_uret(baş: str, *, derece: str | None = None) -> str
 ```
 
-`derece` ∈ `{'çok', 'oldukça', 'pek', 'biraz', 'en', 'daha'}`. Derece varsa önüne gider.
+`baş` bir sıfat veya zarf olabilir. `derece` ∈ `{'çok', 'oldukça', 'pek', 'biraz', 'en', 'daha'}`. Derece varsa önüne eklenir.
 
 ```python
-advp_uret('hızlı', derece='çok')  → 'çok hızlı'
-advp_uret('iyi')                  → 'iyi'
+degmod_uret('hızlı', derece='çok')  → 'çok hızlı'   # ADJ başlı
+degmod_uret('iyi')                  → 'iyi'           # serbest
 ```
+
+**Not:** Constituency etiketi baş POS'una göre belirlenir: `pos="adj"` → `AdjP`, `pos="adv"` → `AdvP`. UD'de `derece` her iki durumda da `advmod` olarak baş'a bağlanır.
 
 ### 3.4 `koordine_np` — Koordinasyon Öbeği
 
@@ -106,7 +111,7 @@ advp_uret('iyi')                  → 'iyi'
 def koordine_np(ogeler: list[str], baglac: str = "ve") -> str
 ```
 
-Mevcut `conjunction.coordinate()` işlevini saran sarmalayıcı. İki ve üzeri öğe desteklenir.
+Mevcut `conjunction.coordinate()` işlevini saran sarmalayıcı. İki ve üzeri öğe desteklenir. **Kısıtlama:** Yalnızca basit koordinasyon bağlaçları (`ve`, `veya`, `ya da`, `ile`, `ama`, `fakat`, `ancak`); korelatif çiftler (`hem_hem`, `ne_ne` vb.) kapsam dışı — `coordinate()` bunları işleyebilir ama `CoordP` head-finding tek bağlaç varsayar.
 
 ```python
 koordine_np(['kitap', 'defter'])           → 'kitap ve defter'
@@ -130,9 +135,9 @@ class LeafNode:
 
 @dataclass(frozen=True)
 class PhraseNode:
-    tag: str                                   # 'NP' | 'VP' | 'S' | 'AdvP' | 'PP' | 'CoordP'
+    tag: str                                   # 'NP' | 'VP' | 'S' | 'AdjP' | 'AdvP' | 'PP' | 'CoordP'
     children: tuple[PhraseNode | LeafNode, ...]
-    surface: str                               # ' '.join(leaf.token for leaf in tree)
+    surface: str  # özyinelemeli yaprakları düzleştirerek ' '.join; factory ile kurulur (frozen sonrası set yok)
 ```
 
 ### 4.2 API
@@ -163,21 +168,23 @@ Kural-tabanlı, Türkçe SOV sırasına göre. Tek geçiş (bottom-up gruplama):
 
 - **Fiilimsi modifier:** `kind=participle` analizine sahip token → sol taraftaki `NOUN`'a bağlanan `NP` oluşturur.
 - **Serbest sözcük sırası:** VP sona gelemezse `S` yine kurulur; `PhraseNode` üzerinde `warnings` alanı eklenmez — kullanıcı `surface` üzerinden kontrol eder.
-- **Belirsizlik çözümü:** Birden fazla analiz varsa `disambiguation.rank()` ile en üst aday seçilir.
+- **Belirsizlik çözümü:** `parse_text()` zaten `rank_in_context` ile sıralanmış analizler döner; her token için `analyses[i][0]` (ilk eleman = en iyi aday) kullanılır. Yeniden `rank()` çağrılmaz. Token'ın analiz listesi boşsa (`[]`) veya tüm analizler hypothetical ise `LeafNode.tag = 'X'` (OOV işareti) kullanılır; `analysis = None`.
 
 ### 4.4 POS Etiket Eşlemesi
 
-`Analysis.pos` → constituency `tag`:
+**`Analysis.pos` asla `None` değildir** — her zaman `'verb'`, `'noun'`, `'adj'`, `'conj'` değerlerinden biri.  
+Ek kural: `kind == 'copula'` ise `pos` ne olursa olsun `LeafNode.tag = 'VERB'`.
 
-| `Analysis.pos` | `LeafNode.tag` |
-|----------------|----------------|
-| `'verb'` | `'VERB'` |
-| `'noun'` | `'NOUN'` |
-| `'adj'` | `'ADJ'` |
-| `'adv'` | `'ADV'` |
-| `'conj'` | `'CCONJ'` |
-| `None` (kind=decline) | `'NOUN'` |
-| `None` (kind=copula) | `'VERB'` |
+| `Analysis.pos` | `LeafNode.tag` | Örnek `kind`'lar |
+|----------------|----------------|-----------------|
+| `'verb'` | `'VERB'` | `conjugate`, `converb`, `converb_ken`, `converb_casina` |
+| `'noun'` | `'NOUN'` | `decline`, `participle`, `ordinal`, `distributive` |
+| `'adj'` | `'ADJ'` | `intensify`, `diminutive`, `derivation` (adj çıktılı) |
+| `'conj'` | `'CCONJ'` | `conjunction` |
+| herhangi, `kind='copula'` | `'VERB'` | `copula` (ek-fiil) |
+| analiz yok / hypothetical | `'X'` | OOV token |
+
+**R1-R5 kurallarında kullanılan tüm etiketler bu tablodan üretilebilir.** `ADV` için: sözlük zarfları `pos='adv'` ile analyze edilebilirse `'ADV'` kullanılır; aksi hâlde `'ADJ'` ile işaretlenir (Türkçe'de sıfat-zarf ayrımı yüzeyde belirsiz).
 
 ---
 
@@ -209,12 +216,28 @@ def constituency_to_dep(tree: PhraseNode) -> list[DepToken]
 
 | Öbek | Baş (head) | Bağımlı ilişkileri |
 |------|-----------|---------------------|
-| `NP` | En sağdaki `NOUN` | Sol `ADJ` → `amod`; `miktar` → `nummod`; tamlayan `NP` → `nmod` |
+| `NP` | En sağdaki `NOUN` | Sol `ADJ` → `amod`; miktar → `nummod`; tamlayan `NP` (gen-işaretli) → `nmod:poss` |
 | `PP` | `ADP` (edat) | `NP` → `nmod` |
-| `AdvP` | `ADJ` ya da `ADV` | `derece` → `advmod` |
+| `AdjP`/`AdvP` | `ADJ` ya da `ADV` | `derece` → `advmod` |
 | `CoordP` | İlk `NP` | Diğer `NP`'ler → `conj`; `CCONJ` → `cc` |
-| `VP` | `VERB` | Özne `NP` → `nsubj`; nesne `NP` → `obj`; `PP` → `obl`; `AdvP` → `advmod` |
+| `VP` | `VERB` | NP (`case=nom`/yok) → `nsubj`; NP (`case=acc`) → `obj`; NP (`case=dat/loc/abl`) → `obl`; `PP` → `obl`; `AdjP`/`AdvP` → `advmod` |
 | `S` | `VP` başı | Kök bağı (`head=0`, `deprel='root'`) |
+
+**Tamlama head-finding kuralı (HIGH-3 düzeltmesi):**  
+Belirtili tamlama `evin kapısı` = `[NP-GEN[evin]] [NP-POSS[kapısı]]`. Kural:
+- Possessed (iyelik-eki taşıyan, `possessive` kwarg ≠ None) NOUN → baş
+- Genitive possessor NP → `nmod:poss` olarak başa bağlanır
+- İç içe tamlama `evin kapısının kolu` → sağdan sola özyineleme (her katman aynı kural)
+
+**Özne/nesne belirleme (MEDIUM-3 düzeltmesi):**  
+Konum değil, durum (case) belirler. `case=acc` → `obj`, `case` yoksa/`nom` → `nsubj`, `case=dat/loc/abl` → `obl`. Pro-drop (özne yok) → VP kök olarak kalır; `nsubj` arcs eklenmez.
+
+**Worked example — `evin kapısını gördüm`:**
+```
+1  evin      ev     NOUN  decline  Case=Gen|Number=Sing       2  nmod:poss  _  _
+2  kapısını  kapı   NOUN  decline  Case=Acc|Number=Sing       3  obj        _  _
+3  gördüm    görmek VERB  conjugate Number=Sing|Person=1|Tense=Past  0  root  _  _
+```
 
 ### 5.4 UD Features Eşlemesi
 
@@ -235,8 +258,19 @@ def constituency_to_dep(tree: PhraseNode) -> list[DepToken]
 | `person='3pl'` | `Number=Plur\|Person=3` |
 | `possessive='2sg'` | `Number[psor]=Sing\|Person[psor]=2` |
 | `negative=True` | `Polarity=Neg` |
+| `kind=participle` | `VerbForm=Part` |
+| `kind=converb` / `converb_ken` | `VerbForm=Conv` |
+| `tense='aorist'` | `Tense=Aor` |
+| `aux='evid'` (evidential) | `Evident=Nfh` |
+| `voice_chain` içinde `pass` | `Voice=Pass` |
+| `voice_chain` içinde `caus` | `Voice=Cau` |
 
-Birden fazla özellik varsa alfabetik sıra ve `|` ayraç (UD standardı).
+**Varsayılan değer kuralları (feats üretilirken):**
+- `case` kwargs'ta yoksa → `Case=Nom` ekle
+- `number` yoksa ve NOUN → `Number=Sing` ekle
+- `person` yoksa ve VERB değilse → atla
+
+Birden fazla özellik varsa alfabetik sıra ve `|` ayraç (UD standardı). `xpos = Analysis.kind` (raw); analiz yoksa `xpos = '_'`.
 
 ---
 
@@ -261,6 +295,8 @@ def to_conllu(
 2	kitabı	kitap	NOUN	decline	Case=Acc|Number=Sing	3	obj	_	_
 3	okudu	okumak	VERB	conjugate	Number=Sing|Person=3|Tense=Past	0	root	_	_
 ```
+
+**Not — `Case=Nom` kaynağı:** `öğrenci` için `analysis.kwargs` içinde `case` yoktur (nom varsayılan, CLAUDE.md §4 kuralı gereği kwargs'tan atılır). `Case=Nom` feats üretirken §5.4 "varsayılan değer kuralları" ile eklenir — `case` absence → `Case=Nom`.
 
 ### 6.2 Tam Uçtan Uca Örnek
 
