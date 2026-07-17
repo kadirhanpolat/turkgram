@@ -802,8 +802,8 @@ def _try_reduplication_all(
     surface: str,
     token1: str,
     token2: str,
-    analyses: list,
-    seen: set,
+    analyses: list[Analysis],
+    seen: set[tuple],
     roots: Collection[str] | None,
 ) -> None:
     """Üç ikileme türünü dener; analyses listesini günceller.
