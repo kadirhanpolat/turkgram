@@ -568,3 +568,16 @@ Yeni dosyalar (2026-07-17, Faz 9b yazım denetimi):
 - `tests/golden_spellcheck.py` — 40-girdi bağımsız golden (motor-körü, Opus); NOT: seker→dag tuzağı
 - `tests/test_spellcheck.py` — runner (58 test)
 - `tools/sweep_spellcheck.py` — korpus tarama aracı (26k leksikon, 0 çökme)
+
+Yeni dosyalar (2026-07-17, Faz E3/E4 yan cümle desteği):
+- `docs/superpowers/specs/2026-07-17-e3-e4-subordinate-clauses-design.md` — onaylı tasarım dokümanı
+- `docs/superpowers/plans/2026-07-17-faz-e3-e4-yan-cumle.md` — implementasyon planı
+- `turkgram/parse.py` — `_apply_r6_ki` (CompP/RelP) + `_apply_r7_diye` (DiyeP) + R5 stop-list güncellemesi; `_CONVERB_VERB_TOKENS={"diye"}` (yüzey tabanlı VERB etiketi); `_node_matches` children opsiyonel
+- `tests/golden_subordinate.py` — 10-girdi bağımsız golden (motor-körü, Opus): 5 ki-cümlesi + 3 diye-cümlesi + 2 regresyon
+- `tests/test_subordinate.py` — runner (10 test)
+- `tests/test_parse.py` — `_node_matches` children key yoksa `True` dön (opsiyonel alt-ağaç)
+- `tools/sweep_syntax_e.py` — CompP/RelP/DiyeP hakem kontrolleri + `_tag`/`PhraseNode` import
+
+**Faz E3/E4 kritik tuzak — `diye` analizi:** `diye` morfolojik olarak `demek` opt-3sg (`kind='conjugate', tense='opt'`); `kind='converb'` ASLA üretilmez. Spec §4.1'in `kind=='converb'` koşulu çalışmaz — yüzey tabanlı kapalı küme tespiti (`ki`/`ve` gibi) kullanılır. `_CONVERB_VERB_TOKENS={"diye"}` `_leaf_tag`'de VERB etiketi garantiler; R7 `node.token.lower() == "diye"` kontrolüyle tetiklenir.
+
+**Faz E3/E4 kritik tuzak — `NP ki NP`:** Eski davranış CoordP (R4); R6 R4'ten önce çalıştığından sol=NP → RelP. Linguistik olarak doğru (Türkçede `ki` koordinatör değil).
