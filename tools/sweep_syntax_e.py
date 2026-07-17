@@ -16,7 +16,7 @@ import traceback
 from turkgram import tokenize, parse_text
 from turkgram.lexicon import load as _load_lexicon
 from turkgram.syntax import np_uret, pp_uret, degmod_uret, koordine_np
-from turkgram.parse import parse_phrase
+from turkgram.parse import parse_phrase, PhraseNode, _tag
 from turkgram.dependency import constituency_to_dep
 
 
@@ -98,6 +98,36 @@ def _run() -> None:
                 errors.append(f"{text!r}: {exc}")
             except Exception as exc:
                 errors.append(f"{text!r}: ÇÖKME — {exc}\n{traceback.format_exc()}")
+
+    # ── 6. yan cümle öbekleri — CompP / RelP / DiyeP tag kontrolü ─────────
+    subordinate_sentences = [
+        ("biliyorum ki geldi",     {"bilmek", "gelmek"},           "CompP"),
+        ("öyle bir şey ki gördüm", {"öyle", "bir", "şey", "görmek"}, "RelP"),
+        ("gelir diye bekledi",     {"gelmek", "beklemek"},         "S"),
+        ("okusun diye kitap aldı", {"okumak", "kitap", "almak"},   "S"),
+    ]
+    for text, roots, expected_root_tag in subordinate_sentences:
+        total += 1
+        try:
+            toks = tokenize(text)
+            analyses = parse_text(text, roots=roots)
+            tree = parse_phrase(toks, analyses)
+            assert tree.tag == expected_root_tag, (
+                f"{text!r}: beklenen root={expected_root_tag!r}, alınan={tree.tag!r}"
+            )
+            if expected_root_tag == "S":
+                child_tags = [_tag(c) for c in tree.children]
+                if "DiyeP" not in child_tags:
+                    vp_children = []
+                    for c in tree.children:
+                        if isinstance(c, PhraseNode) and c.tag == "VP":
+                            vp_children = [_tag(x) for x in c.children]
+                    if "DiyeP" in vp_children:
+                        errors.append(f"{text!r}: DiyeP VP içine çekilmiş (S-düzeyi olmalı)")
+        except AssertionError as exc:
+            errors.append(f"subordinate {text!r}: {exc}")
+        except Exception as exc:
+            errors.append(f"subordinate {text!r}: ÇÖKME — {exc}")
 
     # ── Sonuç ────────────────────────────────────────────────────────────
     print(f"Tarama: {total} çağrı, {len(errors)} hata")
