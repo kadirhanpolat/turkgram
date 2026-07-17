@@ -1,6 +1,6 @@
 # Faz E — Sözdizim Genişletme İmplementasyon Planı
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Turkgram kütüphanesine zengin öbek üretimi (E1), constituency parser (E2), dependency graph çıkarımı (E5) ve CoNLL-U export (E6) ekle.
 
@@ -44,7 +44,7 @@
 Bu golden motordan bağımsız, dilbilgisinden elle doğrulanmış biçimler içerir.  
 **ÖNEMLİ:** Bu dosyayı yazarken `syntax.py`'yi AÇMA — yalnız spec §3 + Türkçe dilbilgisini kullan.
 
-- [ ] **Step 1: Golden dosyasını oluştur**
+- [x] **Step 1: Golden dosyasını oluştur**
 
 ```python
 # tests/golden_syntax_rich.py
@@ -93,7 +93,7 @@ KOORDINE_NP_CASES = [
 ]
 ```
 
-- [ ] **Step 2: Golden'ı manuel gözden geçir**
+- [x] **Step 2: Golden'ı manuel gözden geçir**
 
 Her satırı Türkçe morfoloji açısından kontrol et:
 - `evin kapısını`: ev→gen=evin; kapı→3sg-poss+acc=kapısını ✓
@@ -107,7 +107,7 @@ Her satırı Türkçe morfoloji açısından kontrol et:
 **Files:**
 - Create: `tests/test_syntax_rich.py`
 
-- [ ] **Step 1: Runner dosyasını oluştur**
+- [x] **Step 1: Runner dosyasını oluştur**
 
 ```python
 # tests/test_syntax_rich.py
@@ -139,7 +139,7 @@ def test_koordine_np(ogeler, baglac, expected):
     assert koordine_np(ogeler, baglac) == expected
 ```
 
-- [ ] **Step 2: Testlerin başarısız olduğunu doğrula**
+- [x] **Step 2: Testlerin başarısız olduğunu doğrula**
 
 ```bash
 pytest tests/test_syntax_rich.py -v
@@ -154,7 +154,7 @@ Beklenti: `ImportError: cannot import name 'np_uret' from 'turkgram.syntax'`
 **Files:**
 - Modify: `turkgram/syntax.py`
 
-- [ ] **Step 1: np_uret fonksiyonunu ekle**
+- [x] **Step 1: np_uret fonksiyonunu ekle**
 
 `turkgram/syntax.py` sonuna ekle (mevcut `__all__` öncesi):
 
@@ -225,7 +225,7 @@ def koordine_np(
     return coordinate(list(ogeler), baglac)
 ```
 
-- [ ] **Step 2: `__all__`'ı güncelle**
+- [x] **Step 2: `__all__`'ı güncelle**
 
 ```python
 __all__ = [
@@ -239,7 +239,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 3: Testleri çalıştır**
+- [x] **Step 3: Testleri çalıştır**
 
 ```bash
 pytest tests/test_syntax_rich.py -v
@@ -247,7 +247,7 @@ pytest tests/test_syntax_rich.py -v
 
 Beklenti: Tüm testler yeşil. Başarısız olanlar varsa golden'ı değil implementasyonu düzelt.
 
-- [ ] **Step 4: Tüm paketi çalıştır**
+- [x] **Step 4: Tüm paketi çalıştır**
 
 ```bash
 pytest --ignore=tests/test_slow_roundtrip.py -q
@@ -255,7 +255,7 @@ pytest --ignore=tests/test_slow_roundtrip.py -q
 
 Beklenti: Önceki test sayısına yeni testler eklendi; regresyon yok.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add turkgram/syntax.py tests/golden_syntax_rich.py tests/test_syntax_rich.py
@@ -269,7 +269,7 @@ git commit -m "feat(syntax): E1 zengin öbek üretimi — np_uret/pp_uret/degmod
 **Files:**
 - Modify: `turkgram/tr.py`
 
-- [ ] **Step 1: Türkçe sarmalayıcıları ekle**
+- [x] **Step 1: Türkçe sarmalayıcıları ekle**
 
 `tr.py` içinde uygun yere (diğer sarmalayıcıların yanına) ekle:
 
@@ -313,7 +313,7 @@ def koordinasyon(
     return koordine_np(ogeler, baglac)
 ```
 
-- [ ] **Step 2: TR denklik testi ekle**
+- [x] **Step 2: TR denklik testi ekle**
 
 `tests/test_syntax_rich.py`'ye ekle:
 
@@ -327,7 +327,7 @@ def test_tr_derece_obeği_denklik():
     assert derece_obeği("hızlı", derece="çok") == degmod_uret("hızlı", derece="çok")
 ```
 
-- [ ] **Step 3: Testleri çalıştır ve commit et**
+- [x] **Step 3: Testleri çalıştır ve commit et**
 
 ```bash
 pytest tests/test_syntax_rich.py -v
@@ -342,7 +342,7 @@ git commit -m "feat(tr): E1 Türkçe sarmalayıcılar — isim_obeği/derece_obe
 **Files:**
 - Create: `turkgram/parse.py`
 
-- [ ] **Step 1: Temel dosyayı oluştur**
+- [x] **Step 1: Temel dosyayı oluştur**
 
 ```python
 # turkgram/parse.py
@@ -397,7 +397,7 @@ class PhraseNode:
 __all__ = ["LeafNode", "PhraseNode", "parse_phrase"]
 ```
 
-- [ ] **Step 2: parse_phrase taslak ekle (ImportError vermemesi için)**
+- [x] **Step 2: parse_phrase taslak ekle (ImportError vermemesi için)**
 
 ```python
 def parse_phrase(
@@ -415,7 +415,7 @@ def parse_phrase(
     raise NotImplementedError("E2 parser henüz implemente edilmedi")
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add turkgram/parse.py
@@ -432,7 +432,7 @@ git commit -m "feat(parse): E2 LeafNode/PhraseNode dataclass'lar + parse_phrase 
 **ÖNEMLİ:** Bu dosyayı yazarken `parse.py`'yi AÇMA — yalnız spec §4 + Türkçe dilbilgisi.  
 Golden, beklenen ağaç yapısını `dict` formatında tanımlar (dataclass gerektirmez).
 
-- [ ] **Step 1: Golden dosyasını oluştur**
+- [x] **Step 1: Golden dosyasını oluştur**
 
 ```python
 # tests/golden_parse.py
@@ -537,7 +537,7 @@ PARSE_CASES = [
 ]
 ```
 
-- [ ] **Step 2: Golden'ı gözden geçir**
+- [x] **Step 2: Golden'ı gözden geçir**
 
 Her ağacı Türkçe dilbilgisiyle kontrol et:
 - `büyük ev`: sıfat + isim → NP, sıfat çekilmez ✓
@@ -551,7 +551,7 @@ Her ağacı Türkçe dilbilgisiyle kontrol et:
 **Files:**
 - Create: `tests/test_parse.py`
 
-- [ ] **Step 1: Runner dosyasını oluştur**
+- [x] **Step 1: Runner dosyasını oluştur**
 
 ```python
 # tests/test_parse.py
@@ -589,7 +589,7 @@ def test_parse_phrase(case):
     )
 ```
 
-- [ ] **Step 2: Testin başarısız olduğunu doğrula**
+- [x] **Step 2: Testin başarısız olduğunu doğrula**
 
 ```bash
 pytest tests/test_parse.py -v
@@ -604,7 +604,7 @@ Beklenti: `NotImplementedError: E2 parser henüz implemente edilmedi`
 **Files:**
 - Modify: `turkgram/parse.py`
 
-- [ ] **Step 1: Etiket üretim yardımcısını ekle**
+- [x] **Step 1: Etiket üretim yardımcısını ekle**
 
 `parse.py`'nin başına import'ları ekle ve `_leaf_tag` fonksiyonunu yaz:
 
@@ -636,7 +636,7 @@ def _leaf_tag(token: str, analysis: "Analysis | None") -> str:
     return _POS_TO_TAG.get(analysis.pos, "X")
 ```
 
-- [ ] **Step 2: parse_phrase implementasyonunu yaz**
+- [x] **Step 2: parse_phrase implementasyonunu yaz**
 
 ```python
 def parse_phrase(
@@ -675,7 +675,7 @@ def parse_phrase(
     return root
 ```
 
-- [ ] **Step 3: Kural yardımcılarını yaz**
+- [x] **Step 3: Kural yardımcılarını yaz**
 
 ```python
 def _tag(node: PhraseNode | LeafNode) -> str:
@@ -826,7 +826,7 @@ def _wrap_bare_vp(nodes: list) -> list:
     ]
 ```
 
-- [ ] **Step 4: Testleri çalıştır**
+- [x] **Step 4: Testleri çalıştır**
 
 ```bash
 pytest tests/test_parse.py -v
@@ -834,7 +834,7 @@ pytest tests/test_parse.py -v
 
 Beklenti: Tüm PARSE_CASES yeşil.
 
-- [ ] **Step 5: Regresyon kontrolü**
+- [x] **Step 5: Regresyon kontrolü**
 
 ```bash
 pytest --ignore=tests/test_slow_roundtrip.py -q
@@ -842,7 +842,7 @@ pytest --ignore=tests/test_slow_roundtrip.py -q
 
 Beklenti: Tüm önceki testler hâlâ yeşil.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add turkgram/parse.py tests/golden_parse.py tests/test_parse.py
@@ -859,7 +859,7 @@ git commit -m "feat(parse): E2 constituency parser — parse_phrase R1-R5 kurall
 
 **ÖNEMLİ:** `dependency.py`'yi AÇMA — yalnız spec §5-6 + UD standardı.
 
-- [ ] **Step 1: Dependency golden'ı oluştur**
+- [x] **Step 1: Dependency golden'ı oluştur**
 
 ```python
 # tests/golden_dependency.py
@@ -906,7 +906,7 @@ DEP_CASES = [
 ]
 ```
 
-- [ ] **Step 2: CoNLL-U golden'ı oluştur**
+- [x] **Step 2: CoNLL-U golden'ı oluştur**
 
 ```python
 # tests/golden_conllu.py
@@ -935,7 +935,7 @@ CONLLU_CASES = [
 **Files:**
 - Create: `tests/test_dependency.py`
 
-- [ ] **Step 1: Runner dosyasını oluştur**
+- [x] **Step 1: Runner dosyasını oluştur**
 
 ```python
 # tests/test_dependency.py
@@ -975,7 +975,7 @@ def test_to_conllu(case):
     assert result == case["expected"]
 ```
 
-- [ ] **Step 2: Testin başarısız olduğunu doğrula**
+- [x] **Step 2: Testin başarısız olduğunu doğrula**
 
 ```bash
 pytest tests/test_dependency.py -v
@@ -990,7 +990,7 @@ Beklenti: `ImportError: cannot import name 'constituency_to_dep'`
 **Files:**
 - Create: `turkgram/dependency.py`
 
-- [ ] **Step 1: Temel yapıyı oluştur**
+- [x] **Step 1: Temel yapıyı oluştur**
 
 ```python
 # turkgram/dependency.py
@@ -1023,7 +1023,7 @@ class DepToken:
     misc: str = "_"
 ```
 
-- [ ] **Step 2: feats üretim yardımcısını yaz**
+- [x] **Step 2: feats üretim yardımcısını yaz**
 
 ```python
 def _analysis_to_feats(analysis: "object | None", upos: str) -> str:
@@ -1096,7 +1096,7 @@ def _analysis_to_feats(analysis: "object | None", upos: str) -> str:
     return "|".join(f"{k}={v}" for k, v in sorted(feats.items()))
 ```
 
-- [ ] **Step 3: constituency_to_dep'i yaz**
+- [x] **Step 3: constituency_to_dep'i yaz**
 
 ```python
 def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
@@ -1227,7 +1227,7 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
     return result
 ```
 
-- [ ] **Step 4: to_conllu'yu yaz**
+- [x] **Step 4: to_conllu'yu yaz**
 
 ```python
 def to_conllu(
@@ -1255,7 +1255,7 @@ def to_conllu(
 __all__ = ["DepToken", "constituency_to_dep", "to_conllu"]
 ```
 
-- [ ] **Step 5: Testleri çalıştır** (runner Task 10a'da yazıldı)
+- [x] **Step 5: Testleri çalıştır** (runner Task 10a'da yazıldı)
 
 ```bash
 pytest tests/test_dependency.py -v
@@ -1263,7 +1263,7 @@ pytest tests/test_dependency.py -v
 
 Beklenti: Tüm yeşil. Başarısız olan varsa implementasyonu düzelt.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add turkgram/dependency.py tests/golden_dependency.py tests/golden_conllu.py tests/test_dependency.py
@@ -1277,7 +1277,7 @@ git commit -m "feat(dependency): E5+E6 constituency_to_dep + to_conllu (UD/CoNLL
 **Files:**
 - Modify: `turkgram/__init__.py`
 
-- [ ] **Step 1: Yeni modülleri export et**
+- [x] **Step 1: Yeni modülleri export et**
 
 `__init__.py`'de ilgili bölüme ekle:
 
@@ -1291,7 +1291,7 @@ from .dependency import DepToken, constituency_to_dep, to_conllu
 
 `__all__` listesine de ekle: `"LeafNode"`, `"PhraseNode"`, `"parse_phrase"`, `"DepToken"`, `"constituency_to_dep"`, `"to_conllu"`.
 
-- [ ] **Step 2: Import testi**
+- [x] **Step 2: Import testi**
 
 ```bash
 PYTHONUTF8=1 python -c "from turkgram import parse_phrase, constituency_to_dep, to_conllu; print('OK')"
@@ -1299,7 +1299,7 @@ PYTHONUTF8=1 python -c "from turkgram import parse_phrase, constituency_to_dep, 
 
 Beklenti: `OK`
 
-- [ ] **Step 3: Tüm test paketini çalıştır**
+- [x] **Step 3: Tüm test paketini çalıştır**
 
 ```bash
 pytest --ignore=tests/test_slow_roundtrip.py -q
@@ -1307,7 +1307,7 @@ pytest --ignore=tests/test_slow_roundtrip.py -q
 
 Beklenti: Yeni test sayısı = önceki + E1 + E2 + E5 + E6; 0 başarısız.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add turkgram/__init__.py
@@ -1321,7 +1321,7 @@ git commit -m "feat(__init__): E1-E2-E5-E6 yeni API'ler export edildi"
 **Files:**
 - Create: `tools/sweep_syntax_e.py`
 
-- [ ] **Step 1: Sweep aracını oluştur**
+- [x] **Step 1: Sweep aracını oluştur**
 
 ```python
 # tools/sweep_syntax_e.py
@@ -1377,7 +1377,7 @@ for err in errors[:20]:
     print(" ", err)
 ```
 
-- [ ] **Step 2: Sweep'i çalıştır**
+- [x] **Step 2: Sweep'i çalıştır**
 
 ```bash
 PYTHONUTF8=1 python tools/sweep_syntax_e.py
@@ -1385,13 +1385,13 @@ PYTHONUTF8=1 python tools/sweep_syntax_e.py
 
 Beklenti: `Hata: 0`. Hata varsa kök nedeni araştır, düzelt, yeniden çalıştır.
 
-- [ ] **Step 3: Tüm test paketini son kez çalıştır**
+- [x] **Step 3: Tüm test paketini son kez çalıştır**
 
 ```bash
 pytest --ignore=tests/test_slow_roundtrip.py -q
 ```
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add tools/sweep_syntax_e.py
