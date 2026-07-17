@@ -117,6 +117,27 @@ def _node_is_nominative(node: "PhraseNode | LeafNode") -> bool:
     return True
 
 
+def _apply_r0(nodes: list) -> list:
+    """R0: NOUN[gen] NOUN[poss] → NP (belirtili isim tamlaması)."""
+    out, i = [], 0
+    while i < len(nodes):
+        if (isinstance(nodes[i], LeafNode)
+                and nodes[i].tag == "NOUN"
+                and nodes[i].analysis is not None
+                and nodes[i].analysis.kwargs.get("case") == "gen"
+                and i + 1 < len(nodes)
+                and isinstance(nodes[i + 1], LeafNode)
+                and nodes[i + 1].tag == "NOUN"
+                and nodes[i + 1].analysis is not None
+                and nodes[i + 1].analysis.kwargs.get("possessive") is not None):
+            out.append(PhraseNode.make("NP", (nodes[i], nodes[i + 1])))
+            i += 2
+        else:
+            out.append(nodes[i])
+            i += 1
+    return out
+
+
 def _apply_r3(nodes: list) -> list:
     """R3: ADJ ADJ+ → AdjP (derece + baş)."""
     out, i = [], 0
@@ -280,6 +301,7 @@ def parse_phrase(
 
     # 2. Bottom-up gruplama (kural sırası önemli)
     nodes: list[PhraseNode | LeafNode] = list(leaves)
+    nodes = _apply_r0(nodes)   # NP: NOUN[gen] NOUN[poss] (belirtili tamlama)
     nodes = _apply_r3(nodes)   # AdjP: ADJ ADJ+
     nodes = _apply_r1(nodes)   # NP: modifer* NOUN
     nodes = _apply_r1b(nodes)  # NP: participle NOUN

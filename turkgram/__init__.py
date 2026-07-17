@@ -26,7 +26,7 @@ from __future__ import annotations
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
     lexicon, disambiguation, compound, context, adjective, syntax, postposition, conjunction,
-    spellcheck, reduplication,
+    spellcheck, reduplication, parse, dependency,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -80,8 +80,13 @@ from .disambiguation import rank, disambiguate
 # ── Cümle-bağlamı disambiguation (kural-tabanlı sözdizimsel katman, Faz 2b) ─
 from .context import rank_in_context
 
-# ── Sözdizimi katmanı (öbek üretimi, Faz 4) ──────────────────────────────
-from .syntax import isim_tamlamasi, sifat_tamlamasi, cumle_uret
+# ── Sözdizimi katmanı (öbek üretimi, Faz 4 + Faz E) ─────────────────────
+from .syntax import (
+    isim_tamlamasi, sifat_tamlamasi, cumle_uret,
+    np_uret, pp_uret, degmod_uret, koordine_np,
+)
+from .parse import LeafNode, PhraseNode, parse_phrase
+from .dependency import DepToken, constituency_to_dep, to_conllu
 
 # ── Sayı morfolojisi (sıra + dağılım, Faz 5 D1) ─────────────────────────
 from .number import ordinal, distributive
@@ -143,8 +148,11 @@ __all__ = [
     "rank_in_context",
     # sıfat morfolojisi
     "intensify", "diminutive", "zarf_yap",
-    # sözdizimi öbek üretimi
+    # sözdizimi öbek üretimi (Faz 4 + Faz E)
     "isim_tamlamasi", "sifat_tamlamasi", "cumle_uret",
+    "np_uret", "pp_uret", "degmod_uret", "koordine_np",
+    "LeafNode", "PhraseNode", "parse_phrase",
+    "DepToken", "constituency_to_dep", "to_conllu",
     # sayı morfolojisi
     "ordinal", "distributive",
     # edat/ilgeç yönetimi
@@ -164,6 +172,7 @@ __all__ = [
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",
+    "parse", "dependency",
     "normalization", "phonology",
     "__version__",
 ]
