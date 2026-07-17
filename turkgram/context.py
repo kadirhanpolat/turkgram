@@ -24,6 +24,7 @@ from typing import Sequence
 
 from .analysis import Analysis, _tr_lower
 from . import disambiguation as dis
+from .postposition import _POSTPOSITIONS as _POSTPOSITIONS_TABLE
 
 # ---------------------------------------------------------------------------
 # Kind aileleri (SPEC §3) — casina/ken/participle fiil-kind'ları dâhil
@@ -48,27 +49,10 @@ _QUANT_WORDS: frozenset[str] = frozenset({
     "kimi", "birtakım", "hangi", "nice", "onlarca", "yüzlerce", "binlerce",
 })
 
-# Edat → nitelediği adın kabul edilen durumları (SPEC §3 K2)
+# Edat → nitelediği adın kabul edilen durumları (SPEC §3 K2).
+# Tek doğruluk kaynağı postposition._POSTPOSITIONS'tan TÜRETİLİR (drift önlenir).
 _POSTP_GOV: dict[str, frozenset[str]] = {
-    "ile": frozenset({"nom", "gen"}),
-    "için": frozenset({"nom", "gen"}),
-    "gibi": frozenset({"nom", "gen"}),
-    "kadar": frozenset({"nom", "gen", "dat"}),
-    "göre": frozenset({"dat"}),
-    "doğru": frozenset({"dat"}),
-    "karşı": frozenset({"dat"}),
-    "rağmen": frozenset({"dat"}),
-    "dair": frozenset({"dat"}),
-    "ilişkin": frozenset({"dat"}),
-    "ait": frozenset({"dat"}),
-    "değin": frozenset({"dat"}),
-    "önce": frozenset({"abl"}),
-    "sonra": frozenset({"abl"}),
-    "beri": frozenset({"abl"}),
-    "dolayı": frozenset({"abl"}),
-    "ötürü": frozenset({"abl"}),
-    "itibaren": frozenset({"abl"}),
-    "yana": frozenset({"abl"}),
+    e: v["yönet"] for e, v in _POSTPOSITIONS_TABLE.items()
 }
 
 _QUESTION_PARTICLES: frozenset[str] = frozenset({"mı", "mi", "mu", "mü"})

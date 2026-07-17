@@ -75,3 +75,28 @@ def test_yonet_sets_preserve_pronoun_cases():
     assert _POSTPOSITIONS["ile"]["yönet"] == frozenset({"nom", "gen"})
     assert _POSTPOSITIONS["gibi"]["yönet"] == frozenset({"nom", "gen"})
     assert _POSTPOSITIONS["kadar"]["yönet"] == frozenset({"nom", "gen", "dat"})
+
+
+def test_postp_gov_derived_preserves_current_keys():
+    """K2 _POSTP_GOV türetildikten sonra mevcut 19 anahtarın kabul-kümesi DEĞİŞMEZ."""
+    from turkgram.context import _POSTP_GOV
+    from turkgram.postposition import _POSTPOSITIONS
+
+    current_snapshot = {
+        "ile": frozenset({"nom", "gen"}),
+        "için": frozenset({"nom", "gen"}),
+        "gibi": frozenset({"nom", "gen"}),
+        "kadar": frozenset({"nom", "gen", "dat"}),
+        "göre": frozenset({"dat"}), "doğru": frozenset({"dat"}),
+        "karşı": frozenset({"dat"}), "rağmen": frozenset({"dat"}),
+        "dair": frozenset({"dat"}), "ilişkin": frozenset({"dat"}),
+        "ait": frozenset({"dat"}), "değin": frozenset({"dat"}),
+        "önce": frozenset({"abl"}), "sonra": frozenset({"abl"}),
+        "beri": frozenset({"abl"}), "dolayı": frozenset({"abl"}),
+        "ötürü": frozenset({"abl"}), "itibaren": frozenset({"abl"}),
+        "yana": frozenset({"abl"}),
+    }
+    derived = {e: v["yönet"] for e, v in _POSTPOSITIONS.items()}
+    for edat, gov in current_snapshot.items():
+        assert derived[edat] == gov, f"{edat}: {derived[edat]} != {gov}"
+        assert _POSTP_GOV[edat] == gov, f"_POSTP_GOV {edat} daraldı"
