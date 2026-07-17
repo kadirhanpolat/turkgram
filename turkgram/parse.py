@@ -10,12 +10,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .postposition import _POSTPOSITION_CASE as _POSTPOSITION_CASE_MAP
+from .postposition import _POSTPOSITIONS as _POSTPOSITIONS_TABLE
 
 if TYPE_CHECKING:
     from .analysis import Analysis
 
-_POSTPOSITIONS: frozenset[str] = frozenset(_POSTPOSITION_CASE_MAP.keys())
+# ADP tanıma: TÜM edatlar (donmuş dair/ilişkin/ait/yana dahil — aksi halde
+# R2 'buna dair' için PP kurmaz).
+_POSTPOSITIONS: frozenset[str] = frozenset(_POSTPOSITIONS_TABLE.keys())
 
 # Kapalı küme bağlaçlar — yüzey tabanlı (edat gibi, analiz sisteminin dışında)
 _SIMPLE_CONJ_TOKENS: frozenset[str] = frozenset({
@@ -45,6 +47,7 @@ class PhraseNode:
     tag: str                                    # 'NP'|'VP'|'S'|'AdjP'|'PP'|'CoordP'
     children: tuple["PhraseNode | LeafNode", ...]
     surface: str                                # özyinelemeli yaprak birleşimi
+    governs: "frozenset[str] | None" = None    # yalnız PP; yönetilen durum kümesi
 
     @staticmethod
     def _collect_tokens(node: "PhraseNode | LeafNode") -> list[str]:
@@ -57,10 +60,11 @@ class PhraseNode:
         cls,
         tag: str,
         children: tuple["PhraseNode | LeafNode", ...],
+        governs: "frozenset[str] | None" = None,
     ) -> "PhraseNode":
         """Factory — surface'i özyinelemeli hesaplar."""
         surface = " ".join(t for child in children for t in cls._collect_tokens(child))
-        return cls(tag=tag, children=children, surface=surface)
+        return cls(tag=tag, children=children, surface=surface, governs=governs)
 
 
 def _leaf_tag(token: str, analysis: "Analysis | None") -> str:
@@ -93,11 +97,12 @@ def _leaf_tag(token: str, analysis: "Analysis | None") -> str:
             pass
     # Adım 2: pos tabanlı
     _POS_TO_TAG = {
-        "verb": "VERB",
-        "noun": "NOUN",
-        "adj":  "ADJ",
-        "num":  "NUM",
-        "conj": "CCONJ",
+        "verb":  "VERB",
+        "noun":  "NOUN",
+        "adj":   "ADJ",
+        "num":   "NUM",
+        "conj":  "CCONJ",
+        "postp": "ADP",
     }
     return _POS_TO_TAG.get(analysis.pos, "X")
 
@@ -203,7 +208,7 @@ def _apply_r1b(nodes: list) -> list:
 
 
 def _apply_r2(nodes: list) -> list:
-    """R2: NP|NOUN ADP → PP."""
+    """R2: NP|NOUN ADP → PP (yönetilen durum işaretlemesiyle)."""
     out, i = [], 0
     while i < len(nodes):
         if (_tag(nodes[i]) in ("NP", "NOUN")
@@ -212,7 +217,10 @@ def _apply_r2(nodes: list) -> list:
             np_node = nodes[i]
             if isinstance(np_node, LeafNode):
                 np_node = PhraseNode.make("NP", (np_node,))
-            out.append(PhraseNode.make("PP", (np_node, nodes[i + 1])))
+            adp = nodes[i + 1]
+            edat = adp.token.lower() if isinstance(adp, LeafNode) else adp.surface.lower()
+            governs = _POSTPOSITIONS_TABLE.get(edat, {}).get("yönet")
+            out.append(PhraseNode.make("PP", (np_node, adp), governs=governs))
             i += 2
         else:
             out.append(nodes[i])

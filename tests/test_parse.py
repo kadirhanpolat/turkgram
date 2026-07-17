@@ -32,3 +32,33 @@ def test_parse_phrase(case):
     assert _node_matches(tree, case["expected"]), (
         f"\nBeklenen:\n{case['expected']}\nAlınan:\n{tree}"
     )
+
+
+def test_pp_carries_governs():
+    """R2 PP düğümü yönetilen durum kümesini taşır."""
+    from turkgram import tokenize, parse_text
+    from turkgram.parse import parse_phrase
+
+    # roots sağlanmazsa 'ev' X etiketlenir → R2 PP kuramaz; golden convention'ı izle
+    tokens = tokenize("ev için")
+    analyses = parse_text("ev için", {"ev"})
+    tree = parse_phrase(tokens, analyses)
+
+    def find_pp(node):
+        if getattr(node, "tag", None) == "PP":
+            return node
+        for ch in getattr(node, "children", ()):
+            r = find_pp(ch)
+            if r:
+                return r
+        return None
+
+    pp = find_pp(tree)
+    assert pp is not None, "PP düğümü kurulmadı"
+    assert pp.governs == frozenset({"nom", "gen"})
+
+
+def test_frozen_edat_forms_pp():
+    """Donmuş edat (dair) ADP kümesinde → R2 PP kurar."""
+    from turkgram.parse import _leaf_tag
+    assert _leaf_tag("dair", None) == "ADP"
