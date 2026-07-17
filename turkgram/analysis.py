@@ -118,7 +118,8 @@ _POS = ("verb", "noun", "adj", "num", "conj")
 _KINDS = ("conjugate", "decline", "copula", "converb",
           "converb_casina", "converb_ken", "participle",
           "intensify", "diminutive", "ordinal", "distributive",
-          "conjunction", "derivation")
+          "conjunction", "derivation",
+          "reduplication_full", "reduplication_converb", "reduplication_m")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -795,15 +796,113 @@ def set_dedup(items: list[Analysis]) -> list[Analysis]:
 
 
 # ---------------------------------------------------------------------------
+# İkileme analizi (Faz 9d)
+# ---------------------------------------------------------------------------
+def _try_reduplication_all(
+    surface: str,
+    token1: str,
+    token2: str,
+    analyses: list,
+    seen: set,
+    roots: Collection[str] | None,
+) -> None:
+    """Üç ikileme türünü dener; analyses listesini günceller.
+
+    - reduplication_full   : token1 == token2, roots filtresiz (hypothetical=roots is None)
+    - reduplication_converb: token1 == token2, SADECE roots verildiğinde; lemma = fiil mastarı
+    - reduplication_m      : token1 != token2 (m-biçim), roots filtresiz
+    """
+    from .reduplication import full_reduplicate, converb_reduplicate, m_reduplicate
+
+    # --- Tam ikileme (full) ---
+    if token1 == token2:
+        candidate = token1
+        if roots is None or candidate in roots:
+            try:
+                if full_reduplicate(candidate) == surface:
+                    key = ("reduplication_full", candidate, frozenset())
+                    if key not in seen:
+                        seen.add(key)
+                        sub = _cached_analyze(candidate, None, 1)
+                        pos = sub[0].pos if sub else None
+                        analyses.append(Analysis(
+                            lemma=candidate,
+                            pos=pos,
+                            kind="reduplication_full",
+                            kwargs={},
+                            segments=_segs_to_tuple([(token1, "kök"), (" " + token2, "ikileme")]),
+                            hypothetical=(roots is None),
+                        ))
+            except Exception:
+                pass
+
+    # --- Converb ikilemesi (yalnız roots verildiğinde) ---
+    if token1 == token2 and roots is not None:
+        for lemma in roots:
+            try:
+                if converb_reduplicate(lemma) == surface:
+                    key = ("reduplication_converb", lemma, frozenset())
+                    if key not in seen:
+                        seen.add(key)
+                        analyses.append(Analysis(
+                            lemma=lemma,
+                            pos="verb",
+                            kind="reduplication_converb",
+                            kwargs={},
+                            segments=_segs_to_tuple([(token1, "kök"), (" " + token2, "ikileme")]),
+                            hypothetical=False,
+                        ))
+            except Exception:
+                pass
+
+    # --- M-ikilemesi ---
+    if token1 != token2:
+        candidate = token1
+        if roots is None or candidate in roots:
+            try:
+                if m_reduplicate(candidate) == surface:
+                    key = ("reduplication_m", candidate, frozenset())
+                    if key not in seen:
+                        seen.add(key)
+                        sub = _cached_analyze(candidate, None, 1)
+                        pos = sub[0].pos if sub else None
+                        analyses.append(Analysis(
+                            lemma=candidate,
+                            pos=pos,
+                            kind="reduplication_m",
+                            kwargs={},
+                            segments=_segs_to_tuple([(token1, "kök"), (" " + token2, "m-ikileme")]),
+                            hypothetical=(roots is None),
+                        ))
+            except Exception:
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Çok-token analizi
 # ---------------------------------------------------------------------------
 def _analyze_multi_token(tokens: list[str], roots: Collection[str] | None) -> list[Analysis]:
     """
-    İki geçerli çok-token kalıbı (SPEC §8):
+    Çok-token kalıpları (SPEC §8):
+    0. İkileme (Faz 9d): 2-token → reduplication_full / reduplication_converb / reduplication_m
     1. Soru grubu: son token m[ıiuü]… ile başlıyor
     2. Birleşik önek: ilk token(lar) + son token → birleşik lemma
     """
     results: list[Analysis] = []
+
+    # 0. İkileme (Faz 9d) — yalnız 2-token yüzeyler
+    if len(tokens) == 2:
+        reduplic_analyses: list[Analysis] = []
+        reduplic_seen: set[tuple] = set()
+        _try_reduplication_all(
+            surface=" ".join(tokens),
+            token1=tokens[0],
+            token2=tokens[1],
+            analyses=reduplic_analyses,
+            seen=reduplic_seen,
+            roots=roots,
+        )
+        results.extend(reduplic_analyses)
 
     # 1. Soru grubu
     last_tok = tokens[-1]
