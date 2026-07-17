@@ -71,14 +71,26 @@
         "roots": {"uzun", "yol"},
         "expected": {"tag": "NP", "surface": "uzun uzun yollar"},
     },
-    {   # derece-çift: çok çok güzel → AdvP (sonraki NOUN değil)
+    {   # derece-çift: çok çok güzel → AdvP (sonraki NOUN değil). Kök S (güzel ADJ kalır → S'ye sarılır).
         "text": "çok çok güzel",
         "roots": {"güzel"},
-        "expected": {"tag": "AdvP", "surface": "çok çok"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "AdvP", "surface": "çok çok"},
+                {"tag": "ADJ", "token": "güzel"},
+            ],
+        },
+    },
+    {   # derece-çift + NOUN: guard skip → NP (adnominal)
+        "text": "çok çok kitap",
+        "roots": {"kitap"},
+        "expected": {"tag": "NP", "surface": "çok çok kitap"},
     },
 ]
 ```
-NOT: son `çok çok güzel` case'inde ağacın kökü tek AdvP olmayabilir (güzel ADJ kalır → S'ye sarılır); `_node_matches` kök tag'i "S" bekleyebilir. Golden'ı yazan Opus, `çok çok`'un AdvP olarak KURULDUĞUNU doğrulayan uygun beklenen yapıyı (gerekirse S kökü + AdvP çocuğu) elle kurar. `çok çok kitap` → NP case'ini de ekle (guard skip: `{"text": "çok çok kitap", "roots": {"kitap"}, "expected": {"tag": "NP", "surface": "çok çok kitap"}}`).
+NOT [hakem #4]: `çok çok güzel` kökü **S** (AdvP tek başına değil — R8 sonrası nodes=[AdvP, ADJ güzel], VERB
+yok → S'ye sarılır). Yukarıdaki beklenen yapı bunu yansıtır. Opus golden'ı yazarken ampirik ağaçla teyit eder.
 
 - [ ] **Step 3: AdvP dependency case'ini `tests/golden_dependency.py` `DEP_CASES` sonuna ekle**
 
@@ -97,7 +109,15 @@ NOT: son `çok çok güzel` case'inde ağacın kökü tek AdvP olmayabilir (güz
     },
 ]
 ```
-NOT: `upos`/`lemma` beklenen değerleri motorun leksikon/analiz davranışından türer; Opus golden yazarken `yavaş`'ın ADJ mı NOUN mu upos aldığını dilbilgisinden (sıfat) varsayar — hakem adımında ampirik doğrulanır, tutmuyorsa golden'daki upos düzeltilir (motoru golden'a uydurma; upos motor olgusudur).
+NOT: `upos`/`lemma` beklenen değerleri motorun leksikon/analiz davranışından türer.
+
+- [ ] **Step 3b (ZORUNLU) [hakem #5]: `yavaş` upos'unu AMPİRİK yakala**
+
+RED'in `upos` yüzünden yanlış nedenle kırılmaması için, golden'ı sabitlemeden önce `yavaş`'ın gerçek upos'unu ölç:
+
+Run: `PYTHONUTF8=1 python -c "from turkgram import tokenize,parse_text; from turkgram.parse import parse_phrase; from turkgram.dependency import constituency_to_dep; t=parse_phrase(tokenize('yavaş yavaş yürüdü'), parse_text('yavaş yavaş yürüdü',{'yavaş','yürümek'})); print([(d.form,d.upos) for d in constituency_to_dep(t)])"`
+
+`yavaş` ADJ değil NOUN dönerse, dependency golden'daki `"upos": "ADJ"` değerlerini gerçek değerle güncelle (upos motor olgusu; motoru golden'a uydurma). deprel/head beklenenleri (advmod/compound:redup) DEĞİŞMEZ — onlar dilbilgisi olgusu.
 
 - [ ] **Step 4: RED doğrula**
 
@@ -171,6 +191,14 @@ def _apply_r8_redup(nodes: list) -> list:
             if tag not in ("NP", "PP", "AdjP", "CoordP", "NOUN", "AdvP"):
 ```
 
+- [ ] **Step 3b [hakem #6]: `PhraseNode` docstring'ini güncelle**
+
+`turkgram/parse.py:45` (bayat — E3/E4 etiketleri de eksik):
+
+```python
+    tag: str  # 'NP'|'VP'|'S'|'AdjP'|'PP'|'CoordP'|'CompP'|'RelP'|'DiyeP'|'AdvP'
+```
+
 - [ ] **Step 4: Parse golden'ını koş (GREEN, parse ağaçları)**
 
 Run: `python -m pytest tests/test_parse.py -q`
@@ -215,12 +243,21 @@ git commit -m "feat(parse): _apply_r8_redup — ikileme AdvP + NOUN-takip guard 
                 return "advmod"
 ```
 
-Ayrıca `_child_deprel` içinde, `if parent_tag == "AdjP":` dalının yanına (AdvP iç ilişkisi) ekle:
+Ayrıca AdvP iç ilişkisi için **top-level** `if parent_tag == "AdvP":` dalı ekle — `if parent_tag == "AdjP":`
+bloğundan (satır 173-175) SONRA, `if parent_tag == "CoordP":` bloğundan (satır 176) ÖNCE. **VP/S bloğunun
+İÇİNE değil**, kardeş `if parent_tag ==` guard'larıyla aynı nesting seviyesinde:
 
 ```python
-        if parent_tag == "AdvP":
-            return "compound:redup"  # ikinci token (tekrar) → baş
+        if parent_tag == "AdjP":
+            if child_tag == "ADJ":
+                return "advmod"
+        if parent_tag == "AdvP":              # ← YENİ, top-level
+            return "compound:redup"           # ikinci token (tekrar) → baş
+        if parent_tag == "CoordP":
+            ...
 ```
+Bu dal `if parent_tag in ("VP","S")` bloğundan ÖNCE döndüğünden `_find_head_leaf`/case hesabına hiç ulaşmaz
+(çökme riski yok).
 
 - [ ] **Step 3: Dependency golden'ını koş (GREEN)**
 
