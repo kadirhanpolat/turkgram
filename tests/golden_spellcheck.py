@@ -1,11 +1,13 @@
-"""Motor-körü bağımsız golden — spellcheck (Faz 9b).
+"""Motor-körü bağımsız golden — spellcheck (Faz 9b + V2).
 Kaynak: Türkçe dilbilgisi; turkgram kaynak koduna BAKILMADI.
 
 Bu dosya YALNIZ veri içerir (liste). Assert/pytest yoktur.
 
 Kapsanan API:
 - is_valid(word) -> bool
-- suggest(word, max_distance=2) -> list[str]  (V1: KÖK/lemma döner, yüzey biçim değil)
+- suggest(word, max_distance=2) -> list[str]
+    V1: çıplak (nom) typo → KÖK/lemma döner (lemma = surface form for nom)
+    V2: çekimli typo → YÜZEY BİÇİM döner (kök + orijinal ekle yeniden üretim)
 - check(word) -> SpellResult(word, is_valid, suggestions: tuple[str, ...])
 
 Türkçe karakter konfüzyonları (distance=0.5 her biri):
@@ -50,12 +52,13 @@ IS_VALID_CASES = [
 ]
 
 # ---------------------------------------------------------------------------
-# SUGGEST_CASES: (word, must_include_root, max_distance)
-#   must_include_root: suggest() sonucunda ZORUNLU bulunması gereken KÖK lemma
-#   (yüzey biçim değil; çıplak isim / mastar fiil / kök sıfat)
+# SUGGEST_CASES: (word, must_include, max_distance)
+#   must_include: suggest() sonucunda ZORUNLU bulunması gereken biçim.
+#   V1 (çıplak nom typo): kök/lemma döner (lemma = surface for nom).
+#   V2 (çekimli typo):    yüzey biçim döner (kök + orijinal ek).
 # ---------------------------------------------------------------------------
 SUGGEST_CASES = [
-    # --- Tek Türkçe karakter konfüzyonu (distance=0.5) ---
+    # --- Tek Türkçe karakter konfüzyonu (distance=0.5), çıplak (V1 uyumlu) ---
     ("seker", "şeker", 2),   # ş/s
     ("cok", "çok", 2),       # ç/c
     ("kapi", "kapı", 2),     # ı/i
@@ -63,16 +66,22 @@ SUGGEST_CASES = [
     ("gul", "gül", 2),       # ü/u
     ("goz", "göz", 2),       # ö/o
 
-    # --- İki karakter konfüzyonu tek kelimede (distance=1.0) ---
+    # --- İki karakter konfüzyonu tek kelimede (distance=1.0), çıplak ---
     ("uc", "üç", 2),         # ü/u + ç/c = 1.0
     ("gozluk", "gözlük", 2), # ö/o + ü/u = 1.0
 
-    # --- Normal Levenshtein (distance=1.0) ---
+    # --- Normal Levenshtein (distance=1.0), çıplak ---
     ("kiyap", "kitap", 2),   # y->t yerdeğişim/ikame
     ("evd", "ev", 2),        # fazla harf -> kök ev bulunmalı
 
     # --- max_distance eşik edge (0.5 tam sınır) ---
     ("seker", "şeker", 0.5), # yalnız ş/s konfüzyonu = 0.5, eşikte bulunmalı
+
+    # --- V2: Çekimli typo → yüzey biçim önerisi ---
+    # Harmoni-tutarlı tek-karakter tiposunda V2 yüzey üretir.
+    # NOT: Bu kelimeler V1'de [] dönerdi (BK-tree kök mesafesi > max_distance).
+    # SINIR: Çok-karakter tiposunda (ö+ü → o+u) suffix harmoni çakışır → kapsam dışı.
+    ("goruyorum", "görüyorum", 2),  # ö/o; görmek pres 1sg → "görüyorum"
 ]
 
 # ---------------------------------------------------------------------------

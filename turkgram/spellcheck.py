@@ -12,8 +12,16 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Iterable
 
-from .analysis import analyze as _analyze
+from .analysis import analyze as _analyze, _call_generator as _regen_surface, _make_frozen
 from . import lexicon as _lexicon
+
+# Morfolojik şablon yeniden üretimi desteklenen kind'lar (V2).
+# Türetme / ikileme gibi karmaşık kind'lar kapsam dışı.
+_REGENERATABLE_KINDS: frozenset[str] = frozenset({
+    "conjugate", "decline", "copula",
+    "converb", "converb_casina", "converb_ken",
+    "participle",
+})
 
 _MAX_WORD_LEN = 200
 
@@ -53,6 +61,18 @@ def is_valid(word: str, *, roots: frozenset[str] | None = None) -> bool:
     return any(not a.hypothetical for a in _analyze(word, roots=r))
 
 
+def _regenerate(lemma: str, analysis: object) -> str | None:
+    """analysis'ın morfolojik şablonunu farklı bir köke uygular (V2 yardımcısı).
+
+    analysis.kind ∈ _REGENERATABLE_KINDS → _call_generator ile yüzey üretir.
+    Diğer kind'lar veya üretim hatası → None.
+    """
+    if analysis.kind not in _REGENERATABLE_KINDS:  # type: ignore[union-attr]
+        return None
+    frozen = _make_frozen(analysis.kwargs)  # type: ignore[union-attr]
+    return _regen_surface(analysis.kind, lemma, frozen)
+
+
 def suggest(
     word: str,
     *,
@@ -60,10 +80,15 @@ def suggest(
     max_suggestions: int = 5,
     max_distance: float = 2.0,
 ) -> list[str]:
-    """Yanlış yazılmış kelime için kök (lemma) önerileri — V1.
+    """Yanlış yazılmış kelime için öneri listesi — V2.
 
-    V1: kök (lemma) listesi döner; "evte" → ["ev"] (inflected değil).
-    V2'de yüzey yeniden üretimi eklenir (API değişmez, davranış değişir).
+    V2 algoritması:
+    1. Morfolojik şablon yolu: analyze(word, roots=None) → hypothetical analizler →
+       her analiz için BK-tree'yi kök üzerinde sorgula → correct_root ile yüzey yeniden üret.
+    2. V1 fallback: tüm kelime üzerinde BK-tree (çözümlenemez typo'lar + çıplak isimler).
+
+    Çıplak (nom) typo'lar için V1 ve V2 aynı sonucu verir (lemma = surface).
+    Çekimli typo'larda V2, yüzey biçim (kök + doğru ek) önerir.
     """
     if max_suggestions < 1:
         raise ValueError(f"max_suggestions en az 1 olmalı, verildi: {max_suggestions}")
@@ -76,17 +101,37 @@ def suggest(
 
     r = _roots(roots)
     tree = _get_tree(r)
-    hits = tree.query(word, max_distance)  # [(distance, lemma), ...] SIRASIZ
 
     try:
         freq: dict[str, int] = _lexicon.load_freq()
     except Exception:
         freq = {}
 
-    # Sırala: distance artan, eşitte frekans azalan, sonra alfabetik (deterministik)
-    hits.sort(key=lambda x: (x[0], -freq.get(x[1], 0), x[1]))
+    candidates: list[tuple[float, str]] = []
+    seen: set[str] = set()
 
-    return [lemma for _, lemma in hits[:max_suggestions]]
+    # V1: BK-tree tüm kelime üzerinde (çıplak isim typo'ları için birincil yol).
+    # V1 önce çalışır — doğru distance'ı garantiler (V2 üstüne yazamaz).
+    for dist, lemma in tree.query(word, max_distance):
+        if lemma not in seen:
+            seen.add(lemma)
+            candidates.append((dist, lemma))
+
+    # V2: Morfolojik şablon yolu — yalnız V1'de bulunmayan yüzey biçimler eklenir.
+    # Çekimli typo'larda V1'in boş döndüğü durumlarda devreye girer.
+    hyp_analyses = _analyze(word, roots=None)
+    for a in hyp_analyses:
+        if a.kind not in _REGENERATABLE_KINDS:
+            continue
+        for dist, correct_lemma in tree.query(a.lemma, max_distance):
+            surface = _regenerate(correct_lemma, a)
+            if surface is not None and surface not in seen:
+                seen.add(surface)
+                candidates.append((dist, surface))
+
+    # Sırala: distance artan, eşitte frekans azalan, sonra alfabetik (deterministik)
+    candidates.sort(key=lambda x: (x[0], -freq.get(x[1], 0), x[1]))
+    return [s for _, s in candidates[:max_suggestions]]
 
 
 def check(
