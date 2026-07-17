@@ -11,9 +11,11 @@ Bu SPEC yalnız **kapalı küme edatlar** için isim öbeği üretimini kapsar.
 
 Edat öbeği = `decline(lemma, case=yönetilen_durum) + ' ' + edat`
 
+Edat **analizi** (`analyze()` içinde `kind="postposition"`) ve PP öbeği doğrulaması §7–§9'da işlenir.
+Tasarım: `docs/superpowers/specs/2026-07-17-edat-analizi-design.md`.
+
 **Kapsam dışı (bu SPEC'te işlenmez):**
 - Çok-kelimeli edatlar ve zarf-fiil öbekleri (bir türlü, ilgili olarak) → sözdizimsel
-- Edat analizi (`analyze()` içinde edat kind'ı) → sözdizimsel bağlam gerektirir, defer
 - Edatın anlamsal seçimi (hangi edatın kullanılacağı kararı) → uygulamaya bırakılır
 
 ---
@@ -124,6 +126,112 @@ def edat_obeği(isim: str, edat: str, bitisik: bool = False) -> str:
 
 - **Anlamsal seçim:** hangi edatın kullanılacağı kararı uygulamaya bırakılır
 - **Çok-kelimeli edatlar** (`bir türlü`, `göz önünde bulundurarak`) → sözdizimsel, defer
-- **Edat çözümlemesi** → sözdizimsel bağlam gerektirir, `analyze()` kapsam dışı
 - **`ile` + zamir şekli seçimi** (`ben ile` vs `benimle`) → stil/kayıt tercihi, API her ikisini destekler
 - **Ek edatlar** (aralarında, üzerinde gibi) → varlık-iyelik öbekleri, sözdizimsel
+- **`bitişik ile` alternatif analizi** (`evle` → ev+ile-bitişik ayrı etiketi) → `evle` zaten
+  `decline(case='ins')`'ten çözülür; V1'de ayrı postposition etiketi eklenmez
+
+---
+
+## §7 Edat Analizi (`analyze()` içinde `kind="postposition"`)
+
+Faz E (`parse.py`) tamamlandığı için ertelenen edat analizi açıldı. İki katman:
+
+### §7.1 Tek-token analiz — `_try_postposition_all`
+
+Bağlaç (`de`/`da`) deseninin aynası: **closed-set, oracle-free, additive, her zaman döner**.
+
+```python
+Analysis(
+    lemma=edat,            # edatın kendisi ("için")
+    pos="postp",           # yeni POS (mevcut "conj" geleneğiyle uyumlu)
+    kind="postposition",   # _KINDS'a SONA
+    kwargs={},             # BOŞ — yönetim lemmadan/tablodan türetilebilir, kwargs'a girmez
+    segments=(("için", "kök"),),
+    hypothetical=False,    # closed-set → her zaman güvenilir
+)
+```
+
+- **Additive:** hiçbir okumanın yerini almaz. `analyze("sonra")` hem `postposition` hem eşsesli
+  zarf/isim okumasını döner; `analyze("göre")` hem `postposition` hem `gör-e` ulaç okumasını.
+  Disambiguation sıralar. (Emsal: `de` = bağlaç + `demek` imp-2sg belirsizliği.)
+- **Dispatch:** `conjunction` ile aynı grupta (yüzey closed-set), `number`/`derivation`'dan ÖNCE.
+- **Eşsesli homograflar** (adversarial): `aşkın` (=isim `aşk+ın`), `başka` (=sıfat), `üzere` (=`üzer+e`)
+  — postposition okuması eklenir ama disambiguation'da doğru okumayı GEÇMEZ (golden sabitler).
+
+### §7.2 PP doğrulaması — `parse.py` R2
+
+- ADP yaprağı artık `Analysis(kind="postposition")` taşır → R2 buna güvenir.
+- PP düğümüne `governs` (yönetilen durum kümesi) iliştirilir. `PhraseNode` frozen dataclass →
+  yeni opsiyonel alan: `governs: frozenset[str] | None = None` (varsayılan None → mevcut düğüm
+  eşitlik testleri kırılmaz; yalnız PP dolu taşır).
+- NP tümlecinin durumu `governs`'a uyuyor mu → **yumuşak uyum işareti** (K2 gibi: işaretle, ASLA
+  reddetme; recall-güvenli). Bu bilgi E5/E6 dependency/CoNLL-U `case` ilişkisini besler.
+- **`için`/zamir asimetrisi burada çözülür:** tek-token analizde tümleç bilinmez → `yönet={nom,gen}`.
+  İsim→nom, zamir→gen ayrımı PP doğrulamasında (önceki NP görülünce) devreye girer.
+
+---
+
+## §8 Konsolide Tablo — Tek Doğruluk Kaynağı
+
+Edat bilgisi üç yerde (üretim `postposition.py`, K2 `context.py`, yeni analiz) elle tutuluyordu ve
+sapmıştı. Tek tablo `postposition.py::_POSTPOSITIONS`; üretim + analiz + K2 hepsi oradan beslenir.
+
+```python
+_POSTPOSITIONS = {
+    "edat": {
+        "üret":       "<tek case>",           # postposition() üretim case'i (üretilebilir=False ise yok)
+        "üret_zamir": "gen",                  # OPSİYONEL — yalnız için (zamir asimetrisi)
+        "yönet":      frozenset({...}),        # K2 + analiz KABUL-KÜMESİ (elle yazılır, üret'ten TÜRETİLMEZ)
+        "üretilebilir": True/False,            # False → postposition() ValueError (donmuş kalıp)
+    },
+}
+```
+
+**KRİTİK — `yönet` elle yazılır, `üret`'ten türetilmez.** Zamirlerde çok-case alan edatlar:
+`ile→{nom,gen}`, `gibi→{nom,gen}`, `kadar→{nom,gen,dat}` (benim ile / benim gibi / senin kadar).
+Tek-case `üret`'ten türetilirse bu kümeler daralır → K2 recall kırılır.
+
+`context.py` `_POSTP_GOV = {e: v["yönet"] for e,v in _POSTPOSITIONS.items()}` olarak türetilir;
+K2 algoritması DEĞİŞMEZ. Build-time golden: türetilen tablo mevcut `_POSTP_GOV`'un tam anahtar
+kümesinde birebir eşit (drift kilidi).
+
+`_ICIN_GEN_PRONOUNS` **korunur** — `üret_zamir` yalnız *hangi* case'i seçer, zamir kümesini kodlamaz.
+
+### §8.1 Genişletilmiş envanter (19 → 23 edat)
+
+**`üretilebilir: False` (donmuş kalıp; analiz + K2 tanır, `postposition()` üretmez):**
+
+| Edat | yönet | Örnek |
+|------|-------|-------|
+| dair | {dat} | buna dair, konuya dair |
+| ilişkin | {dat} | soruna ilişkin |
+| ait | {dat} | bana ait, okula ait |
+| yana | {abl} | benden yana |
+
+Bu 4 edat `parse.py` ADP tanıma kümesine de eklenir (aksi halde R2 `buna dair` için PP kurmaz).
+
+**Çok-case `yönet` (zamir asimetrisi; §8 KRİTİK):**
+
+| Edat | üret | yönet |
+|------|------|-------|
+| için | nom (zamir gen) | {nom, gen} |
+| ile | nom | {nom, gen} |
+| gibi | nom | {nom, gen} |
+| kadar | dat | {nom, gen, dat} |
+
+### §8.2 `postposition()` iki ayrı ValueError
+
+- `edat not in _POSTPOSITIONS` → bilinmeyen edat; `Geçerliler:` **yalnız `üretilebilir:True`** listeler.
+- `not v["üretilebilir"]` → donmuş edat: ayrı mesaj (ör. `'dair' donmuş bir edat, üretilemez`).
+  `dair` "Geçerliler" listesinde GÖRÜNMEZ.
+
+---
+
+## §9 Değişmezler
+
+- `postposition()` üretim çıktısı DEĞİŞMEZ (mevcut 86-girdi golden yeşil).
+- K2 **mevcut 19 edat** davranışı DEĞİŞMEZ; 4 yeni edat (dek/üzere/başka/aşkın) için doğrular (recall-güvenli).
+- `analyze(roots=None)` postposition dalıyla **her zaman** postposition okuması döner.
+- PP doğrulaması hiçbir geçerli yapıyı budamaz.
+- `_KINDS`/`_POS` genişlemesi geriye uyumu kırmaz; `PhraseNode.governs` varsayılan None.
