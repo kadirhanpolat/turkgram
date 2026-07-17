@@ -1549,7 +1549,7 @@ def _try_postposition_all(surface: str, analyses: list[Analysis], seen: set[tupl
     Bilinçli belirsizlik: 'sonra' = edat + zarf; 'göre' = edat + gör-e ulaç.
     """
     from .postposition import _POSTPOSITIONS
-    edat = surface.lower()
+    edat = surface  # analyze() zaten _tr_lower ile normalize etti (bkz. _try_conjunction_all)
     if edat not in _POSTPOSITIONS:
         return
     key = ("postposition", edat, frozenset())
