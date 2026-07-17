@@ -125,6 +125,10 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
     edat kapalı kümesi. Kritik: `için` isim-zamir asimetrisi (`ev için` / `benim için`) +
     `üzere` nom (`ev üzere`). `bitişik=True` ile `ile` → ins (`evle`/`okulla`). `tr.py`:
     `edat_obeği()`. 86 test.
+  - **D2-devamı ✅ Edat çözümlemesi** (`analysis.py` + `parse.py`, SPEC §7-§9) — ertelenen açıldı:
+    tek doğruluk kaynağı `_POSTPOSITIONS` (23 edat); `analyze("için")` → `kind='postposition'`
+    (closed-set, additive); `context._POSTP_GOV` türetilir (K2 değişmez); PP düğümü `governs`
+    taşır (donmuş `dair`/`ilişkin`/`ait`/`yana` dahil). Homograf-güvenli; drift-lock golden. 29 test.
   - **D3 ✅ Sayı çözümlemesi** (`analysis.py` genişleme) — `ordinal`/`distributive` kind;
     `_NUMBER_SIMPLE_ROOTS` precision garantisi; bileşik yüzeyler çok-token dalında. 24 test.
   - **D4 ✅ Bağlaç morfolojisi** (`conjunction.py`, SPEC `spec/conjunction-spec.md`) —

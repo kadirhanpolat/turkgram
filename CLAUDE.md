@@ -316,7 +316,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **3564 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **4096 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -357,12 +357,33 @@ Test durumu: son ölçüm **3564 test yeşil** (slow hariç) + slow round-trip a
     - `tr.py` sarmalayıcı: `edat_obeği(isim, edat, bitişik=False)`.
     - Golden: 86 giriş, bağımsız (motor-körü, Opus), 19 edat × ünsüz/ünlü/zamir.
     - Hakem bulgular giderildi: `için` nom/gen asimetrisi (CRITICAL) + `üzere` nom (MEDIUM).
+  - ✅ **D2-devamı: Edat ÇÖZÜMLEMESİ** (2026-07-18, ertelenen açıldı; SPEC `spec/postposition-spec.md §7-§9`,
+    tasarım `docs/superpowers/specs/2026-07-17-edat-analizi-design.md`, plan `docs/superpowers/plans/2026-07-17-edat-analizi.md`):
+    - **Tek doğruluk kaynağı** `postposition._POSTPOSITIONS` (23 edat): `üret`/`üret_zamir`/`yönet`/`üretilebilir`.
+      Üretim (`postposition()`), analiz (`_try_postposition_all`), K2 (`context._POSTP_GOV` TÜRETİLİR), PP (`parse.py`)
+      hepsi buradan beslenir. Envanter 19→23 (donmuş dair/ilişkin/ait/yana eklendi).
+    - **TUZAK — `yönet` elle yazılır, `üret`'ten TÜRETİLMEZ:** `ile`/`gibi`→{nom,gen}, `kadar`→{nom,gen,dat}
+      zamir-genitifi korunmalı; tek-case `üret`'ten türetilirse K2 recall kırılır. Build-time drift-lock golden
+      (`test_postp_gov_derived_preserves_current_keys`) mevcut 19 anahtarın daralmadığını sabitler.
+    - **`_try_postposition_all`** (`analysis.py`): bağlaç deseninin aynası — closed-set, oracle-dışı, **additive**,
+      `kind="postposition"` (`_KINDS` SONA), `pos="postp"`, `kwargs={}`, her zaman döner (roots-bağımsız).
+      Belirsizlik kendiliğinden: `göre`=edat+görmek, `sonra`/`aşkın`/`başka` homograf.
+    - **TUZAK — homograf sıralaması `_KIND_PRIOR`'a bağlı:** `postposition` `disambiguation._KIND_PRIOR`'da YOK
+      (öncelik 0) → `aşkın`(=aşk+ın)/`başka` bare-noun `decline` (öncelik 2) tepede kalır. Drift-lock test kilitler.
+    - **TUZAK — `analyze()` düz sözcük için `pos="adj"` ÜRETMEZ:** sıfat baskınlığı yalnız `parse._leaf_tag`
+      leksikon-override'ında; `disambiguation.rank`'ta homograf tepe POS = `noun`.
+    - **PP `governs`** (`parse.py`): `PhraseNode.governs: frozenset|None=None` (opsiyonel, varsayılan None →
+      mevcut eşitlik testleri kırılmaz); R2 PP düğümüne `yönet` iliştirir (işaretle, ASLA reddetme — recall-güvenli).
+      E5/E6 dependency/CoNLL-U `case` ilişkisini besler. Donmuş edat ADP kümesine eklendi (`buna dair` PP kurar).
+    - **`postposition()` iki ValueError:** bilinmeyen edat (Geçerliler yalnız üretilebilir) vs donmuş edat
+      (`'dair' donmuş bir edat`). Üretim çıktısı DEĞİŞMEZ (86-girdi golden yeşil).
+    - Hakem: sweep 23 edat + 26k leksikon 0 çökme/0 miss; final adversarial (6 soru) SHIP. **4096 test yeşil** (+slow 2).
+    - Kalan defer: ikileme adverbial-yeniden-kurulum; olasılıksal dizi etiketleme (FST adopt-referans).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
     - Bileşik sayı yüzeyleri (`yirmi birinci`) çok-token dalında `_try_number_all` önce çalışır.
     - `roots` filtresi doğru çalışır (`roots is not None and root not in roots → atla`).
-    - Edat analizi **kapsam dışı** (sözdizimsel bağlam gerektirir, defer).
     - Golden: 24 giriş, bağımsız (motor-körü, Opus): ordinal 1-10+2 bileşik, distributif 1-10+2 bileşik.
   - ✅ **D4: Bağlaç morfolojisi** (`conjunction.py`, SPEC `spec/conjunction-spec.md`) — TAMAMLANDI:
     - `turkgram/conjunction.py` — `conjoin(word, conj)` (de/da ses uyumu; ise ayrı yazılır, harmoni yok;
@@ -388,8 +409,8 @@ Test durumu: son ölçüm **3564 test yeşil** (slow hariç) + slow round-trip a
     Fiil çıktılı suffix (isim→fiil): yüzeyde -mAk sonekini soy → gövde. TUZAK — **fiil→isim gövde vs mastar:**
     `_strip_derivation` çıplak gövde döner (seç); `_try_derivation_all` mastarı yeniden kurar:
     `stem + "m" + low_vowel(stem) + "k"` → `seçmek` (oracle + `Analysis.lemma` için).
-  - `_try_derivation_all(surface, analyses, seen, roots)` (`analysis.py`): `_KINDS`'ta `"derivation"` SONA
-    (bağlaç sonrası, çekim önceliklenir). `analyze()` pos∈{None,noun,verb,adj} guard.
+  - `_try_derivation_all(surface, analyses, seen, roots)` (`analysis.py`): `_KINDS`'ta `"derivation"` bağlaç
+    sonrası (çekim önceliklenir; NOT: `"postposition"` edat analiziyle en sona eklendi). `analyze()` pos∈{None,noun,verb,adj} guard.
     §8.1 precision: `roots is not None and lemma not in roots → atla`; `hypothetical = (roots is None)`.
     Segments: `_segs_to_tuple([(stem, "kök"), (suffix_surf, label)])`.
   - 35 yeni test (32 golden + 3 davranış); Golden: 32 giriş (31 suffix + 1 ek), bağımsız (motor-körü, Opus),
