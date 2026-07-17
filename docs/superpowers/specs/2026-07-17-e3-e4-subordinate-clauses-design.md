@@ -40,7 +40,7 @@ Mevcut `parse.py` bottom-up pipeline'ına iki yeni kural eklenir. Mevcut datacla
 | Etiket | Tetikleyici | Örnek |
 |--------|------------|-------|
 | `CompP` | VERB/VP/S + `ki` + sağ-sequence | `"biliyorum ki geldi"` |
-| `RelP` | NP/NOUN + `ki` + sağ-sequence | `"öyle bir şey ki gördüm"` |
+| `RelP` | NP + `ki` + sağ-sequence | `"öyle bir şey ki gördüm"` |
 | `DiyeP` | sol-sequence + `VERB[diye/demek]` | `"gelir diye bekledi"` |
 
 ---
@@ -55,11 +55,13 @@ Mevcut `parse.py` bottom-up pipeline'ına iki yeni kural eklenir. Mevcut datacla
 
 ```
 Sol ∈ {VERB, VP, S}  + CCONJ[ki] + sağ_sequence → CompP(sol, CCONJ[ki], *sağ)
-Sol ∈ {NP, NOUN}     + CCONJ[ki] + sağ_sequence → RelP(sol, CCONJ[ki], *sağ)
+Sol ∈ {NP}           + CCONJ[ki] + sağ_sequence → RelP(sol, CCONJ[ki], *sağ)
 Aksi halde                                       → değiştirme (R4 görecek)
 ```
 
 `sağ_sequence`: `ki`'den sonra gelen tüm kalan node'lar (tek geçiş, ilk `ki`'de ateşlenir).
+
+**Not:** R1 çalıştıktan sonra tüm bare NOUN yaprakları NP'ye sarılır. Bu yüzden RelP sol koşulu yalnızca `NP`'dir — `NOUN` durumu R6'ya ulaşamaz ve implementasyonda NOUN dalı yazılmaz.
 
 ### 3.3 Örnekler
 
@@ -82,6 +84,8 @@ Aksi halde                                       → değiştirme (R4 görecek)
 - **ki + ki:** İlk `ki` tüm sağ-sequence'i CompP/RelP içine alır; ikinci `ki` CompP'nin çocuğu olarak `surface`'e yansır. İç parsing yok (kapsam dışı).
 - **"iyi ki":** Sol ADJ → R6 ateşlemez → R5 sonrasında S düzeyinde serbest kalır.
 - **"bana dedi ki":** `dedi` VERB, `ki` CompP oluşturur → R7 ateşlemez. Çatışma yok.
+- **Cümle-başı `ki` (i==0):** Sol komşu yok → R6 atlar, `ki` CCONJ olarak kalır. R4 da NP gerektirdiğinden ateşlemez; `ki` S düzeyinde serbest kalır.
+- **`NP ki NP` örüntüsü:** R6 R4'ten önce çalıştığı için sol=NP → RelP üretir (eski davranış CoordP idi). Bu linguistik olarak doğrudur (`kitap ki defter` koordinasyon değildir). Yeni davranış golden'da RelP olarak sabitlenir.
 
 ---
 
@@ -125,10 +129,28 @@ sol_sequence + VERB[diye] → DiyeP(sol_sequence..., VERB[diye])
   → S(DiyeP[okusun diye], VP[kitap aldı])
 ```
 
+**KRITIK — R5 ve DiyeP etkileşimi:** `_apply_r5` VP argümanlarını sola doğru toplarken yalnız nominatif NP gördüğünde durur. `DiyeP` bu listede yoksa R5 onu VP içine çeker ve yanlış yapı üretir: `S(VP(DiyeP, VERB))`. Doğru yapı `S(DiyeP, VP(VERB))`.
+
+**Implementasyon zorunluluğu:** `_apply_r5` içindeki VP-argüman toplama döngüsü `"DiyeP"` etiketinde de durmalıdır (nominatif NP gibi, cümle-düzeyi adjunct olarak). Mevcut stop koşulu:
+```python
+if tag not in ("NP", "PP", "AdjP", "CoordP", "NOUN"):
+    break
+```
+E3/E4 sonrası:
+```python
+if tag not in ("NP", "PP", "AdjP", "CoordP", "NOUN") or tag == "DiyeP":
+    break
+# Daha net:
+if tag in ("DiyeP", "CompP", "RelP"):
+    break  # cümle-düzeyi yan cümle, VP'ye çekilmez
+```
+Ayrıca `CompP`/`RelP` de R5'te VP dışı tutulmalıdır (aynı kural).
+
 ### 4.4 Edge Cases
 
 - **diye analiz başarısız:** `analysis is None` veya `lemma != "demek"` → R7 atlar.
 - **Çok sayıda diye:** İlk `diye`'de sol-sequence tüketilir; ikincisi (nadir) VP içinde VERB olarak kalır.
+- **Cümle-sonu `diye`:** `"gelir diye"` → R7 `DiyeP(VERB[gelir], VERB[diye])` üretir; R5 VERB görmez; fallback `S(DiyeP)` oluşturur. Kabul edilebilir davranış.
 
 ---
 
@@ -154,11 +176,15 @@ sol_sequence + VERB[diye] → DiyeP(sol_sequence..., VERB[diye])
 | 1 | `"biliyorum ki geldi"` | CompP | E3 temel |
 | 2 | `"öyle bir şey ki gördüm"` | RelP | E3 NP-sol |
 | 3 | `"iyi ki geldin"` | S | E3 geçiş (ADJ-sol, R6 ateşlemez) |
-| 4 | `"gelir diye bekledi"` | S (DiyeP+VP) | E4 alıntı |
-| 5 | `"okusun diye kitap aldı"` | S (DiyeP+VP) | E4 amaç |
-| 6 | `"okudu diye sevindi"` | S (DiyeP+VP) | E4 varyant |
+| 4 | `"gelir diye bekledi"` | S, children[0]=DiyeP | E4 alıntı — DiyeP S-düzeyinde, VP içinde DEĞİL |
+| 5 | `"okusun diye kitap aldı"` | S, children[0]=DiyeP | E4 amaç — DiyeP S-düzeyinde |
+| 6 | `"okudu diye sevindi"` | S, children[0]=DiyeP | E4 varyant |
 | 7 | `"kitap ve defter"` | CoordP | Regresyon (ki/diye yok) |
 | 8 | `"eve geldiğini biliyorum"` | S | Regresyon (participle NP) |
+| 9 | `"ki geldi"` | S | E3 edge — cümle-başı ki, R6 atlar |
+| 10 | `"ev ki araba"` | RelP | E3 davranış değişikliği — eski CoordP, yeni RelP |
+
+**Not:** #4/#5/#6 için golden, yalnız `root.tag == "S"` değil, `root.children[0].tag == "DiyeP"` (DiyeP S-düzeyinde, VP içinde olmadığı) da doğrulayacak şekilde kurulmalıdır.
 
 ### 6.2 İş Akışı (CLAUDE.md §2)
 
