@@ -23,7 +23,9 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Sayı morfolojisi** | `turkgram.number` | **`ordinal`** (birinci/dördüncü), **`distributive`** (birer/dörder) |
 | **Edat öbeği** | `turkgram.postposition` | **`postposition`** (19 edat; ev için / bana göre / evle) |
 | **Bağlaç morfolojisi** | `turkgram.conjunction` | **`conjoin`** (de/da ses uyumu), **`coordinate`** (ikili/üçlü/korelatif) |
-| Sözdizimi üretim | `turkgram.syntax` | `isim_tamlamasi`, `sifat_tamlamasi`, `cumle_uret` |
+| Sözdizimi üretim | `turkgram.syntax` | `isim_tamlamasi`, `sifat_tamlamasi`, `cumle_uret`, **`np_uret`** (öbek+niteleyici+tamlayan+durum), **`pp_uret`**, **`degmod_uret`**, **`koordine_np`** |
+| **Constituency parser** | `turkgram.parse` | **`parse_phrase`** (token+analiz → `PhraseNode` ağacı; R0-R5 kuralları; SOV özne tespiti) |
+| **Dependency graph + CoNLL-U** | `turkgram.dependency` | **`constituency_to_dep`** (ağaç → `list[DepToken]`; UD ilişkileri), **`to_conllu`** (CoNLL-U export) |
 | **Çözümleme (parse)** | `turkgram.analysis` | **`analyze`** (yüzey → kök+eksen + segmentasyon; fiil/isim/sıfat/sayı/bağlaç/yapım eki; `max_derivation_depth` ile **zincirli türetme** + `Analysis.chain`), **`analysis_to_dict`** (JSON serileştirme; `schema_version`/`confidence`/`hypothetical`) |
 | Kök leksikonu + frekans | `turkgram.lexicon` | **`load`** (roots; lazy-cached), **`load_freq`**, `pos_map` (gömülü; opt-in) |
 | Disambiguation | `turkgram.disambiguation` | **`rank`**, **`disambiguate`** (aday sıralama + güven; opt-in) |
@@ -34,7 +36,7 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Hecelemleme + vurgu** | `turkgram.syllabify` | **`syllabify`** (hece listesi: gel·di·ği·miz), **`stress`** (0-tabanlı vurgulu hece indeksi), **`stress_mark`** (AN·ka·ra; Türkçe büyük harf) |
 | **Yazım denetimi** | `turkgram.spellcheck` | **`is_valid`** (morfoloji tabanlı geçerlilik), **`suggest`** (BK-tree + Türkçe-ağırlıklı Levenshtein; **V2:** morfolojik şablon → yüzey yeniden üretim: `"goruyorum"→["görüyorum",…]`), **`check`** → `SpellResult(word, is_valid, suggestions)` |
 | **İkileme (reduplication)** | `turkgram.reduplication` | **`full_reduplicate`** (yavaş yavaş), **`converb_reduplicate`** (koşa koşa; -A ulaç × 2), **`m_reduplicate`** (kitap mitap; m-ikileme) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`** |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`**, **`isim_obeği`**, **`derece_obeği`**, **`koordinasyon`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
@@ -236,6 +238,13 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - **Türkçe API:** `temel_biçim()` / `temel_biçim_metin()` / `temel_biçim_detay()` / `temel_biçim_metin_detay()`.
   - TUZAK: `roots=None` → `lexicon.load()` otomatik (analyze hypothetical modundan farklı — lemmatizer her zaman leksikon güdümlü).
   - Hakem: 26k leksikon stratified sweep, 0 çökme. 35 yeni test; **toplam: 3922 test**.
+- **Faz E ✅** — Sözdizim genişletme (zengin öbek üretimi + constituency parser + dependency graph + CoNLL-U):
+  - **E1** — `np_uret(head, *, on_sifatlar, tamlayan, miktar, durum, iyelik)` (tam NP üretimi: `büyük evin kapısını`), `pp_uret`, `degmod_uret`, `koordine_np` (`syntax.py`). TR API: `isim_obeği()` / `derece_obeği()` / `koordinasyon()` (`tr.py`).
+  - **E2** — `parse_phrase(tokens, analyses) → PhraseNode` (`parse.py`): `LeafNode`/`PhraseNode` (frozen dataclasses). Kurallar sırası: **R0** NOUN[gen]+NOUN[poss] → NP (belirtili tamlama: `evin kapısı`), **R3** AdjP, **R1** NP (niteleyici* NOUN), **R1b** participle NP, **R2** PP (NP+ADP), **R4** CoordP, **R5** VP+özne ayrımı (SOV: yalın NP → özne dışarı; eğik NP → VP içine).
+  - **E5+E6** — `constituency_to_dep(tree) → list[DepToken]` + `to_conllu(tokens)` (`dependency.py`): UD uyumlu (nsubj/obj/nmod:poss/amod/nummod/obl/cc/conj/root); `_process_children` şeffaf baş geçişi (VP içi nesne/tamlayan doğru bağlanır).
+  - **Kritik tuzak (R0):** belirtili tamlama R1'DEN önce NOUN[gen]+NOUN[poss] → NP; aksi halde gen-isim VP'de yanlış bağlanır.
+  - **Kritik tuzak (dependency):** VP başı = S başı olduğunda VP şeffaf geçilmeli; `_process_children` ile VP içi çocuklar (kitabı:obj, evin:nmod:poss) doğru yükleme bağlanır.
+  - Hakem: 613 çağrı (200 fiil × 3 özne + NP/PP örnekleri), 0 çökme. 35 yeni test; **toplam: 4051 test**.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -408,6 +417,50 @@ tg.analyze("kitap mitap", roots={"kitap"})     # [Analysis(kind='reduplication_m
 tg.analyze("güle güle", roots=roots)           # belirsiz: reduplication_converb (gülmek) + full (güle)
 tg.analyze("koşa koşa")                        # roots=None → [] (converb yok, full hypothetical)
 
+# Zengin öbek üretimi (Faz E1)
+from turkgram.syntax import np_uret, pp_uret, degmod_uret, koordine_np
+np_uret("kapı")                                 # 'kapı'
+np_uret("kapı", tamlayan="ev")                  # 'evin kapısı'
+np_uret("kapı", tamlayan="ev", durum="acc")     # 'evin kapısını'
+np_uret("öğrenci", on_sifatlar=("başarılı",), miktar="üç")  # 'üç başarılı öğrenci'
+np_uret("ev", iyelik="1sg")                     # 'evim'
+pp_uret("ev", "göre")                           # 'eve göre'
+pp_uret("ben", "için")                          # 'benim için'
+degmod_uret("büyük", derece="çok")              # 'çok büyük'
+degmod_uret("iyi", derece="en")                 # 'en iyi'
+koordine_np(["kitap", "defter", "kalem"], "ve") # 'kitap, defter ve kalem'
+
+# Constituency parser (Faz E2)
+from turkgram import tokenize, parse_text
+from turkgram.parse import parse_phrase, LeafNode, PhraseNode
+tokens = tokenize("öğrenci kitabı okudu")
+analyses = parse_text("öğrenci kitabı okudu", roots={"öğrenci", "kitap", "okumak"})
+tree = parse_phrase(tokens, analyses)
+# tree.tag        → 'S'
+# tree.surface    → 'öğrenci kitabı okudu'
+# tree.children   → (NP('öğrenci'), VP('kitabı okudu'))
+
+# Dependency graph + CoNLL-U (Faz E5+E6)
+from turkgram.dependency import constituency_to_dep, to_conllu
+dep = constituency_to_dep(tree)
+# dep[0]  → DepToken(id=1, form='öğrenci', upos='NOUN', head=3, deprel='nsubj')
+# dep[1]  → DepToken(id=2, form='kitabı',  upos='NOUN', head=3, deprel='obj')
+# dep[2]  → DepToken(id=3, form='okudu',   upos='VERB', head=0, deprel='root')
+print(to_conllu(dep, sent_id="1", text="öğrenci kitabı okudu"))
+# # sent_id = 1
+# # text = öğrenci kitabı okudu
+# 1  öğrenci  öğrenci  NOUN  decline  Case=Nom|Number=Sing  3  nsubj  _  _
+# 2  kitabı   kitap    NOUN  decline  Case=Acc|Number=Sing  3  obj    _  _
+# 3  okudu    okumak   VERB  conjugate  Number=Sing|Person=3|Tense=Past  0  root  _  _
+
+# Belirtili tamlama — gen+poss NP (R0 kuralı)
+tokens2 = tokenize("evin kapısını gördüm")
+analyses2 = parse_text("evin kapısını gördüm", roots={"ev", "kapı", "görmek"})
+tree2 = parse_phrase(tokens2, analyses2)
+dep2 = constituency_to_dep(tree2)
+# dep2[0]  → DepToken(form='evin',     deprel='nmod:poss', head=2)
+# dep2[1]  → DepToken(form='kapısını', deprel='obj',       head=3)
+
 # CLI — python -m turkgram
 # python -m turkgram analyze okudum
 # python -m turkgram analyze okudum --format json
@@ -485,6 +538,10 @@ tr.tam_ikile("yavaş")                          # 'yavaş yavaş'
 tr.ulaç_ikile("koşmak")                        # 'koşa koşa'
 tr.m_ikile("kitap")                            # 'kitap mitap'
 tr.tam_ikile("BÜYÜK")                          # 'büyük büyük'  (_tr_lower: B→b)
+tr.isim_obeği("kapı", tamlayan="ev", durum="belirtme")  # 'evin kapısını'
+tr.isim_obeği("öğrenci", on_sifatlar=("başarılı",), miktar="üç")  # 'üç başarılı öğrenci'
+tr.derece_obeği("büyük", derece="çok")         # 'çok büyük'
+tr.koordinasyon(["kitap", "defter"], "ve")     # 'kitap ve defter'
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
@@ -493,7 +550,8 @@ değerleri + segment) · **`sıralı`**/**`dağıtımlı`** (sayı morfolojisi) 
 **`bağla`** (de/da ses uyumu) / **`koordine_et`** (ikili/üçlü/korelatif) ·
 **`sayıya_çevir`**/**`ondalığa_çevir`**/**`tarihe_çevir`**/**`saate_çevir`** (normalleştirme) ·
 **`kısaltma_aç`**/**`normalleştir`** (pipeline) · **`ipa`** (IPA transkripsiyon) · **`yazım_geçerli`**/**`öneri`**/**`denetle`** (yazım denetimi) ·
-**`tam_ikile`**/**`ulaç_ikile`**/**`m_ikile`** (ikileme).
+**`tam_ikile`**/**`ulaç_ikile`**/**`m_ikile`** (ikileme) ·
+**`isim_obeği`**/**`derece_obeği`**/**`koordinasyon`** (zengin öbek üretimi, Faz E1).
 Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/`soru`/`birleşik`/**`çatı`** ·
 `durum`/`iyelik`/`sayı`. Çekim tablosu anahtarları da Türkçe (`şimdiki.3tekil`, `çoğul.bulunma`).
 
@@ -504,10 +562,11 @@ pip install -e ".[test]"
 pytest
 ```
 
-Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer/hecelemleme ve
-çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
-kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**4016 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/
+tokenizer/hecelemleme/ikileme/lemmatizer/bağlaç/türetme/sözdizimi/dependency ve çözümleme/segmentasyon)
+motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle kurulmuştur — motorun kendi çıktısıyla
+değil, dilbilgisiyle sınanır.
+**4051 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
