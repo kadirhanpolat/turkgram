@@ -54,31 +54,46 @@ sözleşmesini bozar (asıl erteleme nedeni).
 
 Yeni kural **R8_redup** (`_apply_r8_redup`):
 - İki bitişik yaprak `_tr_lower(token[i]) == _tr_lower(token[i+1])` (özdeş, büyük/küçük harf duyarsız).
+  **NOT [hakem #7]:** `parse.py` şu an `_tr_lower` import etmiyor (`_leaf_tag` Python `.lower()` kullanır);
+  R8 İ/I güvenliği için `_tr_lower` import ETMELİ (impl planında).
 - **Sınıflama etikete göre** (per-token analizden gelen `_tag`):
-  - Çift **VERB** → **ulaç-tipi AdvP** (`koşa koşa`; converb morfolojisi kind'de görünmez, yüzey-çift signal).
+  - Çift **VERB** → **ulaç-tipi AdvP** (`koşa koşa`).
   - Çift **ADJ veya NOUN** → **tam-tipi AdvP** — AMA §3.3 NOUN-takip guard'ı.
 - İşlev sözcükleri (CCONJ/ADP/X) doğal dışlanır (etiket VERB/ADJ/NOUN değil).
+
+**KRİTİK — VERB sınıflamasının gerçek nedeni [hakem #2]:** Bare `-A` converb morfolojik envanterde YOK
+(`nonfinite.CONVERBS` = {arak, ip, inca, eli, esiye, madan, dikce, meksizin}; bare `-A` yok). `koşa` per-token
+**optatif** çözülür (`conjugate(koşmak, tense="opt", 3sg)` → `koşa`; `kind="conjugate"`), bu yüzden VERB
+etiketlenir — "converb kind'i gizli" değil, `-A` biçimi **optatifle eşsesli**. Ayrıca
+`converb_reduplicate(lemma)==surface` oracle'ı `roots` ister; `parse_phrase`'in roots'u YOK → oracle
+parser bağlamında KULLANILAMAZ. Sonuç: yüzey-çift + POS sınıflaması **tek uygulanabilir signal**.
 
 ### 3.3 KRİTİK — NOUN-takip guard'ı (R1 çakışması)
 
 Özdeş sıfat çifti **adnominal** da olabilir: `uzun uzun yollar` (pekiştirilmiş sıfat niteleyici → doğrusu
 `NP(uzun uzun yollar)`, AdvP DEĞİL). Koşulsuz "özdeş çift → AdvP" bunu kırar.
 
-**Guard (R6_ki bağlam-duyarlılığı emsali):** tam-tipi (ADJ/NOUN) çiftte, **sonraki token NOUN/NP ise
+**Guard (R6_ki bağlam-duyarlılığı emsali):** tam-tipi (ADJ/NOUN) çiftte, **sonraki token NOUN ise
 AdvP KURMA** — R3/R1'e bırak (adnominal okuma korunur). Sonraki token NOUN değilse (VERB, cümle sonu, vb.)
 → AdvP. **Ulaç-tipi (VERB) çift guard'sız** — adnominal olamaz, her zaman AdvP.
+
+**Guard NOUN yaprağını kontrol eder, NP'yi DEĞİL [hakem #1/#3]:** R8 pipeline'da R1'den ÖNCE çalışır → o anda
+`nodes[i+2]` henüz **çıplak NOUN yaprağı**, NP oluşmamış. Guard `_tag(nodes[i+2]) == "NOUN"` bakar; "NP"
+kontrolü R8-zamanında ölü koddur. `uzun uzun yollar` → guard `yollar`(NOUN) görür → skip → R3 `AdjP(uzun uzun)`
+→ R1 `NP(AdjP, yollar)`. Doğru.
 
 Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kurmaz.
 
 ### 3.4 Kural sırası ve VP entegrasyonu
 
-- **R8_redup pipeline'da EN ÖNCE** (R0'dan bile önce). Gerekçe: R3 (AdjP) ve R1 (NP) özdeş çifti yutmadan
-  önce yakalanmalı. R0 (gen+poss NP) özdeş çifti zaten eşleştirmez → çakışma yok.
+- **R8_redup pipeline'da R3+R1'den ÖNCE** — pratikte en öne konur. Gerçek kısıt "R3+R1'den önce" (R3 AdjP,
+  R1 NP özdeş çifti yutmadan önce). En öne koymak GÜVENLİ ama zorunlu değil: R0 (gen+poss NP) özdeş çifti
+  zaten eşleştirmez [hakem #1].
 - **AdvP → VP-içi.** R5 absorpsiyon kümesine (`parse.py:335`) `"AdvP"` eklenir. Gerekçeler:
   1. **Dilbilimsel:** tarz zarfı fiil öbeği iç niteleyicisi (`[S özne [VP AdvP V]]`), cümle-kardeşi değil.
   2. **Mimari tutarlılık:** R5 zaten NP/PP/AdjP/CoordP absorbe eder; stop-list yalnız yan cümleler
      (DiyeP/CompP/RelP). AdvP yan cümle değil → doğal sınıfı NP/PP yanı. Stop-list'e DOKUNULMAZ.
-  3. **E5/E6 bedava:** `_process_children` VP başını şeffaf geçer → AdvP `advmod` olarak fiile doğru bağlanır.
+     R5 `_node_is_nominative` kontrolü yalnız NP/NOUN'da çağrılır → AdvP özne sanılmaz (güvenli).
 
 ---
 
@@ -86,8 +101,19 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
 
 - `PhraseNode.make("AdvP", (leaf1, leaf2))` — iki yaprak çocuk. Ek alan YOK (tür `full`/`converb`
   çocuklardan/etiketten kurtarılabilir; YAGNI). PP'nin `governs`'u gibi meta gerekmiyor.
-- **E5/E6 (`dependency.py`):** AdvP başı = ilk yaprak; fiile `advmod` ilişkisiyle bağlanır. `_process_children`
-  şeffaf VP-başı geçişi bunu bedava sağlar (AdvP VP içinde). Yeni özel durum GEREKMEZ — doğrulanacak.
+
+**KRİTİK — AdvP dependency BEDAVA DEĞİL [hakem #5]:** İlk tasarım "advmod bedava gelir" diyordu; YANLIŞ.
+`dependency.py` izlendi:
+- `_child_deprel` (satır 156-194) `parent_tag in ("VP","S")` dalında child-tag dağıtımı `("NP","NOUN","CoordP")`,
+  `"PP"`, `("AdjP",)→"advmod"` ele alır; **`"AdvP"` YOK** → son `return "dep"`'e düşer. Yani AdvP başı
+  `deprel="dep"` alır, `advmod` DEĞİL.
+- `_find_head_leaf` (satır 117-154) AdvP dalı yok → `children[-1]` (son yaprak) baş olur.
+
+**Gerekli açık değişiklikler:**
+1. `_child_deprel` VP/S dalına: `if child_tag in ("AdjP", "AdvP"): return "advmod"` (mevcut AdjP dalını genişlet).
+2. `_find_head_leaf`'e AdvP dalı: `if tag == "AdvP": return _find_head_leaf(children[0])` (ilk yaprak baş;
+   özdeş yüzey olduğundan children[0]/[-1] farkı görünmez ama açık kayıt için ilk).
+3. Dependency golden: AdvP başının `advmod` (NOT `dep`) aldığını sabitle.
 
 ---
 
@@ -95,10 +121,18 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
 
 - **m-ikileme** (`kitap mitap`) → nominal, defer (§2).
 - **Ulaç oracle doğrulaması:** V1 tespiti yüzey-çift + POS sınıflaması. `converb_reduplicate(lemma)==surface`
-  oracle'ıyla sıkılaştırma (yalnız gerçek `-A` converb) OPSİYONEL — V1'de yok. Sonuç: bitişik özdeş VERB
-  çifti (ör. nadir `geldi geldi`) de AdvP olur; recall-güvenli (başka geçerli okuma yok), pekiştirme sayılır.
-- **Üç+ tekrar** (`yavaş yavaş yavaş`) — V1 ilk çifti yakalar; üçlü genelleme defer.
+  oracle'ı `roots` ister → parser bağlamında KULLANILAMAZ (§3.2). Sonuç: bitişik özdeş VERB çifti (ör. nadir
+  `geldi geldi`) de AdvP olur; recall-güvenli (başka geçerli okuma yok), pekiştirme sayılır.
+- **`güle güle` selamlaması** [hakem #7]: VERB çifti → AdvP. Anlamsal olarak ünlem (adverbial değil) ama V1
+  bunu bilinçli AdvP'ye toplar (recall-güvenli); anlam ayrımı uygulamaya bırakılır.
+- **NUM/ADJ araya girmesi** (`uzun uzun beş yol`) [hakem #3]: guard yalnız hemen sonraki NOUN'a bakar; araya
+  NUM girerse tam kapsanmaz — V1 defer, nadir.
+- **Üç+ tekrar** (`yavaş yavaş yavaş`) — V1 ilk çifti yakalar; üçlü genelleme defer (üçüncü sıfat başıboş kalır).
+- **Koordine zarf** (`yavaş yavaş ve hızlı hızlı`) [hakem #7]: R4 CoordP `NP CCONJ NP` ister, AdvP NP değil →
+  koordinasyon kurulmaz. Defer.
 - **Ayrık ikileme** / araya sözcük girmesi — kapsam dışı (bitişiklik şart).
+- **Derece-sözcük çifti** (`çok çok`) [hakem #2]: özdeş ADJ çifti → sonraki NOUN değilse AdvP olur
+  (`çok çok güzel` → AdvP `çok çok`); `çok çok kitap` → NOUN-takip guard skip. Golden ile sabitlenir.
 
 ---
 
@@ -107,9 +141,10 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
 1. **SPEC** — `spec/syntax-spec.md`'ye R8_redup kuralı + AdvP etiketi + guard elle yazılır (parse bölümü).
 2. **Golden** — `tests/golden_adverbial.py` (veya mevcut parse golden'a ek), motordan BAĞIMSIZ (Opus,
    motor-körü): tam-AdvP (`yavaş yavaş yürüdü`), ulaç-AdvP (`koşa koşa geldi`), adnominal-guard
-   (`uzun uzun yollar` → NP, AdvP YOK), VP-içi absorpsiyon, regresyon (mevcut parse ağaçları).
-3. **Motor** — `_apply_r8_redup` + pipeline en-öne + R5 absorpsiyon kümesine AdvP + `_POS_TO_TAG`/
-   dependency `advmod`.
+   (`uzun uzun yollar` → NP, AdvP YOK), derece-çift (`çok çok güzel` → AdvP; `çok çok kitap` → NP),
+   VP-içi absorpsiyon, **dependency `advmod`** (CoNLL-U), regresyon (mevcut parse ağaçları).
+3. **Motor** — `_apply_r8_redup` + pipeline R3'ten öne + R5 absorpsiyon kümesine AdvP + `parse.py`'ye
+   `_tr_lower` import + `dependency.py` `_child_deprel` (AdvP→advmod) + `_find_head_leaf` (AdvP dalı).
 4. **Hakem + doğrulama** — golden + korpus tarama (parse çökme yok) + mevcut E2/E3/E4 parse testleri yeşil +
    tam paket regresyonsuz.
 
@@ -121,5 +156,5 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
 - `koşa koşa geldi` → `VP(AdvP(koşa koşa), geldi)`; başıboş VERB kalmaz.
 - `uzun uzun yollar` → `NP(...)`, AdvP KURULMAZ (adnominal guard).
 - Mevcut parse ağaçları (E2/E3/E4 testleri) DEĞİŞMEZ (AdvP yalnız özdeş-çift + non-NOUN-takip'te).
-- E5/E6 `advmod` AdvP başını fiile bağlar (yeni özel durum gerekmez).
+- E5/E6 AdvP başını fiile `advmod` bağlar — **`dependency.py` açık AdvP dalıyla** (§4; bedava değil).
 - Yeni etiket/kural geriye uyumu kırmaz.
