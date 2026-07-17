@@ -40,3 +40,11 @@ def test_homograph_postposition_not_top(surface, correct_pos):
     assert ranked[0].pos == correct_pos, (
         f"{surface}: tepe {ranked[0].pos}/{ranked[0].kind}, beklenen {correct_pos}"
     )
+
+
+def test_postposition_stays_out_of_kind_prior():
+    """Homograf sıralaması postposition'ın düşük kind-önceliğine (0) bağlı."""
+    from turkgram.disambiguation import _KIND_PRIOR
+    assert "postposition" not in _KIND_PRIOR, (
+        "postposition _KIND_PRIOR'a eklenirse aşkın/başka homografı kırılır"
+    )

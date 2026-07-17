@@ -114,12 +114,13 @@ def analysis_to_dict(
 # ---------------------------------------------------------------------------
 # Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
-_POS = ("verb", "noun", "adj", "num", "conj")
+_POS = ("verb", "noun", "adj", "num", "conj", "postp")
 _KINDS = ("conjugate", "decline", "copula", "converb",
           "converb_casina", "converb_ken", "participle",
           "intensify", "diminutive", "ordinal", "distributive",
           "conjunction", "derivation",
-          "reduplication_full", "reduplication_converb", "reduplication_m")
+          "reduplication_full", "reduplication_converb", "reduplication_m",
+          "postposition")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -1059,6 +1060,10 @@ def analyze(surface: str, pos: str | None = None,
     if pos in (None, "conj"):
         _try_conjunction_all(surface_token, analyses, seen)
 
+    # Adım 5b: Edat çözümlemesi (kapalı liste, oracle dışı, additive)
+    if pos in (None, "postp"):
+        _try_postposition_all(surface_token, analyses, seen)
+
     # Adım 6: Sayı çözümlemesi (ordinal + distributive)
     if pos in (None, "num"):
         _try_number_all(surface_token, analyses, seen, roots)
@@ -1532,6 +1537,31 @@ def _try_conjunction_all(surface: str, analyses: list[Analysis], seen: set[tuple
         kind="conjunction",
         kwargs={},
         segments=_segs_to_tuple([(surface, "conj")]),
+        hypothetical=False,
+    ))
+
+
+def _try_postposition_all(surface: str, analyses: list[Analysis], seen: set[tuple]) -> None:
+    """Edat çözümlemesi — oracle dışı, kapalı-liste (SPEC §7.1).
+
+    Bağlaç deseninin aynası: closed-set, additive, her zaman döner.
+    Yönetilen durum lemmadan/tablodan türetilebilir → kwargs BOŞ.
+    Bilinçli belirsizlik: 'sonra' = edat + zarf; 'göre' = edat + gör-e ulaç.
+    """
+    from .postposition import _POSTPOSITIONS
+    edat = surface.lower()
+    if edat not in _POSTPOSITIONS:
+        return
+    key = ("postposition", edat, frozenset())
+    if key in seen:
+        return
+    seen.add(key)
+    analyses.append(Analysis(
+        lemma=edat,
+        pos="postp",
+        kind="postposition",
+        kwargs={},
+        segments=_segs_to_tuple([(surface, "kök")]),
         hypothetical=False,
     ))
 
