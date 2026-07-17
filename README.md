@@ -32,7 +32,7 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Tokenizer + toplu analiz** | `turkgram.tokenize` / `turkgram.analysis` | **`tokenize`** (metin → token listesi: boşluk+noktalama+apostrof), **`parse_text`** (metin → `list[list[Analysis]]`; indeks hizalamalı, H-08 cache, `rank_in_context` entegrasyonu) |
 | **CLI** | `turkgram.__main__` | `python -m turkgram analyze <yüzey> [--format text\|json] [--roots a,b] [--depth N] [--disambiguate] [--lexicon]` · `python -m turkgram version` (sürüm + `DATA_VERSION` + `ANALYSIS_DICT_SCHEMA_VERSION`) |
 | **Hecelemleme + vurgu** | `turkgram.syllabify` | **`syllabify`** (hece listesi: gel·di·ği·miz), **`stress`** (0-tabanlı vurgulu hece indeksi), **`stress_mark`** (AN·ka·ra; Türkçe büyük harf) |
-| **Yazım denetimi** | `turkgram.spellcheck` | **`is_valid`** (morfoloji tabanlı geçerlilik), **`suggest`** (BK-tree + Türkçe-ağırlıklı Levenshtein; kök önerir), **`check`** → `SpellResult(word, is_valid, suggestions)` |
+| **Yazım denetimi** | `turkgram.spellcheck` | **`is_valid`** (morfoloji tabanlı geçerlilik), **`suggest`** (BK-tree + Türkçe-ağırlıklı Levenshtein; **V2:** morfolojik şablon → yüzey yeniden üretim: `"goruyorum"→["görüyorum",…]`), **`check`** → `SpellResult(word, is_valid, suggestions)` |
 | **İkileme (reduplication)** | `turkgram.reduplication` | **`full_reduplicate`** (yavaş yavaş), **`converb_reduplicate`** (koşa koşa; -A ulaç × 2), **`m_reduplicate`** (kitap mitap; m-ikileme) |
 | Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`** |
 
@@ -211,11 +211,11 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
 - **Faz 9b ✅** — yazım denetimi (`turkgram/spellcheck.py`):
   - **`is_valid(word)`** — morfoloji tabanlı geçerlilik: `analyze()` + `lexicon.load()` (opt-in ters); agglütinatif biçimler tam kapsanır (`evlerde`, `gelmişti` → True).
   - **`_BKTree` + Türkçe-ağırlıklı Levenshtein** — 6 Türkçe karakter karfüzyon çifti (ı↔i, ö↔o, ü↔u, ş↔s, ç↔c, ğ↔g) → maliyet 0.5; diğer op 1.0. BK-tree `_frozen` kilidi (lru_cache singleton güvenliği).
-  - **`suggest(word, *, max_suggestions=5, max_distance=2.0)`** — V1: **kök (lemma) döner** (`"seker"→["şeker"]`); sıralama: (uzaklık, -frekans, alfabe). `roots=None` → `lexicon.load()` otomatik.
+  - **`suggest(word, *, max_suggestions=5, max_distance=2.0)`** — **V2: morfolojik şablon yeniden üretim.** (1) V1: BK-tree tüm kelime (çıplak isim typo'ları; `"dag"→["dağ"]`). (2) V2 ek: `analyze(word, roots=None)` → hypothetical analizler → BK-tree kök üzerinde → `_call_generator` ile yüzey yeniden üret (`"goruyorum"→["görüyorum",…]`). V1-önce sıralaması V2'nin doğru distance'ı bloke etmesini önler. Harmoni-tutarsız çok-karakter tiposunda V2 oracle reddi nedeniyle devreye girmez — bilinçli sınır.
   - **`check(word)`** → `SpellResult(frozen=True)` — `is_valid=True` → kısa-devre (BK-tree atlanır).
   - **Türkçe API**: `yazım_geçerli()` / `öneri()` / `denetle()`. **CLI**: `python -m turkgram check <kelime>`.
   - TUZAK: `seker` = `sekmek` geniş 3sg → GEÇERLİ; golden `dag` (dağ) kullandı.
-  - Hakem: 26k leksikon, 0 çökme. 58 yeni test; **toplam: 3883 test**.
+  - Hakem: 26k leksikon, 0 çökme. 59 yeni test (V2: +1 `goruyorum→görüyorum`); **toplam: 4016 test**.
 - **Faz 9d ✅** — İkileme (reduplication, `turkgram/reduplication.py`):
   - **`full_reduplicate(word)`** — sözcük tekrarı: `yavaş yavaş`, `ev ev`.
   - **`converb_reduplicate(lemma)`** — fiil mastarından -A ulaç × 2: `gitmek→gide gide`,
@@ -507,7 +507,7 @@ pytest
 Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer/hecelemleme ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**4015 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**4016 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
