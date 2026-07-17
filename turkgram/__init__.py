@@ -26,7 +26,7 @@ from __future__ import annotations
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
     lexicon, disambiguation, compound, context, adjective, syntax, postposition, conjunction,
-    spellcheck,
+    spellcheck, reduplication,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -104,6 +104,9 @@ from .spellcheck import SpellResult
 # ── Lemmatizer (Faz 9c) ───────────────────────────────────────────────────
 from .lemmatize import lemmatize, lemmatize_text, lemmatize_detail, lemmatize_text_detail, LemmaResult
 
+# ── İkileme (Faz 9d) ──────────────────────────────────────────────────────
+from .reduplication import full_reduplicate, converb_reduplicate, m_reduplicate
+
 # ── Normalleştirme + IPA (Faz 8) ──────────────────────────────────────────
 from .normalization import (
     number_to_words, float_to_words, date_to_words,
@@ -156,6 +159,8 @@ __all__ = [
     "spellcheck", "SpellResult",
     # lemmatizer
     "lemmatize", "lemmatize_text", "lemmatize_detail", "lemmatize_text_detail", "LemmaResult",
+    # ikileme
+    "full_reduplicate", "converb_reduplicate", "m_reduplicate",
     # alt modüller
     "morphology", "morphology_noun", "derivation", "nonfinite", "voice", "tr",
     "analysis", "lexicon", "disambiguation", "compound", "context", "adjective", "syntax",
