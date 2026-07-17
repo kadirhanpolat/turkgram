@@ -158,12 +158,12 @@ Kural-tabanlı, Türkçe SOV sırasına göre. Tek geçiş (bottom-up gruplama):
 
 | Kural | Örüntü | Çıktı |
 |-------|---------|-------|
-| R1 | `(ADJ\|NUM)* NOUN (GEN NOUN)*` | `NP` |
-| R1b | `VERB(kind=participle) NOUN` | `NP` (participle `acl` olarak NOUN'a bağlanır) |
-| R2 | `NP ADP` | `PP` |
-| R3 | `ADJ\|ADV (derece öncesi)` | `AdjP` / `AdvP` |
+| R1 | `(ADJ\|NUM)* NOUN (NOUN[case=gen] NOUN[possessive])*` | `NP` |
+| R1b | `VERB[kind=participle] NOUN` | `NP` (participle `acl` olarak NOUN'a bağlanır) |
+| R2 | `NP ADP` | `PP` (ADP = yüzey üyelik, §4.4 adım 1) |
+| R3 | `ADJ ADJ*` (derece + baş) | `AdjP` |
 | R4 | `NP (CCONJ NP)+` | `CoordP` |
-| R5 | `(NP\|PP\|AdjP\|AdvP)* VP` | `S` |
+| R5 | `(NP\|PP\|AdjP)* VP` | `S` |
 
 **Türkçe özgü davranışlar:**
 
@@ -182,12 +182,15 @@ Kural-tabanlı, Türkçe SOV sırasına göre. Tek geçiş (bottom-up gruplama):
 
 **Etiket üretimi iki adımlı:** (1) `kind`-tabanlı geçersiz kılmalar önce değerlendirilir; (2) `pos`-tabanlı tablo ikincil.
 
-**Adım 1 — kind-tabanlı geçersiz kılmalar (önce kontrol et):**
+**Adım 1 — kind-tabanlı ve yüzey-tabanlı geçersiz kılmalar (önce kontrol et):**
 
-| `Analysis.kind` | `LeafNode.tag` | Gerekçe |
-|-----------------|----------------|---------|
-| `'copula'` | `'VERB'` | Ek-fiil; `pos='noun'` olmasına rağmen fiil işlevi |
-| `'participle'` | `'VERB'` | `pos='verb'` doğru; fiilimsi bağlam kuralı §4.3'te ayrıca işlenir |
+| Koşul | `LeafNode.tag` | Gerekçe |
+|-------|----------------|---------|
+| `kind == 'copula'` | `'VERB'` | Ek-fiil; `pos='noun'` olmasına rağmen fiil işlevi |
+| `kind == 'participle'` | `'VERB'` | `pos='verb'` doğru; fiilimsi bağlam kuralı §4.3'te ayrıca işlenir |
+| token ∈ `POSTPOSITIONS` (kapalı küme) | `'ADP'` | Edat analizi kapsam dışı; yüzey üyelik kontrolü yeterli. `POSTPOSITIONS = set(postposition._POSTPOSITION_CASE.keys())` (19 edat) |
+
+**Edat notu:** `parse_phrase`, edat analizini beklemez — token'ı `POSTPOSITIONS` kümesinde bulursa doğrudan `ADP` atar; `analysis=None`.
 
 **Adım 2 — pos-tabanlı tablo (kind geçersiz kılması yoksa):**
 
@@ -202,7 +205,7 @@ Kural-tabanlı, Türkçe SOV sırasına göre. Tek geçiş (bottom-up gruplama):
 
 **derivation notu:** `kind='derivation'` için `LeafNode.tag`, `_DERIVED_POS` tablosundan gelen `pos` değeri üzerinden belirlenir — fiil/isim/sıfat çıktısına göre `VERB`/`NOUN`/`ADJ`.
 
-**ADV notu:** `_POS`'ta `'adv'` yoktur. Türkçe'de belirteç zarflar analizsiz bırakılabilir → `tag='X'`, ya da bağlamdan `'ADJ'` olarak işaretlenir; `AdvP` etiketi `degmod_uret` üretiminde kullanılır, parser'da ayrı bir giriş yerine `AdjP`/`AdvP` öbek etiketidir.
+**ADV notu:** `_POS`'ta `'adv'` yoktur. `ADV` yaprak etiketi üretilmez — parser kurallarında `ADV` kullanılmaz. Türkçe zarflar `ADJ` (sıfat-işlevli) veya `X` (OOV) olarak etiketlenir. `AdjP`/`AdvP` yalnızca **öbek** etiketidir (yaprak değil); `degmod_uret` gibi üretim yardımcılarının çıktılarına uygulanır.
 
 **R1-R5'te kullanılan tüm etiketler (`NOUN`, `VERB`, `ADJ`, `NUM`, `CCONJ`, `X`) bu tablodan üretilebilir.**
 
@@ -238,7 +241,7 @@ def constituency_to_dep(tree: PhraseNode) -> list[DepToken]
 |------|-----------|---------------------|
 | `NP` | En sağdaki `NOUN` | Sol `ADJ` → `amod`; miktar → `nummod`; tamlayan `NP` (gen-işaretli) → `nmod:poss` |
 | `PP` | `ADP` (edat) | `NP` → `nmod` |
-| `AdjP`/`AdvP` | `ADJ` ya da `ADV` | `derece` → `advmod` |
+| `AdjP` | `ADJ` (en sağdaki) | `derece` ADJ → `advmod` |
 | `CoordP` | İlk `NP` | Diğer `NP`'ler → `conj`; `CCONJ` → `cc` |
 | `VP` | `VERB` | NP (`case=nom`/yok) → `nsubj`; NP (`case=acc`) → `obj`; NP (`case=dat/loc/abl`) → `obl`; `PP` → `obl`; `AdjP`/`AdvP` → `advmod` |
 | `S` | `VP` başı | Kök bağı (`head=0`, `deprel='root'`) |
