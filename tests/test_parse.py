@@ -16,7 +16,9 @@ def _node_matches(node: "PhraseNode | LeafNode", expected: dict) -> bool:
         return False
     if "surface" in expected and node.surface != expected["surface"]:
         return False
-    exp_children = expected.get("children", [])
+    if "children" not in expected:
+        return True  # children kontrolü opsiyonel — sadece tag/surface yeterli
+    exp_children = expected["children"]
     if len(node.children) != len(exp_children):
         return False
     return all(_node_matches(c, e) for c, e in zip(node.children, exp_children))

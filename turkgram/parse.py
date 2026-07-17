@@ -22,6 +22,9 @@ _SIMPLE_CONJ_TOKENS: frozenset[str] = frozenset({
     "ve", "veya", "ama", "fakat", "ancak", "ki",
 })
 
+# Kapalı küme converb fiilleri — analiz sistemi dışında yüzey tabanlı VERB etiketi
+_CONVERB_VERB_TOKENS: frozenset[str] = frozenset({"diye"})
+
 # Derece sözcükleri — her zaman ADJ (R3 AdjP kuralı için)
 _DEGREE_WORDS: frozenset[str] = frozenset({
     "çok", "oldukça", "pek", "biraz", "en", "daha", "az", "fazla", "epey",
@@ -69,6 +72,9 @@ def _leaf_tag(token: str, analysis: "Analysis | None") -> str:
     # Adım 0b: yüzey tabanlı — bağlaç
     if tok in _SIMPLE_CONJ_TOKENS:
         return "CCONJ"
+    # Adım 0b2: yüzey tabanlı — converb fiil (diye)
+    if tok in _CONVERB_VERB_TOKENS:
+        return "VERB"
     # Adım 0c: derece sözcüğü — R3 AdjP için ADJ
     if tok in _DEGREE_WORDS:
         return "ADJ"
@@ -237,6 +243,74 @@ def _apply_r4(nodes: list) -> list:
     return out
 
 
+def _apply_r6_ki(nodes: list) -> list:
+    """R6: bağlam-duyarlı ki gruplaması.
+
+    Sol ∈ {VERB, VP, S}  + CCONJ[ki] + sağ_sequence → CompP
+    Sol ∈ {NP}           + CCONJ[ki] + sağ_sequence → RelP
+    Aksi halde (ADJ, PP, index=0, vb.)              → değiştirme
+
+    Tek geçiş: ilk ki'de ateşlenir, sağ tüm sequence alınır.
+    """
+    for i, node in enumerate(nodes):
+        if not (isinstance(node, LeafNode)
+                and node.tag == "CCONJ"
+                and node.token.lower() == "ki"):
+            continue
+        # Sol komşu kontrolü (i==0 ise sol yok → atla)
+        if i == 0:
+            continue
+        left = nodes[i - 1]
+        left_tag = _tag(left)
+        if left_tag in ("VERB", "VP", "S"):
+            phrase_tag = "CompP"
+        elif left_tag == "NP":
+            phrase_tag = "RelP"
+        else:
+            continue  # ADJ, PP, AdjP, vb. → atla
+        # Sol komşu + ki + sağ tüm sequence → yeni öbek
+        right_seq = nodes[i + 1:]
+        children = (left, node) + tuple(right_seq)
+        new_node = PhraseNode.make(phrase_tag, children)
+        return nodes[: i - 1] + [new_node]
+    return nodes
+
+
+def _apply_r7_diye(nodes: list) -> list:
+    """R7: diye converb → DiyeP (sol-sequence + VERB[diye/demek]).
+
+    Koşul: node.tag == "VERB"
+           and node.analysis.kind == "converb"
+           and node.analysis.lemma == "demek"
+
+    Sol tüm node'lar + diye tokenı → DiyeP.
+    DiyeP cümle-düzeyi adjunct: R5 VP'ye çekmez (Task 3'te sabitlendi).
+    """
+    for i, node in enumerate(nodes):
+        if not isinstance(node, LeafNode):
+            continue
+        if node.tag != "VERB":
+            continue
+        # Yüzey tabanlı hızlı kontrol (analiz yokken de çalışır)
+        is_diye = node.token.lower() == "diye"
+        a = node.analysis
+        if not is_diye:
+            if a is None:
+                continue
+            if not (a.kind == "converb" and a.lemma == "demek"):
+                continue
+        # Sol sequence + diye → DiyeP
+        left_seq = nodes[:i]
+        if not left_seq:
+            # Cümle-başı diye: sol yok → atla (aşırı nadir)
+            continue
+        children = tuple(left_seq) + (node,)
+        diye_p = PhraseNode.make("DiyeP", children)
+        right_seq = nodes[i + 1:]
+        return [diye_p] + list(right_seq)
+    return nodes
+
+
 def _apply_r5(nodes: list) -> list:
     """R5: özne(NP-nom)* + VP(nesne(NP-acc)* + VERB) → S."""
     verb_indices = [
@@ -253,6 +327,9 @@ def _apply_r5(nodes: list) -> list:
         while left >= 0:
             n = nodes[left]
             tag = _tag(n)
+            # Yan cümle öbekleri cümle-düzeyi adjunct — VP'ye çekilmez
+            if tag in ("DiyeP", "CompP", "RelP"):
+                break
             if tag not in ("NP", "PP", "AdjP", "CoordP", "NOUN"):
                 break
             # Yalın NP = özne → VP dışında bırak
@@ -301,13 +378,15 @@ def parse_phrase(
 
     # 2. Bottom-up gruplama (kural sırası önemli)
     nodes: list[PhraseNode | LeafNode] = list(leaves)
-    nodes = _apply_r0(nodes)   # NP: NOUN[gen] NOUN[poss] (belirtili tamlama)
-    nodes = _apply_r3(nodes)   # AdjP: ADJ ADJ+
-    nodes = _apply_r1(nodes)   # NP: modifer* NOUN
-    nodes = _apply_r1b(nodes)  # NP: participle NOUN
-    nodes = _apply_r2(nodes)   # PP: NP ADP
-    nodes = _apply_r4(nodes)   # CoordP: NP CCONJ NP
-    nodes = _apply_r5(nodes)   # S: özne VP(nesne VERB)
+    nodes = _apply_r0(nodes)      # NP: NOUN[gen] NOUN[poss] (belirtili tamlama)
+    nodes = _apply_r3(nodes)      # AdjP: ADJ ADJ+
+    nodes = _apply_r1(nodes)      # NP: modifer* NOUN
+    nodes = _apply_r1b(nodes)     # NP: participle NOUN
+    nodes = _apply_r2(nodes)      # PP: NP ADP
+    nodes = _apply_r6_ki(nodes)   # CompP / RelP: ki bağlam-duyarlı
+    nodes = _apply_r7_diye(nodes) # DiyeP: diye yan cümle
+    nodes = _apply_r4(nodes)      # CoordP: NP CCONJ NP
+    nodes = _apply_r5(nodes)      # S: özne VP(nesne VERB)
     nodes = _wrap_bare_vp(nodes)
 
     # 3. Kök düğüm — tek PhraseNode ise olduğu gibi döndür, çok ise S'ye sar

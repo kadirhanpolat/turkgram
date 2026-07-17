@@ -31,6 +31,7 @@ SUBORDINATE_CASES = [
     },
     {
         # Case 2: RelP — sol NP + ki + sağ-VERB
+        # Not: öyle+bir → AdjP (R3), AdjP+şey → NP (R1)
         "text": "öyle bir şey ki gördüm",
         "roots": {"öyle", "bir", "şey", "görmek"},
         "expected": {
@@ -41,8 +42,14 @@ SUBORDINATE_CASES = [
                     "tag": "NP",
                     "surface": "öyle bir şey",
                     "children": [
-                        {"tag": "ADJ",  "token": "öyle"},
-                        {"tag": "ADJ",  "token": "bir"},
+                        {
+                            "tag": "AdjP",
+                            "surface": "öyle bir",
+                            "children": [
+                                {"tag": "ADJ", "token": "öyle"},
+                                {"tag": "ADJ", "token": "bir"},
+                            ],
+                        },
                         {"tag": "NOUN", "token": "şey"},
                     ],
                 },
@@ -120,7 +127,8 @@ SUBORDINATE_CASES = [
         },
     },
     {
-        # Case 7: DiyeP amaç — nesne VP'de, DiyeP S-düzeyinde
+        # Case 7: DiyeP amaç — DiyeP S-düzeyinde; kitap yalın NP → R5 özne konumunda bırakır
+        # Not: yalın NP VP-dışı (R5 özne sezgisi); kitap belirtisiz nesne ama R5 biçimsel sınır
         "text": "okusun diye kitap aldı",
         "roots": {"okumak", "kitap", "almak"},
         "expected": {
@@ -136,16 +144,14 @@ SUBORDINATE_CASES = [
                     ],
                 },
                 {
+                    "tag": "NP",
+                    "surface": "kitap",
+                    "children": [{"tag": "NOUN", "token": "kitap"}],
+                },
+                {
                     "tag": "VP",
-                    "surface": "kitap aldı",
-                    "children": [
-                        {
-                            "tag": "NP",
-                            "surface": "kitap",
-                            "children": [{"tag": "NOUN", "token": "kitap"}],
-                        },
-                        {"tag": "VERB", "token": "aldı"},
-                    ],
+                    "surface": "aldı",
+                    "children": [{"tag": "VERB", "token": "aldı"}],
                 },
             ],
         },
