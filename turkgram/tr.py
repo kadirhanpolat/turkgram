@@ -781,3 +781,37 @@ def m_ikile(kelime: str) -> str:
     """M-ikileme: kitap → kitap mitap."""
     from .reduplication import m_reduplicate
     return m_reduplicate(_tr_lower(kelime))
+
+
+# ── E1 — Zengin öbek üretimi (syntax.py sarmalayıcılar) ──────────────────────
+
+def isim_obeği(
+    baş: str,
+    *,
+    on_sifatlar: tuple[str, ...] = (),
+    tamlayan: str | None = None,
+    miktar: str | None = None,
+    durum: str = "yalın",
+    iyelik: str | None = None,
+) -> str:
+    """Türkçe isim öbeği. np_uret() sarmalayıcı."""
+    from .syntax import np_uret
+    _durum = _DURUM.get(_tr_lower(durum), durum)
+    _iyelik = _KISI.get(_tr_lower(iyelik), iyelik) if iyelik else None
+    return np_uret(baş, on_sifatlar=on_sifatlar, tamlayan=tamlayan,
+                   miktar=miktar, durum=_durum, iyelik=_iyelik)
+
+
+def derece_obeği(baş: str, *, derece: str | None = None) -> str:
+    """Derece değiştirici öbek. degmod_uret() sarmalayıcı."""
+    from .syntax import degmod_uret
+    return degmod_uret(baş, derece=derece)
+
+
+def koordinasyon(
+    ogeler: tuple[str, ...] | list[str],
+    baglac: str = "ve",
+) -> str:
+    """Koordinasyon öbeği. koordine_np() sarmalayıcı."""
+    from .syntax import koordine_np
+    return koordine_np(ogeler, baglac)

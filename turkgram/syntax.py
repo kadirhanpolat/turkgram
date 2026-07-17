@@ -177,10 +177,79 @@ def _ozne_to_person(ozne: str, sahis: str | None, sayi: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# §4 — Zengin öbek üretimi (E1)
+# ---------------------------------------------------------------------------
+
+def np_uret(
+    head: str,
+    *,
+    on_sifatlar: tuple[str, ...] = (),
+    tamlayan: str | None = None,
+    miktar: str | None = None,
+    durum: str = "nom",
+    iyelik: str | None = None,
+) -> str:
+    """Karmaşık isim öbeği üret (spec §3.1).
+
+    Üretim sırası: miktar? + on_sifatlar* + tamlayan-GEN? + head-case-poss
+    """
+    parts: list[str] = []
+    if miktar is not None:
+        parts.append(miktar.lower().strip())
+    for sifat in on_sifatlar:
+        parts.append(sifat.lower().strip())
+    if tamlayan is not None:
+        parts.append(decline(tamlayan, case="gen"))
+    kwargs: dict[str, str] = {"case": durum}
+    if iyelik is not None:
+        kwargs["possessive"] = iyelik
+    if tamlayan is not None and iyelik is None:
+        kwargs["possessive"] = "3sg"
+    parts.append(decline(head, **kwargs))
+    return " ".join(parts)
+
+
+def pp_uret(isim: str, edat: str, *, bitişik: bool = False) -> str:
+    """Edat öbeği üret (spec §3.2). postposition() sarmalayıcı."""
+    from .postposition import postposition
+    return postposition(isim, edat, bitişik=bitişik)
+
+
+def degmod_uret(baş: str, *, derece: str | None = None) -> str:
+    """Derece değiştiricili öbek üret (spec §3.3)."""
+    _VALID_DERECE = {"çok", "oldukça", "pek", "biraz", "en", "daha"}
+    if derece is not None and derece not in _VALID_DERECE:
+        raise ValueError(
+            f"Geçersiz derece: {derece!r}. Geçerli: {sorted(_VALID_DERECE)}"
+        )
+    if derece is None:
+        return baş.lower().strip()
+    return f"{derece} {baş.lower().strip()}"
+
+
+def koordine_np(
+    ogeler: tuple[str, ...] | list[str],
+    baglac: str = "ve",
+) -> str:
+    """Koordinasyon öbeği üret (spec §3.4). conjunction.coordinate() sarmalayıcı."""
+    from .conjunction import coordinate
+    _SIMPLE_CONJ = {"ve", "veya", "ya da", "ama", "fakat", "ancak"}
+    if baglac not in _SIMPLE_CONJ:
+        raise ValueError(
+            f"Korelatif bağlaçlar desteklenmez: {baglac!r}. Geçerli: {sorted(_SIMPLE_CONJ)}"
+        )
+    return coordinate(list(ogeler), baglac)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 __all__ = [
     "isim_tamlamasi",
     "sifat_tamlamasi",
     "cumle_uret",
+    "np_uret",
+    "pp_uret",
+    "degmod_uret",
+    "koordine_np",
 ]
