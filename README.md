@@ -33,7 +33,8 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **CLI** | `turkgram.__main__` | `python -m turkgram analyze <yüzey> [--format text\|json] [--roots a,b] [--depth N] [--disambiguate] [--lexicon]` · `python -m turkgram version` (sürüm + `DATA_VERSION` + `ANALYSIS_DICT_SCHEMA_VERSION`) |
 | **Hecelemleme + vurgu** | `turkgram.syllabify` | **`syllabify`** (hece listesi: gel·di·ği·miz), **`stress`** (0-tabanlı vurgulu hece indeksi), **`stress_mark`** (AN·ka·ra; Türkçe büyük harf) |
 | **Yazım denetimi** | `turkgram.spellcheck` | **`is_valid`** (morfoloji tabanlı geçerlilik), **`suggest`** (BK-tree + Türkçe-ağırlıklı Levenshtein; kök önerir), **`check`** → `SpellResult(word, is_valid, suggestions)` |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`** |
+| **İkileme (reduplication)** | `turkgram.reduplication` | **`full_reduplicate`** (yavaş yavaş), **`converb_reduplicate`** (koşa koşa; -A ulaç × 2), **`m_reduplicate`** (kitap mitap; m-ikileme) |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
@@ -46,6 +47,12 @@ işteş, yığılabilir → dövüştürüldü). İsim: durum × iyelik × çokl
 ordinal `-(I)ncI` (birinci/dördüncü/onuncu) + distributif `-(ş)Ar` (birer/dörder/altışar);
 çekim delegasyon (`birincinin`). **Edat öbeği:** 19 edat kapalı küme; `için` isim-zamir
 asimetrisi (ev için / benim için), `ile` bitişik (evle/okulla).
+
+**İkileme (Faz 9d):** Türkçe'nin üç düzenli ikileme türü: `full_reduplicate` (tam ikileme: `yavaş yavaş`,
+`ev ev`), `converb_reduplicate` (fiil mastarından -A ulaç biçimi × 2: `koşmak→koşa koşa`,
+`gitmek→gide gide`, `yemek→yiye yiye`), `m_reduplicate` (m-ikileme: `kitap→kitap mitap`,
+`araba→araba maraba`; m-başlı → ValueError). Analiz: `analyze("koşa koşa", roots=lexicon.load())`
+→ `Analysis(kind='reduplication_converb', lemma='koşmak')`. `roots=None` → converb analizi döndürülmez.
 
 **Çözümleme (Faz 2a-6+):** üretimin tersi — yüzey biçimden kök + eksen değerleri + pedagojik
 morfem dökümü. *Analysis-by-generation*: üreteç tek doğruluk kaynağı. Sıfat çözümlemesi:
@@ -209,6 +216,17 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - **Türkçe API**: `yazım_geçerli()` / `öneri()` / `denetle()`. **CLI**: `python -m turkgram check <kelime>`.
   - TUZAK: `seker` = `sekmek` geniş 3sg → GEÇERLİ; golden `dag` (dağ) kullandı.
   - Hakem: 26k leksikon, 0 çökme. 58 yeni test; **toplam: 3883 test**.
+- **Faz 9d ✅** — İkileme (reduplication, `turkgram/reduplication.py`):
+  - **`full_reduplicate(word)`** — sözcük tekrarı: `yavaş yavaş`, `ev ev`.
+  - **`converb_reduplicate(lemma)`** — fiil mastarından -A ulaç × 2: `gitmek→gide gide`,
+    `yemek→yiye yiye`, `okumak→okuya okuya`. ye_de + glide-y otomatik.
+  - **`m_reduplicate(word)`** — m-ikileme: `kitap→kitap mitap`, `araba→araba maraba`;
+    m-başlı sözcük → `ValueError` (p-ikileme kapsam dışı).
+  - Analiz: `analyze("koşa koşa", roots=lexicon.load())` → `Analysis(kind='reduplication_converb',
+    lemma='koşmak')`; `analyze("kitap mitap", roots={"kitap"})` → `Analysis(kind='reduplication_m')`.
+    `roots=None` → converb analizi döndürülmez.
+  - **Türkçe API**: `tam_ikile()` / `ulaç_ikile()` / `m_ikile()`.
+  - Hakem: 26k lemma + 3.2k fiil, 0 çökme. 97 yeni test; **toplam: 4015 test**.
 - **Faz 9c ✅** — Lemmatizer (`turkgram/lemmatize.py`):
   - **`lemmatize(word)`** → `str | None` — tek kelime veya çok-token → lemma; çözümsüz → `None`.
   - **`lemmatize_text(text)`** → `list[str | None]` — metin → token başına lemma; `context.rank_in_context` ile bağlamsal disambiguation.
@@ -370,6 +388,26 @@ tr.denetle("cok")                              # SpellResult(word='cok', is_vali
 # python -m turkgram check evdte
 # python -m turkgram check evde
 
+# İkileme (Faz 9d)
+from turkgram.reduplication import full_reduplicate, converb_reduplicate, m_reduplicate
+full_reduplicate("yavaş")                      # 'yavaş yavaş'
+full_reduplicate("ev")                         # 'ev ev'
+converb_reduplicate("koşmak")                  # 'koşa koşa'
+converb_reduplicate("gitmek")                  # 'gide gide'   (ye_de yumuşama)
+converb_reduplicate("yemek")                   # 'yiye yiye'   (ye_de + glide-y)
+converb_reduplicate("okumak")                  # 'okuya okuya' (ünlü-final + glide-y)
+m_reduplicate("kitap")                         # 'kitap mitap' (k→m)
+m_reduplicate("araba")                         # 'araba maraba' (ünlü-başlı: m+word)
+# m_reduplicate("masa")                        # → ValueError (m-başlı sözcük)
+
+# İkileme analizi
+roots = lexicon.load()
+tg.analyze("koşa koşa", roots=roots)           # [Analysis(kind='reduplication_converb', lemma='koşmak')]
+tg.analyze("yavaş yavaş", roots={"yavaş"})     # [Analysis(kind='reduplication_full', lemma='yavaş')]
+tg.analyze("kitap mitap", roots={"kitap"})     # [Analysis(kind='reduplication_m', lemma='kitap')]
+tg.analyze("güle güle", roots=roots)           # belirsiz: reduplication_converb (gülmek) + full (güle)
+tg.analyze("koşa koşa")                        # roots=None → [] (converb yok, full hypothetical)
+
 # CLI — python -m turkgram
 # python -m turkgram analyze okudum
 # python -m turkgram analyze okudum --format json
@@ -443,6 +481,10 @@ tr.ipa("kelime")                                # celime
 tr.hecele("elektrik")                           # ['e', 'lek', 'trik']
 tr.vurgu("ankara")                              # 0
 tr.vurgu_işaretle("istanbul")                   # 'is·TAN·bul'
+tr.tam_ikile("yavaş")                          # 'yavaş yavaş'
+tr.ulaç_ikile("koşmak")                        # 'koşa koşa'
+tr.m_ikile("kitap")                            # 'kitap mitap'
+tr.tam_ikile("BÜYÜK")                          # 'büyük büyük'  (_tr_lower: B→b)
 ```
 
 Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_tablosu`/`ad_çöz` ·
@@ -450,7 +492,8 @@ Fonksiyon: `çekimle`/`çekim_tablosu`/`fiil_çöz` · `ad_çekimle`/`ad_çekim_
 değerleri + segment) · **`sıralı`**/**`dağıtımlı`** (sayı morfolojisi) · **`edat_obeği`** (edat öbeği) ·
 **`bağla`** (de/da ses uyumu) / **`koordine_et`** (ikili/üçlü/korelatif) ·
 **`sayıya_çevir`**/**`ondalığa_çevir`**/**`tarihe_çevir`**/**`saate_çevir`** (normalleştirme) ·
-**`kısaltma_aç`**/**`normalleştir`** (pipeline) · **`ipa`** (IPA transkripsiyon) · **`yazım_geçerli`**/**`öneri`**/**`denetle`** (yazım denetimi).
+**`kısaltma_aç`**/**`normalleştir`** (pipeline) · **`ipa`** (IPA transkripsiyon) · **`yazım_geçerli`**/**`öneri`**/**`denetle`** (yazım denetimi) ·
+**`tam_ikile`**/**`ulaç_ikile`**/**`m_ikile`** (ikileme).
 Parametre: `kip`/`kişi`/`olumsuz`/`yeterlik`/`soru`/`birleşik`/**`çatı`** ·
 `durum`/`iyelik`/`sayı`. Çekim tablosu anahtarları da Türkçe (`şimdiki.3tekil`, `çoğul.bulunma`).
 
@@ -464,7 +507,7 @@ pytest
 Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer/hecelemleme ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3922 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**4015 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
