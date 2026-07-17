@@ -71,9 +71,11 @@ _POSTP_GOV = {edat: v["yönet"] for edat, v in _POSTPOSITIONS.items()}
 K2 algoritması (yumuşak ağırlık +4/−2, recall-güvenli) aynen kalır.
 
 **Regresyon kilidi [hakem #1]:** Golden'da build-time assertion —
-`{e: v["yönet"] for e,v in _POSTPOSITIONS.items()}`'ın mevcut 19 edat için mevcut `_POSTP_GOV`'a
-**birebir eşit** olduğu (yeni 4 edatla genişletilmiş) test edilir. Böylece `ile`/`gibi`/`kadar`'ın
-`gen`/`nom` kümesi sessizce daralırsa test kırmızı olur — "testler yeşil kalsın" temennisine güvenilmez.
+`{e: v["yönet"] for e,v in _POSTPOSITIONS.items()}`'ın türetilen `_POSTP_GOV`'a **mevcut `_POSTP_GOV`'un
+tam anahtar kümesinde birebir eşit** olduğu test edilir. Dikkat: mevcut `_POSTP_GOV` zaten
+`dair/ilişkin/ait/yana`'yı içeriyor; assertion "19" değil **mevcut tüm anahtarlar** üzerinden yapılır
+(yeni eklenen `dek/üzere/başka/aşkın` fazladan girer). Böylece `ile`/`gibi`/`kadar`'ın `gen`/`nom` kümesi
+sessizce daralırsa test kırmızı olur — "testler yeşil kalsın" temennisine güvenilmez.
 
 ---
 
