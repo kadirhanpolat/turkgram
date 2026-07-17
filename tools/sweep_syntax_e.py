@@ -103,8 +103,8 @@ def _run() -> None:
     subordinate_sentences = [
         ("biliyorum ki geldi",     {"bilmek", "gelmek"},           "CompP"),
         ("öyle bir şey ki gördüm", {"öyle", "bir", "şey", "görmek"}, "RelP"),
-        ("gelir diye bekledi",     {"gelmek", "beklemek"},         "S"),
-        ("okusun diye kitap aldı", {"okumak", "kitap", "almak"},   "S"),
+        ("gelir diye bekledi",     {"gelmek", "beklemek"},        "S"),
+        ("okusun diye kitap aldı", {"okumak", "kitap", "almak"}, "S"),
     ]
     for text, roots, expected_root_tag in subordinate_sentences:
         total += 1

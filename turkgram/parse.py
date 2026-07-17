@@ -277,28 +277,22 @@ def _apply_r6_ki(nodes: list) -> list:
 
 
 def _apply_r7_diye(nodes: list) -> list:
-    """R7: diye converb → DiyeP (sol-sequence + VERB[diye/demek]).
+    """R7: diye subordinator → DiyeP (sol-sequence + VERB[diye]).
 
-    Koşul: node.tag == "VERB"
-           and node.analysis.kind == "converb"
-           and node.analysis.lemma == "demek"
+    "diye" kapalı küme subordinator (demek opt-3sg kökenli, donmuş form).
+    Yüzey tabanlı tespit — ki/ve gibi işlevsel sözcük olarak davranır.
+    VERB etiketi _CONVERB_VERB_TOKENS ile garantilidir.
 
     Sol tüm node'lar + diye tokenı → DiyeP.
-    DiyeP cümle-düzeyi adjunct: R5 VP'ye çekmez (Task 3'te sabitlendi).
+    DiyeP cümle-düzeyi adjunct: R5 VP'ye çekmez.
     """
     for i, node in enumerate(nodes):
         if not isinstance(node, LeafNode):
             continue
         if node.tag != "VERB":
             continue
-        # Yüzey tabanlı hızlı kontrol (analiz yokken de çalışır)
-        is_diye = node.token.lower() == "diye"
-        a = node.analysis
-        if not is_diye:
-            if a is None:
-                continue
-            if not (a.kind == "converb" and a.lemma == "demek"):
-                continue
+        if node.token.lower() != "diye":
+            continue
         # Sol sequence + diye → DiyeP
         left_seq = nodes[:i]
         if not left_seq:
