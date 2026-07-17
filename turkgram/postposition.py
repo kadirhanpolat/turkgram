@@ -11,26 +11,37 @@ _ICIN_GEN_PRONOUNS: frozenset[str] = frozenset({
     "öteki", "öbürü", "hangisi", "bazısı", "çoğu", "azı",
 })
 
+# Tek doğruluk kaynağı — üretim + analiz + K2 (context._POSTP_GOV) buradan beslenir.
+# yönet KÜMESİ elle yazılır (üret'ten TÜRETİLMEZ): zamir çok-case edatları korunur.
+_POSTPOSITIONS: dict[str, dict] = {
+    "için":     {"üret": "nom", "üret_zamir": "gen", "yönet": frozenset({"nom", "gen"}),        "üretilebilir": True},
+    "ile":      {"üret": "nom",                       "yönet": frozenset({"nom", "gen"}),        "üretilebilir": True},
+    "gibi":     {"üret": "nom",                       "yönet": frozenset({"nom", "gen"}),        "üretilebilir": True},
+    "kadar":    {"üret": "dat",                       "yönet": frozenset({"nom", "gen", "dat"}), "üretilebilir": True},
+    "göre":     {"üret": "dat",                       "yönet": frozenset({"dat"}),               "üretilebilir": True},
+    "karşı":    {"üret": "dat",                       "yönet": frozenset({"dat"}),               "üretilebilir": True},
+    "rağmen":   {"üret": "dat",                       "yönet": frozenset({"dat"}),               "üretilebilir": True},
+    "doğru":    {"üret": "dat",                       "yönet": frozenset({"dat"}),               "üretilebilir": True},
+    "dek":      {"üret": "dat",                       "yönet": frozenset({"dat"}),               "üretilebilir": True},
+    "değin":    {"üret": "dat",                       "yönet": frozenset({"dat"}),               "üretilebilir": True},
+    "üzere":    {"üret": "nom",                       "yönet": frozenset({"nom"}),               "üretilebilir": True},
+    "önce":     {"üret": "abl",                       "yönet": frozenset({"abl"}),               "üretilebilir": True},
+    "sonra":    {"üret": "abl",                       "yönet": frozenset({"abl"}),               "üretilebilir": True},
+    "beri":     {"üret": "abl",                       "yönet": frozenset({"abl"}),               "üretilebilir": True},
+    "itibaren": {"üret": "abl",                       "yönet": frozenset({"abl"}),               "üretilebilir": True},
+    "başka":    {"üret": "abl",                       "yönet": frozenset({"abl"}),               "üretilebilir": True},
+    "dolayı":   {"üret": "abl",                       "yönet": frozenset({"abl"}),               "üretilebilir": True},
+    "ötürü":    {"üret": "abl",                       "yönet": frozenset({"abl"}),               "üretilebilir": True},
+    "aşkın":    {"üret": "acc",                       "yönet": frozenset({"acc"}),               "üretilebilir": True},
+    "dair":     {"yönet": frozenset({"dat"}), "üretilebilir": False},
+    "ilişkin":  {"yönet": frozenset({"dat"}), "üretilebilir": False},
+    "ait":      {"yönet": frozenset({"dat"}), "üretilebilir": False},
+    "yana":     {"yönet": frozenset({"abl"}), "üretilebilir": False},
+}
+
+# Geriye uyum görünümü — eski _POSTPOSITION_CASE importları yalnız üretilebilir üret-case bekler.
 _POSTPOSITION_CASE: dict[str, str] = {
-    "için":     "nom",   # isimler yalın; zamir → _ICIN_GEN_PRONOUNS (gen)
-    "ile":      "nom",   # ayrı; bitişik=True ise ins
-    "göre":     "dat",
-    "kadar":    "dat",
-    "karşı":    "dat",
-    "rağmen":   "dat",
-    "doğru":    "dat",
-    "dek":      "dat",
-    "değin":    "dat",
-    "üzere":    "nom",   # bu şart üzere; fiil-mastar tümleci sözdizimsel, kapsam dışı
-    "önce":     "abl",
-    "sonra":    "abl",
-    "beri":     "abl",
-    "itibaren": "abl",
-    "başka":    "abl",
-    "dolayı":   "abl",
-    "ötürü":    "abl",
-    "gibi":     "nom",   # yalın; bitişik yolu yok
-    "aşkın":    "acc",
+    e: v["üret"] for e, v in _POSTPOSITIONS.items() if v["üretilebilir"]
 }
 
 
@@ -62,9 +73,12 @@ def postposition(lemma: str, edat: str, bitişik: bool = False) -> str:
     """
     if not lemma or not lemma.strip():
         raise ValueError("lemma boş olamaz.")
-    if edat not in _POSTPOSITION_CASE:
+    if edat not in _POSTPOSITIONS:
+        producible = sorted(e for e, v in _POSTPOSITIONS.items() if v["üretilebilir"])
+        raise ValueError(f"Bilinmeyen edat: {edat!r}. Geçerliler: {producible}")
+    if not _POSTPOSITIONS[edat]["üretilebilir"]:
         raise ValueError(
-            f"Bilinmeyen edat: {edat!r}. Geçerliler: {sorted(_POSTPOSITION_CASE)}"
+            f"{edat!r} donmuş bir edat (donmuş kalıp), postposition() üretmez."
         )
     if bitişik and edat != "ile":
         raise ValueError(
@@ -72,10 +86,10 @@ def postposition(lemma: str, edat: str, bitişik: bool = False) -> str:
         )
     if bitişik:
         return decline(lemma, case="ins")
-    # için: kişi/n-gövde zamirleri genitif, düz isimler yalın
-    if edat == "için":
-        case = "gen" if lemma.lower() in _ICIN_GEN_PRONOUNS else "nom"
+    entry = _POSTPOSITIONS[edat]
+    if edat == "için" and lemma.lower() in _ICIN_GEN_PRONOUNS:
+        case = entry["üret_zamir"]
     else:
-        case = _POSTPOSITION_CASE[edat]
+        case = entry["üret"]
     declined = decline(lemma, case=case)
     return declined + " " + edat

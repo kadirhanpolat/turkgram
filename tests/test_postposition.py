@@ -41,3 +41,37 @@ def test_tr_edat_obeği_denklik():
     assert tr.edat_obeği("ev", "için") == postposition("ev", "için")
     assert tr.edat_obeği("ev", "ile", bitişik=True) == postposition("ev", "ile", bitişik=True)
     assert tr.edat_obeği("ben", "göre") == postposition("ben", "göre")
+
+
+def test_frozen_edat_raises_distinct_error():
+    """dair/ilişkin/ait/yana donmuş — üretilemez, ayrı ValueError."""
+    for edat in ("dair", "ilişkin", "ait", "yana"):
+        with pytest.raises(ValueError, match="donmuş"):
+            postposition("ev", edat)
+
+
+def test_unknown_edat_lists_only_producible():
+    """Bilinmeyen edat mesajındaki 'Geçerliler' donmuş edatları İÇERMEZ."""
+    with pytest.raises(ValueError) as exc:
+        postposition("ev", "zzz")
+    msg = str(exc.value)
+    assert "dair" not in msg and "ilişkin" not in msg
+    assert "için" in msg
+
+
+def test_new_edats_present_in_table():
+    from turkgram.postposition import _POSTPOSITIONS
+    assert set(_POSTPOSITIONS) >= {
+        "dair", "ilişkin", "ait", "yana",
+        "dek", "üzere", "başka", "aşkın",
+    }
+    assert _POSTPOSITIONS["dair"]["üretilebilir"] is False
+    assert _POSTPOSITIONS["için"]["üretilebilir"] is True
+
+
+def test_yonet_sets_preserve_pronoun_cases():
+    """KRİTİK: ile/gibi/kadar zamir-genitifi korunur (üret'ten türetilmez)."""
+    from turkgram.postposition import _POSTPOSITIONS
+    assert _POSTPOSITIONS["ile"]["yönet"] == frozenset({"nom", "gen"})
+    assert _POSTPOSITIONS["gibi"]["yönet"] == frozenset({"nom", "gen"})
+    assert _POSTPOSITIONS["kadar"]["yönet"] == frozenset({"nom", "gen", "dat"})
