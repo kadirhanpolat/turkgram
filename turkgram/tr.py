@@ -761,3 +761,23 @@ def denetle(
     return _spellcheck.check(
         kelime, roots=kökler, max_suggestions=maksimum, max_distance=uzaklık
     )
+
+
+# ── İkileme (Faz 9d) ─────────────────────────────────────────────────────────
+
+def tam_ikile(kelime: str) -> str:
+    """Sözcüğü kendisiyle ikiler: yavaş → yavaş yavaş."""
+    from .reduplication import full_reduplicate
+    return full_reduplicate(_tr_lower(kelime))
+
+
+def ulaç_ikile(mastar: str) -> str:
+    """-A ulaç biçimini ikiler: koşmak → koşa koşa."""
+    from .reduplication import converb_reduplicate
+    return converb_reduplicate(_tr_lower(mastar))
+
+
+def m_ikile(kelime: str) -> str:
+    """M-ikileme: kitap → kitap mitap."""
+    from .reduplication import m_reduplicate
+    return m_reduplicate(_tr_lower(kelime))
