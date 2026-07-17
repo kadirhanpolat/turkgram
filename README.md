@@ -209,6 +209,7 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - **Türkçe API**: `yazım_geçerli()` / `öneri()` / `denetle()`. **CLI**: `python -m turkgram check <kelime>`.
   - TUZAK: `seker` = `sekmek` geniş 3sg → GEÇERLİ; golden `dag` (dağ) kullandı.
   - Hakem: 26k leksikon, 0 çökme. 58 yeni test; **toplam: 3883 test**.
+- **Faz 9c ✅** — Lemmatizer (`turkgram/lemmatize.py`): `lemmatize` / `lemmatize_text` / `lemmatize_detail` / `lemmatize_text_detail` + `LemmaResult`; fallback zinciri (analyze → spellcheck → None); Türkçe API `temel_biçim*`.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
@@ -455,7 +456,7 @@ pytest
 Golden testler (`tests/golden_*.py` — fiil/isim/copula/ulaç/fiilimsi/tasvir/çatı/sayı/edat/tokenizer/hecelemleme ve
 çözümleme/segmentasyon) motordan **bağımsız** olarak, elle-doğrulanmış biçimlerle
 kurulmuştur — motorun kendi çıktısıyla değil, dilbilgisiyle sınanır.
-**3883 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
+**3922 test** (slow hariç). Round-trip tam süpürme `-m slow` ile: `pytest -m slow`.
 
 ## Lisans
 
