@@ -209,7 +209,15 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - **Türkçe API**: `yazım_geçerli()` / `öneri()` / `denetle()`. **CLI**: `python -m turkgram check <kelime>`.
   - TUZAK: `seker` = `sekmek` geniş 3sg → GEÇERLİ; golden `dag` (dağ) kullandı.
   - Hakem: 26k leksikon, 0 çökme. 58 yeni test; **toplam: 3883 test**.
-- **Faz 9c ✅** — Lemmatizer (`turkgram/lemmatize.py`): `lemmatize` / `lemmatize_text` / `lemmatize_detail` / `lemmatize_text_detail` + `LemmaResult`; fallback zinciri (analyze → spellcheck → None); Türkçe API `temel_biçim*`.
+- **Faz 9c ✅** — Lemmatizer (`turkgram/lemmatize.py`):
+  - **`lemmatize(word)`** → `str | None` — tek kelime veya çok-token → lemma; çözümsüz → `None`.
+  - **`lemmatize_text(text)`** → `list[str | None]` — metin → token başına lemma; `context.rank_in_context` ile bağlamsal disambiguation.
+  - **`lemmatize_detail(word)`** → `LemmaResult(lemma, pos, confidence, corrected)` — zengin sonuç.
+  - **`lemmatize_text_detail(text)`** → `list[LemmaResult | None]` — metin düzeyi zengin API.
+  - **Fallback zinciri:** `analyze` → boşsa `spellcheck.suggest` → tekrar `analyze` → yoksa `None`; `corrected=True` flag spellcheck düzeltmesi işaretler.
+  - **Türkçe API:** `temel_biçim()` / `temel_biçim_metin()` / `temel_biçim_detay()` / `temel_biçim_metin_detay()`.
+  - TUZAK: `roots=None` → `lexicon.load()` otomatik (analyze hypothetical modundan farklı — lemmatizer her zaman leksikon güdümlü).
+  - Hakem: 26k leksikon stratified sweep, 0 çökme. 35 yeni test; **toplam: 3922 test**.
 
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
