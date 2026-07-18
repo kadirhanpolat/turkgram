@@ -13,6 +13,8 @@ CASES = [
     ("kitap mitap", {"kitap"}),                   # yüklemsiz NP kök
     ("kitap kalem", {"kitap", "kalem"}),          # m-DEĞİL → m-NP kurulmaz
     ("yavaş yavaş yürüdü", {"yavaş", "yürümek"}), # AdvP (R8) çakışma-yok
+    ("güzel müzel elbise", {"güzel", "elbise"}),  # ADJ-taban → AdjP niteleyici
+    ("yeşil meşil", {"yeşil"}),                    # ADJ-taban yüklemsiz
 ]
 
 

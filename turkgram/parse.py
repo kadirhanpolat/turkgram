@@ -160,12 +160,13 @@ def _apply_r8_redup(nodes: list) -> list:
 
 
 def _apply_r9_mredup(nodes: list) -> list:
-    """R9: bitişik NOUN + m-reduplikant → NP (m-ikileme nominal-yeniden-kurulum).
+    """R9: bitişik NOUN/ADJ + m-reduplikant → NP/AdjP (m-ikileme yeniden-kurulum).
 
-    NOUN-tabanlı m-ikileme (kitap mitap, araba maraba) → tek NP öbeği; baş = taban
-    isim, reduplikant `MRED` etiketiyle (compound:redup + upos=NOUN dependency'de).
-    Yüzey testi: m_reduplicate(taban) == taban + " " + reduplikant. ADJ/başka taban
-    kapsam dışı (V1). m-test başarısızsa dokunmaz (recall-güvenli).
+    NOUN-taban (kitap mitap, araba maraba) → tek NP öbeği (özne/nesne rolü);
+    ADJ-taban (güzel müzel) → tek AdjP öbeği (adjectival, isim niteler). Baş = taban,
+    reduplikant `MRED` etiketiyle (compound:redup + upos=taban POS'undan miras dependency'de).
+    Yüzey testi: m_reduplicate(taban) == taban + " " + reduplikant. m-test başarısızsa
+    dokunmaz (recall-güvenli).
     """
     from .analysis import _tr_lower          # Türkçe İ/I güvenli küçültme
     from .reduplication import m_reduplicate  # yüzey m-testi (cycle yok)
@@ -176,14 +177,15 @@ def _apply_r9_mredup(nodes: list) -> list:
         matched = False
         if (b is not None
                 and isinstance(a, LeafNode) and isinstance(b, LeafNode)
-                and a.tag == "NOUN"):
+                and a.tag in ("NOUN", "ADJ")):
             la, lb = _tr_lower(a.token), _tr_lower(b.token)
             try:
                 # Bilinçli belirsizlik (tasarım §3.2): reduplikant gerçek sözcük olsa
                 # da (adam madam) m-ikileme tercih edilir — recall-güvenli, baskın okuma.
                 if m_reduplicate(la) == la + " " + lb:
                     mred = LeafNode(tag="MRED", token=b.token, analysis=None)
-                    out.append(PhraseNode.make("NP", (a, mred)))
+                    phrase_tag = "NP" if a.tag == "NOUN" else "AdjP"
+                    out.append(PhraseNode.make(phrase_tag, (a, mred)))
                     i += 2
                     matched = True
             except ValueError:

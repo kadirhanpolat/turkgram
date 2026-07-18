@@ -151,7 +151,9 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
             for c in reversed(children):
                 if isinstance(c, LeafNode) and c.tag == "ADJ":
                     return c
-            return _find_head_leaf(children[-1])
+            # m-ikileme reduplikant (MRED) ASLA baş olmaz → fallback'te atla
+            non_mred = [c for c in children if getattr(c, "tag", None) != "MRED"]
+            return _find_head_leaf((non_mred or list(children))[-1])
         if tag == "AdvP":
             return _find_head_leaf(children[0])  # ilk yaprak = baş
         if tag == "CoordP":
@@ -160,9 +162,10 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
 
     def _child_deprel(parent_tag: str, child: "PN | LeafNode") -> str:
         child_tag = child.tag
+        # m-ikileme reduplikant → baş (parent NP veya AdjP fark etmez)
+        if child_tag == "MRED":
+            return "compound:redup"
         if parent_tag == "NP":
-            if child_tag == "MRED":
-                return "compound:redup"      # m-ikileme reduplikant → baş
             if child_tag == "ADJ":
                 return "amod"
             if child_tag == "NUM":
@@ -234,8 +237,13 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
     for i, lf in enumerate(all_leaves, 1):
         a = lf.analysis
         head_id, deprel = deps.get(i, (0, "root"))
-        # MRED = m-ikileme reduplikant (parse iç etiketi) → UD upos NOUN (baş isimle aynı)
-        upos = "NOUN" if lf.tag == "MRED" else lf.tag
+        # MRED = m-ikileme reduplikant (parse iç etiketi) → UD upos taban(head) POS'undan
+        # miras (NOUN taban→NOUN, ADJ taban→ADJ). head_id compound:redup ile tabanı gösterir.
+        if lf.tag == "MRED":
+            base = all_leaves[head_id - 1] if head_id else lf
+            upos = base.tag if getattr(base, "tag", None) in ("NOUN", "ADJ") else "NOUN"
+        else:
+            upos = lf.tag
         xpos = a.kind if a else "_"
         feats = _analysis_to_feats(a, upos)
         lemma = a.lemma if a else None
