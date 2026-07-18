@@ -393,7 +393,9 @@ Test durumu: son ölçüm **4110 test yeşil** (slow hariç) + slow round-trip a
     `dependency.py` açık dallar — `_child_deprel` VP/S dalı `("AdjP","AdvP")→advmod` (baş→fiil) + top-level
     `parent_tag=="AdvP"→compound:redup` (ikinci token→baş, UD-geçerli); `_find_head_leaf` AdvP dalı (`children[0]`=baş).
     m-ikileme kapsam DIŞI (nominal, defer). Hakem: sweep 7 cümle 0 çökme + adversarial APPROVE (0 CRITICAL/HIGH).
-    **4102 test yeşil** (+6). Kalan defer: üç+ tekrar + koordine zarf (SPEC §5).
+    **4102 test yeşil** (+6). Kapsam dışı (defer değil): üç+ *yineleme* (`yavaş yavaş yavaş`) gramatik ikileme
+    DEĞİL, ifadesel/prozodik tekrardır (ikileme tanımı gereği İKİLİ — Korkmaz) → R8 ilk çifti yakalar, doğru.
+    Kalan defer: koordine zarf (SPEC §5).
   - ✅ **m-İkileme nominal-yeniden-kurulum** (SPEC/tasarım `docs/superpowers/specs/2026-07-18-m-ikileme-nominal-design.md`,
     plan `docs/superpowers/plans/2026-07-18-m-ikileme-nominal.md`): AdvP'nin nominal kardeşi. Parser NOUN-tabanlı
     m-ikilemeyi (`kitap mitap`, `araba maraba`) tek **`NP`** öbeği olarak yeniden kurar (genelleyici/pekiştirici ad,
@@ -412,7 +414,8 @@ Test durumu: son ölçüm **4110 test yeşil** (slow hariç) + slow round-trip a
     (adjectival, isim niteler: `güzel müzel elbise`→`NP(AdjP, elbise)`, R1 niteleyici alır). Reduplikant upos taban
     POS'undan miras (tek `MRED` etiketi iki tabanı da kapsar, iki tag GEREKMEZ) → `müzel`=ADJ, `mitap`=NOUN. `çocuk mocuk`
     (çocuk→ADJ quirk) artık AdjP kurar (semantik isim ama başıboş X yok; disambiguation açığı ayrı). Hakem V2: APPROVE
-    (0 CRITICAL/HIGH/MEDIUM, 1 LOW ulaşılamaz fallback). **4110 test yeşil** (+3). Kalan defer: üç+ tekrar (SPEC §5).
+    (0 CRITICAL/HIGH/MEDIUM, 1 LOW ulaşılamaz fallback). **4110 test yeşil** (+3). m-ikileme doğası gereği İKİLİ
+    (taban + m-biçim); "üçlü m-ikileme" YOK. Kalan defer: koordine (SPEC §5).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.

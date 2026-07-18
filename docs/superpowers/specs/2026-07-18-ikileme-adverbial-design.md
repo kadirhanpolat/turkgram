@@ -131,7 +131,12 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
   bunu bilinçli AdvP'ye toplar (recall-güvenli); anlam ayrımı uygulamaya bırakılır.
 - **NUM/ADJ araya girmesi** (`uzun uzun beş yol`) [hakem #3]: guard yalnız hemen sonraki NOUN'a bakar; araya
   NUM girerse tam kapsanmaz — V1 defer, nadir.
-- **Üç+ tekrar** (`yavaş yavaş yavaş`) — V1 ilk çifti yakalar; üçlü genelleme defer (üçüncü sıfat başıboş kalır).
+- **Üç+ yineleme** (`yavaş yavaş yavaş`) — **gramatik ikileme DEĞİL, kapsam DIŞI (defer değil).** Türkçede
+  ikileme tanımı gereği **ikilidir** (Korkmaz, *Şekil Bilgisi*: iki öğeli anlatım aracı). Üç+ tekrar
+  **ifadesel/prozodik yineleme** (expressive repetition) — açık uçlu (n tane), vurgu/yoğunlaştırma amaçlı,
+  kapalı bir dilbilgisi biçimi değil. Betimleyici gramer kütüphanesi bunu ikileme olarak modellememeli;
+  R8 ilk çifti (gramatik ikileme) yakalar, üçüncü öğe ifadesel yineleme olarak başıboş kalır — DOĞRU davranış.
+  İleride istenirse üslup/prozodi katmanı olarak ayrı ele alınır (ikileme değil).
 - **Koordine zarf** (`yavaş yavaş ve hızlı hızlı`) [hakem #7]: R4 CoordP `NP CCONJ NP` ister, AdvP NP değil →
   koordinasyon kurulmaz. Defer.
 - **Ayrık ikileme** / araya sözcük girmesi — kapsam dışı (bitişiklik şart).

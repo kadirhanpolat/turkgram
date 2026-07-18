@@ -120,8 +120,11 @@ aynı UD ilişkisi burada nominal bağlamda kullanılır (tutarlı).
 - **`çocuk mocuk`** (çocuk→ADJ disambiguation quirk): V2'de ADJ-taban desteğiyle **AdjP** olarak
   tetiklenir (semantik olarak isim; çocuk→ADJ yanlış-etiketi disambiguation açığı, m-ikilemeye özgü
   değil). Başıboş X bırakmaz — kabul edilebilir; doğru NOUN-etiketi ayrı disambiguation işi.
-- **Üç+ token** / araya sözcük (`kitap mitap kalem`) → R1 sonraki NOUN'u m-NP'ye modifikatör olarak
-  ekleyebilir; nadir, V1 defer (bitişik ikili şart).
+- **m-ikileme DOĞASI GEREĞİ İKİLİ** (taban + m-biçim): "üçlü m-ikileme" diye bir gramatik yapı YOK.
+  `kitap mitap kalem` gibi diziler üç m-parçalı ikileme değil; olsa olsa m-NP + ayrı isim. `kitap mitap kalem`
+  → R1 sonraki NOUN'u m-NP'ye modifikatör olarak ekleyebilir; nadir, V1 defer (bitişik ikili şart).
+  (Tam ikileme/AdvP tarafındaki `yavaş yavaş yavaş` üç+ *yineleme*si de gramatik ikileme değil, ifadesel
+  tekrardır — AdvP tasarımı §5.)
 - **Gerçek-sözcük reduplikant belirsizliği** (`adam madam`) → recall-güvenli m-ikileme (§3.2).
 - **Ayrık m-ikileme** / araya sözcük girmesi — kapsam dışı (bitişiklik şart).
 - **p-ikileme** (`çer çöp` gibi lexik ikilemeler) — m-ikileme değil, kapsam dışı.
