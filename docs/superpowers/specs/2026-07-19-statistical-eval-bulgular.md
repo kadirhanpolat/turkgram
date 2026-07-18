@@ -67,6 +67,33 @@ Python değişmezini gereksiz esnetir.
    `ve`/`ki`/`bu` kapalı-küme fonksiyon sözcükleri. Daha büyük iş; ayrı faz.
 3. CRF yalnız (1)+(2) sonrası HMM hâlâ darboğazsa yeniden değerlendirilir (§9 gate tekrar).
 
+## 5b. Uygulama — (a) `_analysis_pos`/`_analysis_fine_state` eşleme fix (2026-07-19)
+
+`_analysis_pos` artık `pos` alanından eşler (`postp→Postp`, `conj→Conj`, `num→Num`,
+`adj→Adj`; fiil kind'ları→Verb, copula→Noun; `pos` yoksa→Noun geriye uyum).
+`_analysis_fine_state` benzer sözcük-sınıfı dalları aldı. Model bu etiketleri zaten
+içeriyor → aday-emisyon eşleşti.
+
+| Metrik (150 cümle) | Öncesi | Sonrası |
+|--------------------|--------|---------|
+| Coverage | 45.1% | **51.4%** (+6.3) |
+| HMM acc(tüm) | 44.2% | **49.1%** (+4.9) |
+| rule acc(tüm) | 43.7% | 47.3% |
+| HMM acc(covered) | 98.1% | 95.5% |
+
+- Analizör aday POS uzayı: Noun/Verb → +Adj(60)/Postp(40)/Conj(16)/Num(1).
+- **HMM dizi-bağlamı artık değer katıyor:** HMM, kuralı Postp(10)/Conj(8)/Adj(7)'de
+  yeniyor (edat/bağlaç disambiguation'ında bigram geçişi belirleyici) → HMM'in varlığı
+  ampirik doğrulandı.
+- acc(covered) düşüşü (98→95.5) BEKLENEN: yeni aday sınıfları (Postp/Conj/Adj) daha
+  zor seçim getirir; ama genel acc(tüm) yükseldi (coverage kazancı baskın).
+- Testler: `tests/test_statistical_pos_mapping.py` (15 test; gerçek analiz + fake geriye uyum).
+  Tam paket regresyonsuz (4142 yeşil).
+
+**Kalan (b — derin, ayrı faz):** Adverb %8.7 / Det %6.4 / Pron %5.8 hâlâ üretilmiyor
+(analizör bunları Noun/hiç verir); bare Adj/Num/Pron leksikon-POS danışması gerektirir.
+CRF hâlâ gereksiz — darboğaz coverage.
+
 ## 5. Notlar
 
 - `tools/diff_harness.py` gold-reader `*.txt` glob'lar; gerçek gold tek dosya

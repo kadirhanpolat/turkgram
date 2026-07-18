@@ -288,7 +288,14 @@ def _analysis_fine_state(analysis) -> str:
     if kind in ("copula",):
         return "Noun"
 
-    # Bilinmeyen → Noun (güvenli varsayılan, Artım-1 ile aynı)
+    # Diğer sözcük sınıfları → `pos` alanından ince durum (Postp/Conj/Num/Adj).
+    # Model ince-durum kümesi bu etiketleri içerir (_fine_state_from_oflazer emsali).
+    pos = getattr(analysis, "pos", "") or ""
+    _FINE = {"postp": "Postp", "conj": "Conj", "num": "Num", "adj": "Adj"}
+    if pos in _FINE:
+        return _FINE[pos]
+
+    # Bilinmeyen / pos alanı yok (fake) → Noun (güvenli varsayılan, geriye uyum)
     return "Noun"
 
 
@@ -402,23 +409,31 @@ def load_model(
 # Yardımcı — Analysis → (lemma, major_pos) çiftine çevir
 # ---------------------------------------------------------------------------
 
-def _analysis_pos(analysis) -> str:
-    """turkgram Analysis nesnesinin kind'ından kaba major_pos türet.
+# Analysis.pos → TrMor2018/Oflazer major_pos etiketi (gömülü model kümesiyle uyumlu).
+# Bulgu (2026-07-19 eval): eski eşleme yalnız kind'a bakıp postp/conj/num/adj'ı
+# Noun'a indiriyordu → HMM coverage %45'e kilitleniyordu. Analizör bu sözcük
+# sınıflarını `pos` alanında zaten üretir; model Postp/Conj/Num/Adj emisyonlarına
+# sahip → eşleme düzeltilince bedava coverage.
+_POS_TO_MAJOR: Dict[str, str] = {
+    "noun": "Noun", "verb": "Verb", "adj": "Adj",
+    "num": "Num", "conj": "Conj", "postp": "Postp",
+}
 
-    Analysis-by-generation kind'ları:
-      conjugate / converb* / participle → Verb
-      decline → Noun
-      copula → Noun (ad yüklemi) veya Verb; copula → Noun seç (Artım-1 kaba)
-    Daha ince eşleme Artım-2'de.
+
+def _analysis_pos(analysis) -> str:
+    """turkgram Analysis nesnesinden kaba major_pos türet.
+
+    Fiil türleri (conjugate/converb*/participle) → Verb; nominal ekfiil (copula)
+    → Noun (kaba). Diğer sözcük sınıfları `pos` alanından (postp→Postp, conj→Conj,
+    num→Num, adj→Adj, noun→Noun). `pos` alanı yoksa (ör. test fake'i) → Noun (geriye uyum).
     """
     kind = getattr(analysis, "kind", "") or ""
     if kind in ("conjugate", "converb", "converb_casina", "converb_ken", "participle"):
         return "Verb"
-    if kind in ("decline",):
-        return "Noun"
-    if kind in ("copula",):
+    if kind == "copula":
         return "Noun"  # Artım-1: nominal ekfiil → Noun (kaba)
-    return "Noun"  # varsayılan (bilinmeyen kind → Noun, güvenli)
+    pos = getattr(analysis, "pos", "") or ""
+    return _POS_TO_MAJOR.get(pos, "Noun")
 
 
 # ---------------------------------------------------------------------------
