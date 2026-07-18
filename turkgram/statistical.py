@@ -436,6 +436,35 @@ def _analysis_pos(analysis) -> str:
     return _POS_TO_MAJOR.get(pos, "Noun")
 
 
+# Leksikon POS → major_pos (opsiyonel lexicon-aware katman; parse._leaf_tag emsali).
+# Analizör çıplak sözcükleri decline(noun) verir; leksikon pos_map daha ince POS
+# bilir (kırmızı=adj, iki=num, çünkü=conj, hızlı=adj, sen=pron). model pos_set bu
+# etiketleri (Adverb/Det/Pron/Interj dahil) içerir → coverage kazancı. TrMor tagset'i
+# ile leksikon arasında sistematik uyuşmazlık olabilir (her→adj vs Det) — düzeltmez,
+# zarar da vermez (o token zaten yanlıştı). Bulgu: 2026-07-19-statistical-eval-bulgular §5c.
+_LEX_POS_TO_MAJOR: Dict[str, str] = {
+    "noun": "Noun", "verb": "Verb", "adj": "Adj", "num": "Num",
+    "conj": "Conj", "postp": "Postp", "adv": "Adverb", "det": "Det",
+    "pron": "Pron", "interj": "Interj",
+}
+
+
+def _analysis_pos_lex(analysis, pos_map: "Optional[Dict[str, str]]" = None) -> str:
+    """Lexicon-aware major_pos: çıplak decline(noun) analizinde leksikon pos_map'e
+    danış (daha ince sözcük sınıfı); aksi halde `_analysis_pos`.
+
+    `pos_map=None` → dokunmadan `_analysis_pos` (geriye uyum). Fiil/postp/conj/num/adj
+    zaten analizden geldiği için yalnız (kind=decline, pos=noun) durumu refine edilir.
+    """
+    base = _analysis_pos(analysis)
+    if pos_map is None or base != "Noun":
+        return base
+    if getattr(analysis, "kind", "") != "decline":
+        return base
+    lemma = (getattr(analysis, "lemma", "") or "").lower()
+    return _LEX_POS_TO_MAJOR.get(pos_map.get(lemma, ""), base)
+
+
 # ---------------------------------------------------------------------------
 # Çarpımsal skorlama (bağlamsız, token-başına)
 # ---------------------------------------------------------------------------
@@ -472,6 +501,7 @@ def viterbi(
     tokens: Sequence[str],
     analyses_per_token: Sequence[Sequence],
     model: StatModel,
+    pos_fn=None,
 ) -> List[List]:
     """Viterbi algoritması — cümledeki her token için en iyi POS dizisini bul.
 
@@ -482,7 +512,13 @@ def viterbi(
 
     analyses_per_token[i] = Analysis nesnelerinin listesi.
     Boş aday listesi → çıkışta da boş.
+
+    pos_fn: Analysis → major_pos fonksiyonu (varsayılan `_analysis_pos`).
+    Lexicon-aware coverage için `lambda a: _analysis_pos_lex(a, pos_map)` geçilebilir
+    (golden fake-testleri varsayılanı kullanır → dokunulmaz).
     """
+    if pos_fn is None:
+        pos_fn = _analysis_pos
     n = len(tokens)
     if n == 0:
         return []
@@ -494,7 +530,7 @@ def viterbi(
             return [_SENTENCE_END]  # sentinel
         seen: list = []
         for a in candidates:
-            p = _analysis_pos(a)
+            p = pos_fn(a)
             if p not in seen:
                 seen.append(p)
         return seen
@@ -549,8 +585,8 @@ def viterbi(
             continue
         selected_pos = best_path[i]
         # Seçilen POS'a uyan adaylar öne, geri kalan girdi sırasında
-        first  = [a for a in cands if _analysis_pos(a) == selected_pos]
-        second = [a for a in cands if _analysis_pos(a) != selected_pos]
+        first  = [a for a in cands if pos_fn(a) == selected_pos]
+        second = [a for a in cands if pos_fn(a) != selected_pos]
         result.append(first + second)
 
     return result

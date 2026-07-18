@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from turkgram import analysis as an, context as ctx, disambiguation as dis, lexicon as lx
 from turkgram.statistical import (
-    load_model, viterbi, parse_oflazer, _analysis_pos,
+    load_model, viterbi, parse_oflazer, _analysis_pos, _analysis_pos_lex,
 )
 
 _GOLD = Path(__file__).parent / "trmor2018" / "TrMor2018" / "handtagged" / "trmor2018.gold"
@@ -64,11 +64,17 @@ def _gold_pos(correct: str) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0, help="ilk N cümle (0=hepsi)")
+    ap.add_argument("--lex", action="store_true",
+                    help="lexicon-aware POS (decline-noun → pos_map ile refine)")
     args = ap.parse_args()
 
     roots = lx.load()  # leksikon güdümlü aday üretimi (recall için şart)
     model = load_model()  # Artım-1 major-POS emisyon+geçiş
     freq = lx.load_freq()
+
+    # POS eşleme fonksiyonu: düz (_analysis_pos) veya lexicon-aware (_analysis_pos_lex)
+    _pm = lx.pos_map() if args.lex else None
+    pos_of = (lambda a: _analysis_pos_lex(a, _pm)) if args.lex else _analysis_pos
 
     methods = ("isolated", "rule", "hmm")
     correct = {m: 0 for m in methods}
@@ -96,7 +102,7 @@ def main() -> None:
 
         iso = [dis.rank(c) for c in cand]
         rule = ctx.rank_in_context(tokens, cand, freq=freq)
-        hmm = viterbi(tokens, cand, model)
+        hmm = viterbi(tokens, cand, model, pos_fn=pos_of)
 
         picks = {"isolated": iso, "rule": rule, "hmm": hmm}
 
@@ -112,7 +118,7 @@ def main() -> None:
             if not cand_i:
                 n_no_cand += 1
                 continue
-            cand_pos = {_analysis_pos(a) for a in cand_i}
+            cand_pos = {pos_of(a) for a in cand_i}
             our_pos_dist.update(cand_pos)
             is_covered = gp in cand_pos
             if is_covered:
@@ -121,7 +127,7 @@ def main() -> None:
             method_pos = {}
             for m in methods:
                 top = picks[m][i]
-                mp = _analysis_pos(top[0]) if top else None
+                mp = pos_of(top[0]) if top else None
                 method_pos[m] = mp
                 if mp == gp:
                     correct[m] += 1

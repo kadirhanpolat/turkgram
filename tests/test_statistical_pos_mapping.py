@@ -8,7 +8,7 @@ gerçek analiz pos alanına dayanır).
 """
 import pytest
 from turkgram import analysis as an, lexicon as lx
-from turkgram.statistical import _analysis_pos, _analysis_fine_state
+from turkgram.statistical import _analysis_pos, _analysis_fine_state, _analysis_pos_lex
 
 
 @pytest.fixture(scope="module")
@@ -66,3 +66,24 @@ def test_fake_analysis_backward_compat():
         kwargs: dict = {}
     assert _analysis_pos(_Fake()) == "Noun"
     assert _analysis_fine_state(_Fake()) == "Noun"
+
+
+# --- lexicon-aware refinement (_analysis_pos_lex) ---
+@pytest.mark.parametrize("token,expected", [
+    ("kırmızı", "Adj"),    # leksikon adj; analizör decline(noun)
+    ("hızlı",   "Adj"),
+    ("iki",     "Num"),
+    ("sen",     "Pron"),
+])
+def test_analysis_pos_lex_refine(token, expected, roots):
+    a = _first(token, roots, pos="noun", kind="decline")
+    pm = lx.pos_map()
+    assert _analysis_pos_lex(a, pm) == expected
+    # pos_map=None → düz _analysis_pos (Noun; geriye uyum)
+    assert _analysis_pos_lex(a, None) == "Noun"
+
+
+def test_analysis_pos_lex_preserves_nonnoun(roots):
+    """decline-noun olmayan analiz pos_map'ten etkilenmez (için=Postp kalır)."""
+    a = _first("için", roots, pos="postp", kind="postposition")
+    assert _analysis_pos_lex(a, lx.pos_map()) == "Postp"

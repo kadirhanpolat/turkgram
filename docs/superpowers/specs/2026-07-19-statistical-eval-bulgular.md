@@ -94,6 +94,36 @@ içeriyor → aday-emisyon eşleşti.
 (analizör bunları Noun/hiç verir); bare Adj/Num/Pron leksikon-POS danışması gerektirir.
 CRF hâlâ gereksiz — darboğaz coverage.
 
+## 5c. Uygulama — (b) lexicon-aware POS refinement (B-refine dilimi, 2026-07-19)
+
+ROI ölçümü (150 cümle): uncovered decline-noun 258 token; leksikon `pos_map` ile
+**95'i düzelebilir** (Adj/adj 44, Adverb/adv 32, Num/num 8, Conj/conj 6, Pron/pron 5).
+Kalan uncovered: B-cover (aday yok, 210 — Conj 34/Det 30/Pron 3 fonksiyon sözcükleri +
+Noun 80/Adj 20 leksikon açığı) ve tagset-uyuşmazlığı (Det/adj 59, Adverb/adj 18 —
+turkgram leksikonu ≠ TrMor tagset; `her`→adj ama gold Det).
+
+**Uygulama:** `_analysis_pos_lex(analysis, pos_map)` — çıplak `decline(noun)` analizinde
+leksikon pos_map'e danışır (parse._leaf_tag emsali); `pos_map=None` → düz `_analysis_pos`.
+`viterbi(..., pos_fn=)` opsiyonel parametresi (varsayılan `_analysis_pos` → golden fake
+testleri DOKUNULMAZ). `_analysis_pos`'a pos_map KOYULMADI bilinçli: golden viterbi fake'leri
+(geçen→adj, hafta→adv, üç→num) yeniden sınıflanıp kırılırdı.
+
+| Metrik (150 cümle) | başlangıç | fix-a | **+lex** |
+|--------------------|-----------|-------|----------|
+| Coverage | 45.1% | 51.4% | **59.3%** |
+| HMM acc(tüm) | 44.2% | 49.1% | **55.9%** |
+| rule acc(tüm) | 43.7% | 47.3% | 52.9% |
+| isolated acc(tüm) | 42.6% | 44.6% | 51.8% |
+
+- Kümülatif kazanç: coverage +14.2pt, HMM acc +11.7pt.
+- Analizör aday POS: +Adj(254)/Adverb(80)/Pron(30)/Num(30).
+- HMM dizi-bağlamı yine değer katıyor (kuralı Noun 15/Adverb 12/Postp 10/Conj 8/Adj 8'de yener).
+- Testler: `tests/test_statistical_pos_mapping.py` (+lex birim testleri). Tam paket regresyonsuz.
+
+**Kalan (b sonraki dilim — B-cover, ayrı iş):** Det(%6.4)/bazı Conj/Pron hâlâ analizör
+adayı üretmiyor (`bu`/`o`/`ve`/`ki` → NO-REAL). Kapalı-küme fonksiyon-sözcük analiz dalı
+(conjunction/postposition emsali) veya aday-enjeksiyonu gerekir. CRF hâlâ gereksiz.
+
 ## 5. Notlar
 
 - `tools/diff_harness.py` gold-reader `*.txt` glob'lar; gerçek gold tek dosya
