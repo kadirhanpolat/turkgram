@@ -159,6 +159,39 @@ def _apply_r8_redup(nodes: list) -> list:
     return out
 
 
+def _apply_r9_mredup(nodes: list) -> list:
+    """R9: bitişik NOUN + m-reduplikant → NP (m-ikileme nominal-yeniden-kurulum).
+
+    NOUN-tabanlı m-ikileme (kitap mitap, araba maraba) → tek NP öbeği; baş = taban
+    isim, reduplikant `MRED` etiketiyle (compound:redup + upos=NOUN dependency'de).
+    Yüzey testi: m_reduplicate(taban) == taban + " " + reduplikant. ADJ/başka taban
+    kapsam dışı (V1). m-test başarısızsa dokunmaz (recall-güvenli).
+    """
+    from .analysis import _tr_lower          # Türkçe İ/I güvenli küçültme
+    from .reduplication import m_reduplicate  # yüzey m-testi (cycle yok)
+    out, i = [], 0
+    while i < len(nodes):
+        a = nodes[i]
+        b = nodes[i + 1] if i + 1 < len(nodes) else None
+        matched = False
+        if (b is not None
+                and isinstance(a, LeafNode) and isinstance(b, LeafNode)
+                and a.tag == "NOUN"):
+            la, lb = _tr_lower(a.token), _tr_lower(b.token)
+            try:
+                if m_reduplicate(la) == la + " " + lb:
+                    mred = LeafNode(tag="MRED", token=b.token, analysis=None)
+                    out.append(PhraseNode.make("NP", (a, mred)))
+                    i += 2
+                    matched = True
+            except ValueError:
+                pass  # boş/m-başlı taban → m-ikileme değil
+        if not matched:
+            out.append(a)
+            i += 1
+    return out
+
+
 def _apply_r0(nodes: list) -> list:
     """R0: NOUN[gen] NOUN[poss] → NP (belirtili isim tamlaması)."""
     out, i = [], 0
@@ -412,6 +445,7 @@ def parse_phrase(
     # 2. Bottom-up gruplama (kural sırası önemli)
     nodes: list[PhraseNode | LeafNode] = list(leaves)
     nodes = _apply_r8_redup(nodes)  # AdvP: bitişik özdeş çift (R3/R1'den ÖNCE)
+    nodes = _apply_r9_mredup(nodes) # NP: bitişik NOUN + m-reduplikant (m-ikileme)
     nodes = _apply_r0(nodes)      # NP: NOUN[gen] NOUN[poss] (belirtili tamlama)
     nodes = _apply_r3(nodes)      # AdjP: ADJ ADJ+
     nodes = _apply_r1(nodes)      # NP: modifer* NOUN
