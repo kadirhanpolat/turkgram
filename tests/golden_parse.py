@@ -95,4 +95,52 @@ PARSE_CASES = [
             ],
         },
     },
+    # --- İkileme adverbial (Faz E-devamı) ---
+    {   # tam ikileme → AdvP, VP içinde
+        "text": "yavaş yavaş yürüdü",
+        "roots": {"yavaş", "yürümek"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "VP", "children": [
+                    {"tag": "AdvP", "surface": "yavaş yavaş"},
+                    {"tag": "VERB", "token": "yürüdü"},
+                ]},
+            ],
+        },
+    },
+    {   # ulaç ikilemesi → AdvP (VERB çifti), başıboş VERB kalmaz
+        "text": "koşa koşa geldi",
+        "roots": {"koşmak", "gelmek"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "VP", "children": [
+                    {"tag": "AdvP", "surface": "koşa koşa"},
+                    {"tag": "VERB", "token": "geldi"},
+                ]},
+            ],
+        },
+    },
+    {   # adnominal guard: uzun uzun yollar → NP, AdvP YOK
+        "text": "uzun uzun yollar",
+        "roots": {"uzun", "yol"},
+        "expected": {"tag": "NP", "surface": "uzun uzun yollar"},
+    },
+    {   # derece-çift: çok çok güzel → AdvP (sonraki NOUN değil). Kök S (güzel ADJ kalır → S'ye sarılır).
+        "text": "çok çok güzel",
+        "roots": {"güzel"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "AdvP", "surface": "çok çok"},
+                {"tag": "ADJ", "token": "güzel"},
+            ],
+        },
+    },
+    {   # derece-çift + NOUN: guard skip → NP (adnominal)
+        "text": "çok çok kitap",
+        "roots": {"kitap"},
+        "expected": {"tag": "NP", "surface": "çok çok kitap"},
+    },
 ]

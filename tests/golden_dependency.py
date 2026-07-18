@@ -39,4 +39,16 @@ DEP_CASES = [
              "head": 0, "deprel": "root"},
         ],
     },
+    {   # ikileme: baş→fiil advmod, ikinci→baş compound:redup
+        "text": "yavaş yavaş yürüdü",
+        "roots": {"yavaş", "yürümek"},
+        "expected": [
+            {"id": 1, "form": "yavaş", "lemma": "yavaş",   "upos": "ADJ",
+             "head": 3, "deprel": "advmod"},
+            {"id": 2, "form": "yavaş", "lemma": "yavaş",   "upos": "ADJ",
+             "head": 1, "deprel": "compound:redup"},
+            {"id": 3, "form": "yürüdü","lemma": "yürümek", "upos": "VERB",
+             "head": 0, "deprel": "root"},
+        ],
+    },
 ]
