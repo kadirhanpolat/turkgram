@@ -51,4 +51,16 @@ DEP_CASES = [
              "head": 0, "deprel": "root"},
         ],
     },
+    {   # m-ikileme nominal: baş(kitap) nsubj, reduplikant(mitap) compound:redup upos=NOUN
+        "text": "kitap mitap aldı",
+        "roots": {"kitap", "almak"},
+        "expected": [
+            {"id": 1, "form": "kitap", "lemma": "kitap", "upos": "NOUN",
+             "head": 3, "deprel": "nsubj"},
+            {"id": 2, "form": "mitap",                   "upos": "NOUN",
+             "head": 1, "deprel": "compound:redup"},
+            {"id": 3, "form": "aldı",  "lemma": "almak", "upos": "VERB",
+             "head": 0, "deprel": "root"},
+        ],
+    },
 ]

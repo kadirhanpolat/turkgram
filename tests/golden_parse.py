@@ -143,4 +143,47 @@ PARSE_CASES = [
         "roots": {"kitap"},
         "expected": {"tag": "NP", "surface": "çok çok kitap"},
     },
+    # --- m-İkileme nominal (Faz E-devamı) ---
+    {   # NOUN m-ikileme → NP; yalın nom → özne konumu (kitap aldı emsali)
+        "text": "kitap mitap aldı",
+        "roots": {"kitap", "almak"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "NP", "surface": "kitap mitap"},
+                {"tag": "VP", "children": [
+                    {"tag": "VERB", "token": "aldı"},
+                ]},
+            ],
+        },
+    },
+    {   # ünlü-başlı m-form (araba → maraba)
+        "text": "araba maraba aldı",
+        "roots": {"araba", "almak"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "NP", "surface": "araba maraba"},
+                {"tag": "VP", "children": [
+                    {"tag": "VERB", "token": "aldı"},
+                ]},
+            ],
+        },
+    },
+    {   # yüklemsiz m-ikileme → NP kök (X başıboş kalmaz)
+        "text": "kitap mitap",
+        "roots": {"kitap"},
+        "expected": {"tag": "NP", "surface": "kitap mitap"},
+    },
+    {   # REGRESYON: m-değil bitişik NOUN çifti → m-NP KURULMAZ (mevcut davranış)
+        "text": "kitap kalem",
+        "roots": {"kitap", "kalem"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "NP", "surface": "kitap"},
+                {"tag": "NP", "surface": "kalem"},
+            ],
+        },
+    },
 ]
