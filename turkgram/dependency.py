@@ -130,7 +130,10 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
             for c in reversed(children):
                 if isinstance(c, LeafNode) and c.tag == "NOUN":
                     return c
-            return _find_head_leaf(children[-1])
+            # m-ikileme reduplikant (MRED) ASLA baş olmaz → fallback'te atla
+            # (normal NP'de MRED yok → children ile aynı; davranış korunur)
+            non_mred = [c for c in children if getattr(c, "tag", None) != "MRED"]
+            return _find_head_leaf((non_mred or list(children))[-1])
         if tag in ("VP", "S"):
             for c in children:
                 if isinstance(c, LeafNode) and c.tag == "VERB":

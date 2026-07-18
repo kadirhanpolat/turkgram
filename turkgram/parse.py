@@ -179,6 +179,8 @@ def _apply_r9_mredup(nodes: list) -> list:
                 and a.tag == "NOUN"):
             la, lb = _tr_lower(a.token), _tr_lower(b.token)
             try:
+                # Bilinçli belirsizlik (tasarım §3.2): reduplikant gerçek sözcük olsa
+                # da (adam madam) m-ikileme tercih edilir — recall-güvenli, baskın okuma.
                 if m_reduplicate(la) == la + " " + lb:
                     mred = LeafNode(tag="MRED", token=b.token, analysis=None)
                     out.append(PhraseNode.make("NP", (a, mred)))
