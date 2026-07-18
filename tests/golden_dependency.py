@@ -88,4 +88,17 @@ DEP_CASES = [
              "head": 0, "deprel": "root"},
         ],
     },
+    {   # koordine sıfat niteleyici: CoordP → amod (isim başı root); cc/conj ilk konjunkta
+        "text": "kırmızı ve mavi araba",
+        "roots": {"kırmızı", "mavi", "araba"},
+        "expected": [
+            {"id": 1, "form": "kırmızı", "lemma": "kırmızı", "upos": "ADJ",
+             "head": 4, "deprel": "amod"},
+            {"id": 2, "form": "ve",      "upos": "CCONJ", "head": 1, "deprel": "cc"},
+            {"id": 3, "form": "mavi",    "lemma": "mavi",  "upos": "ADJ",
+             "head": 1, "deprel": "conj"},
+            {"id": 4, "form": "araba",   "lemma": "araba", "upos": "NOUN",
+             "head": 0, "deprel": "root"},
+        ],
+    },
 ]

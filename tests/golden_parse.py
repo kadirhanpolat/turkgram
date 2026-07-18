@@ -229,4 +229,27 @@ PARSE_CASES = [
             ],
         },
     },
+    # --- Koordine sıfat niteleyici + isim (R3c, R1'den önce) ---
+    {   # tek-ADJ koordinasyonu isim niteler → NP(CoordP, isim)
+        "text": "kırmızı ve mavi araba",
+        "roots": {"kırmızı", "mavi", "araba"},
+        "expected": {
+            "tag": "NP",
+            "children": [
+                {"tag": "CoordP", "surface": "kırmızı ve mavi"},
+                {"tag": "NOUN", "token": "araba"},
+            ],
+        },
+    },
+    {   # AdjP m-ikileme koordinasyonu isim niteler → NP(CoordP(AdjP ve AdjP), isim)
+        "text": "güzel müzel ve çirkin mirkin elbise",
+        "roots": {"güzel", "çirkin", "elbise"},
+        "expected": {
+            "tag": "NP",
+            "children": [
+                {"tag": "CoordP", "surface": "güzel müzel ve çirkin mirkin"},
+                {"tag": "NOUN", "token": "elbise"},
+            ],
+        },
+    },
 ]
