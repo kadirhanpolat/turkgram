@@ -296,19 +296,32 @@ def _apply_r2(nodes: list) -> list:
     return out
 
 
+_COORDINABLE: tuple[str, ...] = ("NP", "AdjP", "AdvP")
+
+
 def _apply_r4(nodes: list) -> list:
-    """R4: NP (CCONJ NP)+ → CoordP."""
+    """R4: X (CCONJ X)+ → CoordP; X ∈ {NP, AdjP, AdvP}, AYNI kategori.
+
+    NP koordinasyonu (`kitap ve kalem`) + koordine zarf (`yavaş yavaş ve hızlı
+    hızlı`) + serbest koordine sıfat (`güzel müzel ve çirkin mirkin`). Konjunktlar
+    aynı kategoriden olmalı (NP ve AdvP karışmaz). AdjP+isim koordinasyonu R1
+    sıralaması nedeniyle kapsam dışı (ikinci AdjP isme kapılır).
+    """
     out, i = [], 0
     while i < len(nodes):
-        if (_tag(nodes[i]) in ("NP", "CoordP")
+        ti = _tag(nodes[i])
+        # Eşleşecek konjunkt kategorisi: koordine öbek ise kendi etiketi; mevcut
+        # CoordP (defansif/legacy) ise NP.
+        cat = ti if ti in _COORDINABLE else ("NP" if ti == "CoordP" else None)
+        if (cat is not None
                 and i + 2 < len(nodes)
                 and _tag(nodes[i + 1]) == "CCONJ"
-                and _tag(nodes[i + 2]) == "NP"):
+                and _tag(nodes[i + 2]) == cat):
             group = [nodes[i]]
             j = i + 1
             while (j + 1 < len(nodes)
                    and _tag(nodes[j]) == "CCONJ"
-                   and _tag(nodes[j + 1]) == "NP"):
+                   and _tag(nodes[j + 1]) == cat):
                 group.extend([nodes[j], nodes[j + 1]])
                 j += 2
             out.append(PhraseNode.make("CoordP", tuple(group)))

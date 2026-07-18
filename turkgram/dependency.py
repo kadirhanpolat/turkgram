@@ -188,9 +188,16 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
         if parent_tag == "CoordP":
             if child_tag == "CCONJ":
                 return "cc"
-            if child_tag in ("NP", "CoordP"):
+            if child_tag in ("NP", "CoordP", "AdjP", "AdvP"):
                 return "conj"
         if parent_tag in ("VP", "S"):
+            # Koordine zarf/sıfat öbeği → advmod (nominal case-based mantıktan ÖNCE)
+            if child_tag == "CoordP":
+                conj_cat = next(
+                    (c.tag for c in child.children
+                     if getattr(c, "tag", None) != "CCONJ"), None)
+                if conj_cat in ("AdvP", "AdjP"):
+                    return "advmod"
             cl = _find_head_leaf(child) if isinstance(child, PN) else child
             case = cl.analysis.kwargs.get("case") if cl.analysis else None
             if child_tag in ("NP", "NOUN", "CoordP"):

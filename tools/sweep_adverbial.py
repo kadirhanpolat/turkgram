@@ -13,6 +13,10 @@ CASES = [
     ("uzun uzun yollar", {"uzun", "yol"}),      # adnominal → NP, AdvP yok
     ("çok çok güzel", {"güzel"}),
     ("kitap mitap aldı", {"kitap", "almak"}),   # m-ikileme kapsam dışı (AdvP olmamalı)
+    # Koordine ikileme/zarf (R4 genelleme)
+    ("yavaş yavaş ve hızlı hızlı yürüdü", {"yavaş", "hızlı", "yürümek"}),  # koordine AdvP → CoordP
+    ("güzel müzel ve çirkin mirkin", {"güzel", "çirkin"}),                  # koordine AdjP → CoordP
+    ("kitap ve kalem aldı", {"kitap", "kalem", "almak"}),                   # regresyon: NP koord
 ]
 
 
@@ -22,13 +26,19 @@ def _has_advp(node):
     return any(_has_advp(c) for c in getattr(node, "children", ()))
 
 
+def _has_coordp(node):
+    if getattr(node, "tag", None) == "CoordP":
+        return True
+    return any(_has_coordp(c) for c in getattr(node, "children", ()))
+
+
 def main():
     crashes = 0
     for text, roots in CASES:
         try:
             tree = parse_phrase(tokenize(text), parse_text(text, roots))
             dep = constituency_to_dep(tree)  # dependency çökme kontrolü
-            print(f"{text!r}: AdvP={_has_advp(tree)}, {len(dep)} token")
+            print(f"{text!r}: AdvP={_has_advp(tree)}, CoordP={_has_coordp(tree)}, {len(dep)} token")
         except Exception as e:
             crashes += 1
             print(f"CRASH {text!r}: {e}")
