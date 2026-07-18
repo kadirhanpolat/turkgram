@@ -7,6 +7,7 @@ API:
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -128,6 +129,118 @@ def _node_is_nominative(node: "PhraseNode | LeafNode") -> bool:
     return True
 
 
+# Apostrof-ek → durum sınıflandırıcı (yumuşama-FREE, deterministik; SPEC §2.2).
+# Türkçe imlada apostrof yalnız özel-ad/sayı + çekim eki sınırında kullanılır →
+# ekin kendisi kesin sinyaldir. Motorun yumuşaması (Ahmet→Ahmed) imlaya UYMAZ
+# (Ahmet'in) → merged-surface oracle yerine ekin doğrudan sınıflandırılması.
+# Regex'ler karşılıklı dışlayıcı (anchored); tam-bir eşleşme yoksa → merge yok.
+_APOS_CASE_PATTERNS: tuple[tuple[str, "re.Pattern[str]"], ...] = (
+    ("gen", re.compile(r"^n?[ıiuü]n$")),   # nin/nın/nun/nün, in/ın/un/ün
+    ("abl", re.compile(r"^[dt][ae]n$")),   # den/dan, ten/tan
+    ("loc", re.compile(r"^[dt][ae]$")),    # de/da, te/ta
+    ("ins", re.compile(r"^y?l[ae]$")),     # yle/yla, le/la
+    ("dat", re.compile(r"^y?[ae]$")),      # ye/ya, e/a
+    ("acc", re.compile(r"^y?[ıiuü]$")),    # yi/yı/yu/yü, i/ı/u/ü
+)
+
+
+def _classify_apostrophe_suffix(suffix: str) -> "str | None":
+    """Apostrof-eki (küçültülmüş, apostrofsuz) → durum adı; belirsiz → None."""
+    hits = [case for case, pat in _APOS_CASE_PATTERNS if pat.match(suffix)]
+    return hits[0] if len(hits) == 1 else None
+
+
+def _apply_r_proper(nodes: list) -> list:
+    """R_proper: NAME yaprağı + 'EK yaprağı → tek NOUN[case] yaprağı (SPEC §2).
+
+    Özel-isim + apostrof-ek yeniden kurulum. Tokenizer `Ali'nin`'i
+    `["Ali", "'nin"]` böler; bu ön-geçiş ikiliyi tek genitif/durum NOUN yaprağına
+    birleştirir. Yüzey tabanlı (apostrof kesin sinyal) — leksikon ŞART DEĞİL.
+    Sınıflanamayan ek → dokunma (recall-güvenli).
+    """
+    from .analysis import Analysis, _segs_to_tuple, _tr_lower
+    out, i = [], 0
+    while i < len(nodes):
+        a = nodes[i]
+        b = nodes[i + 1] if i + 1 < len(nodes) else None
+        if (b is not None
+                and isinstance(a, LeafNode) and isinstance(b, LeafNode)
+                and b.token.startswith("'") and len(b.token) > 1):
+            case = _classify_apostrophe_suffix(_tr_lower(b.token[1:]))
+            if case is not None:
+                merged_token = a.token + b.token
+                seg_label = {"gen": "tamlayan", "acc": "belirtme", "dat": "yönelme",
+                             "loc": "bulunma", "abl": "ayrılma", "ins": "vasıta"}[case]
+                analysis = Analysis(
+                    lemma=a.token,                 # VERBATIM özel-ad (CoNLL-U lemma)
+                    pos="noun",
+                    kind="decline",
+                    kwargs={"case": case},
+                    segments=_segs_to_tuple([(a.token, "KÖK"),
+                                             (b.token[1:], seg_label)]),
+                    hypothetical=False,
+                )
+                out.append(LeafNode(tag="NOUN", token=merged_token, analysis=analysis))
+                i += 2
+                continue
+        out.append(a)
+        i += 1
+    return out
+
+
+def _is_gen_noun_leaf(node: "PhraseNode | LeafNode") -> bool:
+    """Yaprak, genitif durumda NOUN mı? (R_gencoord tetiği)."""
+    return (isinstance(node, LeafNode)
+            and node.tag == "NOUN"
+            and node.analysis is not None
+            and node.analysis.kwargs.get("case") == "gen")
+
+
+def _apply_r_gencoord(nodes: list) -> list:
+    """R_gencoord: NOUN[gen] (CCONJ NOUN[gen])+ → CoordP (SPEC §3.1; R0'dan ÖNCE).
+
+    Koordine genitif tamlayanlar tek CoordP olur; her konjunkt kendi NP'sine
+    sarılır (golden_parse `kitap ve defter` emsali). R0'dan önce çalışır → R0'ın
+    sağdaki `NOUN[gen] head` çiftini erken yakalaması engellenir.
+    """
+    out, i = [], 0
+    while i < len(nodes):
+        if (_is_gen_noun_leaf(nodes[i])
+                and i + 2 < len(nodes)
+                and _tag(nodes[i + 1]) == "CCONJ"
+                and _is_gen_noun_leaf(nodes[i + 2])):
+            group = [PhraseNode.make("NP", (nodes[i],))]
+            j = i + 1
+            while (j + 1 < len(nodes)
+                   and _tag(nodes[j]) == "CCONJ"
+                   and _is_gen_noun_leaf(nodes[j + 1])):
+                group.extend([nodes[j], PhraseNode.make("NP", (nodes[j + 1],))])
+                j += 2
+            out.append(PhraseNode.make("CoordP", tuple(group)))
+            i = j
+        else:
+            out.append(nodes[i])
+            i += 1
+    return out
+
+
+def _is_gen_coord(node: "PhraseNode | LeafNode") -> bool:
+    """Düğüm, tüm konjunktları genitif NP olan bir CoordP mi? (R0-genel possessor)."""
+    if not (isinstance(node, PhraseNode) and node.tag == "CoordP"):
+        return False
+    conjuncts = [c for c in node.children if getattr(c, "tag", None) != "CCONJ"]
+    if not conjuncts:
+        return False
+    for c in conjuncts:
+        if isinstance(c, PhraseNode) and c.tag == "NP":
+            head = c.children[0] if c.children else None
+            if not _is_gen_noun_leaf(head):
+                return False
+        elif not _is_gen_noun_leaf(c):
+            return False
+    return True
+
+
 def _apply_r8_redup(nodes: list) -> list:
     """R8: bitişik özdeş çift → AdvP (ikileme adverbial-yeniden-kurulum).
 
@@ -197,22 +310,23 @@ def _apply_r9_mredup(nodes: list) -> list:
 
 
 def _apply_r0(nodes: list) -> list:
-    """R0: NOUN[gen] NOUN[poss] → NP (belirtili isim tamlaması)."""
+    """R0: possessor + head → NP (belirtili isim tamlaması; SPEC §3.2).
+
+    possessor = NOUN[gen] VEYA gen-CoordP (R_gencoord çıktısı, koordine tamlayan).
+    head = bitişik NOUN | NP. **Head poss-etiketi ŞART DEĞİL** (recall-güvenli):
+    head poss/acc homografı acc sıralanabilir; Türkçede yalın genitif zorunlu
+    possessed-head ister → gen-possessor + bitişik ad = tamlama.
+    """
     out, i = [], 0
     while i < len(nodes):
-        if (isinstance(nodes[i], LeafNode)
-                and nodes[i].tag == "NOUN"
-                and nodes[i].analysis is not None
-                and nodes[i].analysis.kwargs.get("case") == "gen"
+        node = nodes[i]
+        if ((_is_gen_noun_leaf(node) or _is_gen_coord(node))
                 and i + 1 < len(nodes)
-                and isinstance(nodes[i + 1], LeafNode)
-                and nodes[i + 1].tag == "NOUN"
-                and nodes[i + 1].analysis is not None
-                and nodes[i + 1].analysis.kwargs.get("possessive") is not None):
-            out.append(PhraseNode.make("NP", (nodes[i], nodes[i + 1])))
+                and _tag(nodes[i + 1]) in ("NOUN", "NP")):
+            out.append(PhraseNode.make("NP", (node, nodes[i + 1])))
             i += 2
         else:
-            out.append(nodes[i])
+            out.append(node)
             i += 1
     return out
 
@@ -493,9 +607,11 @@ def parse_phrase(
 
     # 2. Bottom-up gruplama (kural sırası önemli)
     nodes: list[PhraseNode | LeafNode] = list(leaves)
+    nodes = _apply_r_proper(nodes)  # NOUN[case]: özel-isim + apostrof-ek merge (EN BAŞTA)
     nodes = _apply_r8_redup(nodes)  # AdvP: bitişik özdeş çift (R3/R1'den ÖNCE)
     nodes = _apply_r9_mredup(nodes) # NP: bitişik NOUN + m-reduplikant (m-ikileme)
-    nodes = _apply_r0(nodes)      # NP: NOUN[gen] NOUN[poss] (belirtili tamlama)
+    nodes = _apply_r_gencoord(nodes)  # CoordP: koordine genitif tamlayan (R0'dan ÖNCE)
+    nodes = _apply_r0(nodes)      # NP: possessor(NOUN[gen]|gen-CoordP) + head
     nodes = _apply_r3(nodes)      # AdjP: ADJ ADJ+
     nodes = _apply_r3c_adj_coord(nodes)  # CoordP: sıfat koordinasyonu (R1'den ÖNCE)
     nodes = _apply_r1(nodes)      # NP: modifer* NOUN

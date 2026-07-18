@@ -173,12 +173,18 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
             if child_tag == "AdjP":
                 return "amod"
             if child_tag == "CoordP":
-                # koordine sıfat niteleyici (R3c) → amod; koordine isim tamlayan → nmod
-                conj_cat = next(
-                    (c.tag for c in child.children
-                     if getattr(c, "tag", None) != "CCONJ"), None)
+                # koordine sıfat niteleyici (R3c) → amod; koordine genitif tamlayan → nmod:poss
+                conjuncts = [c for c in child.children
+                             if getattr(c, "tag", None) != "CCONJ"]
+                conj_cat = conjuncts[0].tag if conjuncts else None
                 if conj_cat in ("ADJ", "AdjP"):
                     return "amod"
+                if conj_cat in ("NP", "NOUN") and conjuncts:
+                    fh = (_find_head_leaf(conjuncts[0])
+                          if isinstance(conjuncts[0], PN) else conjuncts[0])
+                    if fh.analysis and fh.analysis.kwargs.get("case") == "gen":
+                        return "nmod:poss"
+                    return "nmod"
             if child_tag in ("NP", "NOUN"):
                 cl = _find_head_leaf(child) if isinstance(child, PN) else child
                 if cl.analysis and cl.analysis.kwargs.get("case") == "gen":
