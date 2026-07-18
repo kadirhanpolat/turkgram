@@ -203,4 +203,30 @@ PARSE_CASES = [
         "roots": {"güzel"},
         "expected": {"tag": "AdjP", "surface": "güzel müzel"},
     },
+    # --- Koordine ikileme/zarf (R4 genelleme) ---
+    {   # koordine AdvP → CoordP, VP içinde (tarz zarfı)
+        "text": "yavaş yavaş ve hızlı hızlı yürüdü",
+        "roots": {"yavaş", "hızlı", "yürümek"},
+        "expected": {
+            "tag": "S",
+            "children": [
+                {"tag": "VP", "children": [
+                    {"tag": "CoordP", "surface": "yavaş yavaş ve hızlı hızlı"},
+                    {"tag": "VERB", "token": "yürüdü"},
+                ]},
+            ],
+        },
+    },
+    {   # serbest koordine AdjP m-ikilemesi → CoordP kök (isim yok)
+        "text": "güzel müzel ve çirkin mirkin",
+        "roots": {"güzel", "çirkin"},
+        "expected": {
+            "tag": "CoordP",
+            "children": [
+                {"tag": "AdjP", "surface": "güzel müzel"},
+                {"tag": "CCONJ", "token": "ve"},
+                {"tag": "AdjP", "surface": "çirkin mirkin"},
+            ],
+        },
+    },
 ]

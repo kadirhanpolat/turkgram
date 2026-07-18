@@ -75,4 +75,17 @@ DEP_CASES = [
              "head": 0, "deprel": "root"},
         ],
     },
+    {   # koordine AdvP: tepe advmod (nsubj değil); cc/conj ilk konjunkt başına; compound:redup içeride
+        "text": "yavaş yavaş ve hızlı hızlı yürüdü",
+        "roots": {"yavaş", "hızlı", "yürümek"},
+        "expected": [
+            {"id": 1, "form": "yavaş",  "upos": "ADJ",  "head": 6, "deprel": "advmod"},
+            {"id": 2, "form": "yavaş",  "upos": "ADJ",  "head": 1, "deprel": "compound:redup"},
+            {"id": 3, "form": "ve",     "upos": "CCONJ","head": 1, "deprel": "cc"},
+            {"id": 4, "form": "hızlı",  "upos": "ADJ",  "head": 1, "deprel": "conj"},
+            {"id": 5, "form": "hızlı",  "upos": "ADJ",  "head": 4, "deprel": "compound:redup"},
+            {"id": 6, "form": "yürüdü", "lemma": "yürümek", "upos": "VERB",
+             "head": 0, "deprel": "root"},
+        ],
+    },
 ]
