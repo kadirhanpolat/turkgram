@@ -158,6 +158,8 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
     def _child_deprel(parent_tag: str, child: "PN | LeafNode") -> str:
         child_tag = child.tag
         if parent_tag == "NP":
+            if child_tag == "MRED":
+                return "compound:redup"      # m-ikileme reduplikant → baş
             if child_tag == "ADJ":
                 return "amod"
             if child_tag == "NUM":
@@ -229,7 +231,8 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
     for i, lf in enumerate(all_leaves, 1):
         a = lf.analysis
         head_id, deprel = deps.get(i, (0, "root"))
-        upos = lf.tag
+        # MRED = m-ikileme reduplikant (parse iç etiketi) → UD upos NOUN (baş isimle aynı)
+        upos = "NOUN" if lf.tag == "MRED" else lf.tag
         xpos = a.kind if a else "_"
         feats = _analysis_to_feats(a, upos)
         lemma = a.lemma if a else None
