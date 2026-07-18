@@ -316,7 +316,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **4113 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -424,10 +424,19 @@ Test durumu: son ölçüm **4113 test yeşil** (slow hariç) + slow round-trip a
     (`kitap ve kalem`, m-ikileme `kitap mitap ve kalem malem`) DEĞİŞMEZ. **Dependency:** `_child_deprel` parent
     CoordP conj seti `("NP","CoordP","AdjP","AdvP")`; VP/S'de child CoordP konjunkt-kategorisi AdvP/AdjP ise
     **`advmod`** (nominal case-based mantıktan ÖNCE), değilse eski nsubj/obj/obl. cc/conj→ilk konjunkt başı,
-    compound:redup içeride (mevcut koord konvansiyonu). **TUZAK — R1<R4 sıralaması:** AdjP+isim koordinasyonu
-    (`güzel müzel ve çirkin mirkin elbise`) kapsam DIŞI — R1 ikinci AdjP'yi isme kapar (R4'ten önce); R4 NP
-    koordinasyonu için R1 sonrası olmak zorunda → reorder edilemez, defer. Hakem: APPROVE (0 CRITICAL/HIGH;
-    MEDIUM+LOW ulaşılamaz/pre-existing). **4113 test yeşil** (+3).
+    compound:redup içeride (mevcut koord konvansiyonu). Hakem: APPROVE (0 CRITICAL/HIGH; MEDIUM+LOW
+    ulaşılamaz/pre-existing). **4113 test yeşil** (+3).
+  - ✅ **Koordine sıfat niteleyici + isim** (AdvP tasarımı §5): `kırmızı ve mavi araba` / `güzel müzel ve çirkin
+    mirkin elbise` → `NP(CoordP(sıfatlar), isim)`. **TUZAK — R1<R4 sıralaması:** koordine sıfat niteleyici R4
+    (R1-sonrası) ile çözülemez — R1 ikinci sıfatı isme kapar. Çözüm: **R1'den ÖNCE** çalışan yeni kural **R3c**
+    (`_apply_r3c_adj_coord`, R3'ten sonra): `(ADJ|AdjP) (CCONJ (ADJ|AdjP))+ → CoordP` (karışık `çok güzel ve
+    kırmızı` serbest). R1 modifier setine `CoordP` eklendi — **GÜVENLİ çünkü R1-zamanında CoordP yalnız R3c'den
+    (sıfat)**; NP/AdvP CoordP R4'te (R1-sonrası) kurulur. Dependency: `_child_deprel` NP-child CoordP konjunkt-
+    kategorisi ADJ/AdjP ise **`amod`**; CoordP conj setine `ADJ` eklendi. **Sözcük sırası attributive/predicative
+    ayırır:** sıfat ÖNCE (`güzel ve sıcak hava`) → `NP(CoordP, isim)`; SONRA (`hava güzel ve sıcak`) → `S(NP, CoordP)`
+    predicate (R1 yalnız sola bakar → guard GEREKMEZ). Tek-ADJ koordinasyonu (`kırmızı ve mavi`) da kapsandı.
+    Hakem: 2 MEDIUM ikisi de geçersiz (biri yanlış-izleme = doğru predicate davranışı, biri pre-existing özel-isim
+    tokenizasyonu, tetiklenmiyor). **4116 test yeşil** (+3).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.

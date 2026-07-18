@@ -139,8 +139,13 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
   İleride istenirse üslup/prozodi katmanı olarak ayrı ele alınır (ikileme değil).
 - **Koordine zarf** (`yavaş yavaş ve hızlı hızlı`) — **TAMAMLANDI (2026-07-18):** R4 genelleştirildi
   (`_COORDINABLE=("NP","AdjP","AdvP")`, aynı-kategori koordinasyonu) → `CoordP(AdvP ve AdvP)`; VP-içi `advmod`.
-  Serbest koordine AdjP m-ikilemesi (`güzel müzel ve çirkin mirkin`) bedava geldi. **Kalan defer:** AdjP+isim
-  koordinasyonu (`güzel müzel ve çirkin mirkin elbise`) — R1 ikinci AdjP'yi isme kapar (R4'ten önce), sözdizimsel.
+  Serbest koordine AdjP m-ikilemesi (`güzel müzel ve çirkin mirkin`) bedava geldi.
+- **Koordine sıfat niteleyici + isim** (`kırmızı ve mavi araba`, `güzel müzel ve çirkin mirkin elbise`) —
+  **TAMAMLANDI (2026-07-18):** R1<R4 sıralama engeli, R1'den ÖNCE çalışan yeni kural **R3c** ile çözüldü
+  (`_apply_r3c_adj_coord`: `(ADJ|AdjP) (CCONJ (ADJ|AdjP))+ → CoordP`, karışık serbest); R1 modifier setine
+  `CoordP` eklendi (R1-zamanında CoordP yalnız R3c'den = sıfat). Dependency: NP-child sıfat-CoordP → `amod`.
+  Sözcük sırası attributive/predicative ayırır (sıfat önce → NP niteleyici; sonra → S predicate). Tek-ADJ
+  koordinasyonu (`kırmızı ve mavi araba`) da kapsandı (aynı mekanizma).
 - **Ayrık ikileme** / araya sözcük girmesi — kapsam dışı (bitişiklik şart).
 - **Derece-sözcük çifti** (`çok çok`) [hakem #2]: özdeş ADJ çifti → sonraki NOUN değilse AdvP olur
   (`çok çok güzel` → AdvP `çok çok`); `çok çok kitap` → NOUN-takip guard skip. Golden ile sabitlenir.
