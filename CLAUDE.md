@@ -316,7 +316,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **4110 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **4113 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -415,7 +415,19 @@ Test durumu: son ölçüm **4110 test yeşil** (slow hariç) + slow round-trip a
     POS'undan miras (tek `MRED` etiketi iki tabanı da kapsar, iki tag GEREKMEZ) → `müzel`=ADJ, `mitap`=NOUN. `çocuk mocuk`
     (çocuk→ADJ quirk) artık AdjP kurar (semantik isim ama başıboş X yok; disambiguation açığı ayrı). Hakem V2: APPROVE
     (0 CRITICAL/HIGH/MEDIUM, 1 LOW ulaşılamaz fallback). **4110 test yeşil** (+3). m-ikileme doğası gereği İKİLİ
-    (taban + m-biçim); "üçlü m-ikileme" YOK. Kalan defer: koordine (SPEC §5).
+    (taban + m-biçim); "üçlü m-ikileme" YOK.
+  - ✅ **Koordine ikileme/zarf** (R4 genelleme; AdvP tasarımı §5): CoordP kuralı **R4** artık yalnız `NP CCONJ NP`
+    değil, **`_COORDINABLE=("NP","AdjP","AdvP")`** aynı-kategori koordinasyonu yapar → koordine zarf
+    (`yavaş yavaş ve hızlı hızlı yürüdü` → `VP(CoordP(AdvP ve AdvP), yürüdü)`) + serbest koordine sıfat
+    (`güzel müzel ve çirkin mirkin` → `CoordP(AdjP ve AdjP)`). `cat = ti if ti in _COORDINABLE else ("NP" if
+    ti=="CoordP" else None)`; sağ konjunkt da `cat` olmalı (KARIŞIK `NP ve AdvP` koordine OLMAZ). Koordine-NP
+    (`kitap ve kalem`, m-ikileme `kitap mitap ve kalem malem`) DEĞİŞMEZ. **Dependency:** `_child_deprel` parent
+    CoordP conj seti `("NP","CoordP","AdjP","AdvP")`; VP/S'de child CoordP konjunkt-kategorisi AdvP/AdjP ise
+    **`advmod`** (nominal case-based mantıktan ÖNCE), değilse eski nsubj/obj/obl. cc/conj→ilk konjunkt başı,
+    compound:redup içeride (mevcut koord konvansiyonu). **TUZAK — R1<R4 sıralaması:** AdjP+isim koordinasyonu
+    (`güzel müzel ve çirkin mirkin elbise`) kapsam DIŞI — R1 ikinci AdjP'yi isme kapar (R4'ten önce); R4 NP
+    koordinasyonu için R1 sonrası olmak zorunda → reorder edilemez, defer. Hakem: APPROVE (0 CRITICAL/HIGH;
+    MEDIUM+LOW ulaşılamaz/pre-existing). **4113 test yeşil** (+3).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.

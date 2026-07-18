@@ -137,8 +137,10 @@ Guard recall-güvenli: geçerli bir adnominal yapıyı budamaz, yalnız AdvP kur
   kapalı bir dilbilgisi biçimi değil. Betimleyici gramer kütüphanesi bunu ikileme olarak modellememeli;
   R8 ilk çifti (gramatik ikileme) yakalar, üçüncü öğe ifadesel yineleme olarak başıboş kalır — DOĞRU davranış.
   İleride istenirse üslup/prozodi katmanı olarak ayrı ele alınır (ikileme değil).
-- **Koordine zarf** (`yavaş yavaş ve hızlı hızlı`) [hakem #7]: R4 CoordP `NP CCONJ NP` ister, AdvP NP değil →
-  koordinasyon kurulmaz. Defer.
+- **Koordine zarf** (`yavaş yavaş ve hızlı hızlı`) — **TAMAMLANDI (2026-07-18):** R4 genelleştirildi
+  (`_COORDINABLE=("NP","AdjP","AdvP")`, aynı-kategori koordinasyonu) → `CoordP(AdvP ve AdvP)`; VP-içi `advmod`.
+  Serbest koordine AdjP m-ikilemesi (`güzel müzel ve çirkin mirkin`) bedava geldi. **Kalan defer:** AdjP+isim
+  koordinasyonu (`güzel müzel ve çirkin mirkin elbise`) — R1 ikinci AdjP'yi isme kapar (R4'ten önce), sözdizimsel.
 - **Ayrık ikileme** / araya sözcük girmesi — kapsam dışı (bitişiklik şart).
 - **Derece-sözcük çifti** (`çok çok`) [hakem #2]: özdeş ADJ çifti → sonraki NOUN değilse AdvP olur
   (`çok çok güzel` → AdvP `çok çok`); `çok çok kitap` → NOUN-takip guard skip. Golden ile sabitlenir.
