@@ -316,7 +316,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **4107 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **4110 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -404,11 +404,15 @@ Test durumu: son ölçüm **4107 test yeşil** (slow hariç) + slow round-trip a
     belirsizliği pre-existing SOV sınırı). **TUZAK — MRED iç etiketi:** reduplikant (`mitap`) parse-iç `MRED` etiketi
     alır (öbek dışına SIZMAZ, yalnız R9-NP içinde); `_find_head_leaf` en-sağdaki-NOUN mantığı tabanı zaten baş bulur
     (MRED≠NOUN), + fallback'te MRED atlama guard'ı (hakem HIGH sertleştirme, ADJ-taban geleceği için). **Dependency:**
-    `_child_deprel` NP dalı `MRED→compound:redup`; DepToken `upos = "NOUN" if lf.tag=="MRED" else lf.tag` (reduplikant
-    UD nominal-compound geleneği; lemma/feats `_` analizsiz). **TUZAK — belirsizlik:** `adam madam` (madam gerçek
-    sözcük) recall-güvenli m-ikilemeye toplanır (§3.2 bilinçli). ADJ-taban (`güzel müzel`) + `çocuk mocuk` (çocuk→ADJ
-    quirk) kapsam DIŞI (V1, defer). Hakem: sweep 7 cümle 0 çökme (MRED kurulum + AdvP çakışma-yok doğrulandı) +
-    adversarial (0 CRITICAL; HIGH+MEDIUM giderildi). **4107 test yeşil** (+5).
+    `_child_deprel` **top-level** `MRED→compound:redup` (parent NP/AdjP fark etmez); DepToken upos MRED için
+    **taban(head) POS'undan MİRAS** (`base=all_leaves[head_id-1]; upos=base.tag`) → NOUN taban→NOUN, ADJ taban→ADJ;
+    lemma/feats `_` analizsiz. **TUZAK — belirsizlik:** `adam madam` (madam gerçek sözcük) recall-güvenli m-ikilemeye
+    toplanır (§3.2 bilinçli). Hakem: sweep 9 cümle 0 çökme + adversarial (0 CRITICAL; HIGH+MEDIUM giderildi).
+    **V2 (2026-07-18) — ADJ-taban genişletme:** `a.tag in ("NOUN","ADJ")`; ADJ-taban (`güzel müzel`) → **`AdjP`**
+    (adjectival, isim niteler: `güzel müzel elbise`→`NP(AdjP, elbise)`, R1 niteleyici alır). Reduplikant upos taban
+    POS'undan miras (tek `MRED` etiketi iki tabanı da kapsar, iki tag GEREKMEZ) → `müzel`=ADJ, `mitap`=NOUN. `çocuk mocuk`
+    (çocuk→ADJ quirk) artık AdjP kurar (semantik isim ama başıboş X yok; disambiguation açığı ayrı). Hakem V2: APPROVE
+    (0 CRITICAL/HIGH/MEDIUM, 1 LOW ulaşılamaz fallback). **4110 test yeşil** (+3). Kalan defer: üç+ tekrar (SPEC §5).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
