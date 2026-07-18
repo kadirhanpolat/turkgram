@@ -316,7 +316,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **4102 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **4107 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -393,7 +393,22 @@ Test durumu: son ölçüm **4102 test yeşil** (slow hariç) + slow round-trip a
     `dependency.py` açık dallar — `_child_deprel` VP/S dalı `("AdjP","AdvP")→advmod` (baş→fiil) + top-level
     `parent_tag=="AdvP"→compound:redup` (ikinci token→baş, UD-geçerli); `_find_head_leaf` AdvP dalı (`children[0]`=baş).
     m-ikileme kapsam DIŞI (nominal, defer). Hakem: sweep 7 cümle 0 çökme + adversarial APPROVE (0 CRITICAL/HIGH).
-    **4102 test yeşil** (+6). Kalan defer: m-ikileme nominal + üç+ tekrar + koordine zarf (SPEC §5).
+    **4102 test yeşil** (+6). Kalan defer: üç+ tekrar + koordine zarf (SPEC §5).
+  - ✅ **m-İkileme nominal-yeniden-kurulum** (SPEC/tasarım `docs/superpowers/specs/2026-07-18-m-ikileme-nominal-design.md`,
+    plan `docs/superpowers/plans/2026-07-18-m-ikileme-nominal.md`): AdvP'nin nominal kardeşi. Parser NOUN-tabanlı
+    m-ikilemeyi (`kitap mitap`, `araba maraba`) tek **`NP`** öbeği olarak yeniden kurar (genelleyici/pekiştirici ad,
+    özne/nesne rolü). Yeni yüzey-tabanlı kural **R9_mredup** (`parse._apply_r9_mredup`, R8 emsali): bitişik `a.tag=="NOUN"`
+    + yüzey m-testi `m_reduplicate(_tr_lower(a.token))==la+" "+lb` → `NP(NOUN taban, MRED reduplikant)`. Pipeline R8'den
+    sonra, R0/R1'den önce. **NP rolü BEDAVA** (kullanıcı kararı): NP olduğu için R1/R5 nominal argümanı doğrudan işler,
+    ek entegrasyon YOK; `kitap mitap` yalın nom → özne konumu (`kitap aldı` emsali, indefinite-nom-nesne yapısal
+    belirsizliği pre-existing SOV sınırı). **TUZAK — MRED iç etiketi:** reduplikant (`mitap`) parse-iç `MRED` etiketi
+    alır (öbek dışına SIZMAZ, yalnız R9-NP içinde); `_find_head_leaf` en-sağdaki-NOUN mantığı tabanı zaten baş bulur
+    (MRED≠NOUN), + fallback'te MRED atlama guard'ı (hakem HIGH sertleştirme, ADJ-taban geleceği için). **Dependency:**
+    `_child_deprel` NP dalı `MRED→compound:redup`; DepToken `upos = "NOUN" if lf.tag=="MRED" else lf.tag` (reduplikant
+    UD nominal-compound geleneği; lemma/feats `_` analizsiz). **TUZAK — belirsizlik:** `adam madam` (madam gerçek
+    sözcük) recall-güvenli m-ikilemeye toplanır (§3.2 bilinçli). ADJ-taban (`güzel müzel`) + `çocuk mocuk` (çocuk→ADJ
+    quirk) kapsam DIŞI (V1, defer). Hakem: sweep 7 cümle 0 çökme (MRED kurulum + AdvP çakışma-yok doğrulandı) +
+    adversarial (0 CRITICAL; HIGH+MEDIUM giderildi). **4107 test yeşil** (+5).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
