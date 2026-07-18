@@ -44,7 +44,7 @@ class LeafNode:
 @dataclass(frozen=True)
 class PhraseNode:
     """Öbek düğüm — constituency ağaç düğümü."""
-    tag: str                                    # 'NP'|'VP'|'S'|'AdjP'|'PP'|'CoordP'
+    tag: str                                    # 'NP'|'VP'|'S'|'AdjP'|'PP'|'CoordP'|'CompP'|'RelP'|'DiyeP'|'AdvP'
     children: tuple["PhraseNode | LeafNode", ...]
     surface: str                                # özyinelemeli yaprak birleşimi
     governs: "frozenset[str] | None" = None    # yalnız PP; yönetilen durum kümesi
@@ -126,6 +126,37 @@ def _node_is_nominative(node: "PhraseNode | LeafNode") -> bool:
         if isinstance(child, PhraseNode) and child.tag == "NP":
             return _node_is_nominative(child)
     return True
+
+
+def _apply_r8_redup(nodes: list) -> list:
+    """R8: bitişik özdeş çift → AdvP (ikileme adverbial-yeniden-kurulum).
+
+    Tam ikileme (yavaş yavaş) + ulaç ikilemesi (koşa koşa) → AdvP.
+    Sınıflama: VERB çifti → ulaç-tipi (guard'sız); ADJ/NOUN çifti → tam-tipi
+    (sonraki NOUN ise adnominal → skip, R1'e bırak). m-ikileme kapsam dışı.
+    """
+    from .analysis import _tr_lower  # Türkçe İ/I güvenli küçültme (cycle yok)
+    out, i = [], 0
+    while i < len(nodes):
+        a = nodes[i]
+        b = nodes[i + 1] if i + 1 < len(nodes) else None
+        if (b is not None
+                and isinstance(a, LeafNode) and isinstance(b, LeafNode)
+                and _tr_lower(a.token) == _tr_lower(b.token)
+                and a.tag == b.tag
+                and a.tag in ("VERB", "ADJ", "NOUN")):
+            # NOUN-takip guard (yalnız tam-tipi ADJ/NOUN): sonraki çıplak NOUN → adnominal, skip
+            next_is_noun = (i + 2 < len(nodes) and _tag(nodes[i + 2]) == "NOUN")
+            if a.tag in ("ADJ", "NOUN") and next_is_noun:
+                out.append(a)
+                i += 1
+                continue
+            out.append(PhraseNode.make("AdvP", (a, b)))
+            i += 2
+        else:
+            out.append(a)
+            i += 1
+    return out
 
 
 def _apply_r0(nodes: list) -> list:
@@ -332,7 +363,7 @@ def _apply_r5(nodes: list) -> list:
             # Yan cümle öbekleri cümle-düzeyi adjunct — VP'ye çekilmez
             if tag in ("DiyeP", "CompP", "RelP"):
                 break
-            if tag not in ("NP", "PP", "AdjP", "CoordP", "NOUN"):
+            if tag not in ("NP", "PP", "AdjP", "CoordP", "NOUN", "AdvP"):
                 break
             # Yalın NP = özne → VP dışında bırak
             if tag in ("NP", "NOUN") and _node_is_nominative(n):
@@ -380,6 +411,7 @@ def parse_phrase(
 
     # 2. Bottom-up gruplama (kural sırası önemli)
     nodes: list[PhraseNode | LeafNode] = list(leaves)
+    nodes = _apply_r8_redup(nodes)  # AdvP: bitişik özdeş çift (R3/R1'den ÖNCE)
     nodes = _apply_r0(nodes)      # NP: NOUN[gen] NOUN[poss] (belirtili tamlama)
     nodes = _apply_r3(nodes)      # AdjP: ADJ ADJ+
     nodes = _apply_r1(nodes)      # NP: modifer* NOUN
