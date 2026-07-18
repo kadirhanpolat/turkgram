@@ -236,14 +236,46 @@ def _apply_r3(nodes: list) -> list:
     return out
 
 
+_ADJ_COORD_TAGS: tuple[str, ...] = ("ADJ", "AdjP")
+
+
+def _apply_r3c_adj_coord(nodes: list) -> list:
+    """R3c: sıfat koordinasyonu — (ADJ|AdjP) (CCONJ (ADJ|AdjP))+ → CoordP.
+
+    R1'den ÖNCE çalışır: koordine sıfat niteleyicileri (`kırmızı ve mavi`,
+    `güzel müzel ve çirkin mirkin`) tek CoordP olur → R1 onu isim niteleyicisi
+    olarak alır (aksi halde R1 son sıfatı isme kapar, ilki başıboş kalır).
+    Karışık ADJ/AdjP konjunkt serbest (`çok güzel ve kırmızı`).
+    """
+    out, i = [], 0
+    while i < len(nodes):
+        if (_tag(nodes[i]) in _ADJ_COORD_TAGS
+                and i + 2 < len(nodes)
+                and _tag(nodes[i + 1]) == "CCONJ"
+                and _tag(nodes[i + 2]) in _ADJ_COORD_TAGS):
+            group = [nodes[i]]
+            j = i + 1
+            while (j + 1 < len(nodes)
+                   and _tag(nodes[j]) == "CCONJ"
+                   and _tag(nodes[j + 1]) in _ADJ_COORD_TAGS):
+                group.extend([nodes[j], nodes[j + 1]])
+                j += 2
+            out.append(PhraseNode.make("CoordP", tuple(group)))
+            i = j
+        else:
+            out.append(nodes[i])
+            i += 1
+    return out
+
+
 def _apply_r1(nodes: list) -> list:
-    """R1: (ADJ|NUM|AdjP)* NOUN → NP."""
+    """R1: (ADJ|NUM|AdjP|CoordP)* NOUN → NP (CoordP = R3c sıfat koordinasyonu)."""
     out, i = [], 0
     while i < len(nodes):
         node = nodes[i]
         if _tag(node) == "NOUN":
             start = i
-            while start > 0 and _tag(nodes[start - 1]) in ("ADJ", "NUM", "AdjP"):
+            while start > 0 and _tag(nodes[start - 1]) in ("ADJ", "NUM", "AdjP", "CoordP"):
                 start -= 1
             end = i + 1
             group = tuple(nodes[start:end])
@@ -465,6 +497,7 @@ def parse_phrase(
     nodes = _apply_r9_mredup(nodes) # NP: bitişik NOUN + m-reduplikant (m-ikileme)
     nodes = _apply_r0(nodes)      # NP: NOUN[gen] NOUN[poss] (belirtili tamlama)
     nodes = _apply_r3(nodes)      # AdjP: ADJ ADJ+
+    nodes = _apply_r3c_adj_coord(nodes)  # CoordP: sıfat koordinasyonu (R1'den ÖNCE)
     nodes = _apply_r1(nodes)      # NP: modifer* NOUN
     nodes = _apply_r1b(nodes)     # NP: participle NOUN
     nodes = _apply_r2(nodes)      # PP: NP ADP

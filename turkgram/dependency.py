@@ -172,6 +172,13 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
                 return "nummod"
             if child_tag == "AdjP":
                 return "amod"
+            if child_tag == "CoordP":
+                # koordine sıfat niteleyici (R3c) → amod; koordine isim tamlayan → nmod
+                conj_cat = next(
+                    (c.tag for c in child.children
+                     if getattr(c, "tag", None) != "CCONJ"), None)
+                if conj_cat in ("ADJ", "AdjP"):
+                    return "amod"
             if child_tag in ("NP", "NOUN"):
                 cl = _find_head_leaf(child) if isinstance(child, PN) else child
                 if cl.analysis and cl.analysis.kwargs.get("case") == "gen":
@@ -188,7 +195,7 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
         if parent_tag == "CoordP":
             if child_tag == "CCONJ":
                 return "cc"
-            if child_tag in ("NP", "CoordP", "AdjP", "AdvP"):
+            if child_tag in ("NP", "CoordP", "AdjP", "AdvP", "ADJ"):
                 return "conj"
         if parent_tag in ("VP", "S"):
             # Koordine zarf/sıfat öbeği → advmod (nominal case-based mantıktan ÖNCE)
