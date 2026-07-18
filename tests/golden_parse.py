@@ -186,4 +186,21 @@ PARSE_CASES = [
             ],
         },
     },
+    # --- ADJ-taban m-ikileme → AdjP (V2) ---
+    {   # sıfat m-ikilemesi isim niteler: güzel müzel elbise → NP(AdjP, elbise)
+        "text": "güzel müzel elbise",
+        "roots": {"güzel", "elbise"},
+        "expected": {
+            "tag": "NP",
+            "children": [
+                {"tag": "AdjP", "surface": "güzel müzel"},
+                {"tag": "NOUN", "token": "elbise"},
+            ],
+        },
+    },
+    {   # yüklemsiz/niteliksiz ADJ m-ikilemesi → AdjP kök
+        "text": "güzel müzel",
+        "roots": {"güzel"},
+        "expected": {"tag": "AdjP", "surface": "güzel müzel"},
+    },
 ]

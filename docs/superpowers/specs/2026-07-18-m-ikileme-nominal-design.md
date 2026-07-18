@@ -26,14 +26,20 @@ Ayrı nominal iş olarak ertelenmişti. Bu doküman onu açar.
 
 ## 2. Kapsam (kullanıcı kararı)
 
-**YALNIZ NOUN-tabanlı m-ikileme → NP:**
+**NOUN-tabanlı m-ikileme → NP:**
 - `kitap mitap` ("kitaplar ve benzeri"), `araba maraba`, `para mara` → tek **`NP`** öbeği.
 - Baş = ilk token (gerçek isim); m-parçası (ikinci token) reduplikant.
 
+**ADJ-tabanlı m-ikileme → AdjP (V2, 2026-07-18 genişletme):**
+- `güzel müzel`, `yeşil meşil` — sıfat m-ikilemesi, **adjectival** (isim niteler:
+  `güzel müzel elbise`). Taban ADJ → tek **`AdjP`** öbeği; R1 onu isim niteleyicisi olarak alır
+  (`NP(AdjP(güzel müzel), elbise)`), R5 AdjP'yi absorbe eder. Baş = taban sıfat.
+- Reduplikant upos = **taban POS'undan miras** (NOUN taban→NOUN, ADJ taban→ADJ). Tek `MRED`
+  iç etiketi korunur; upos `deps` head-bağından (compound:redup) türetilir → iki tag GEREKMEZ.
+- `_find_head_leaf` AdjP "en sağdaki ADJ" mantığı tabanı zaten baş bulur (MRED≠ADJ) + fallback
+  MRED-atlama guard (NP emsali).
+
 **Kapsam DIŞI (defer):**
-- **ADJ/başka tabanlı m-ikileme** (`güzel müzel`, `yeşil meşil`) — sıfat m-ikilemesi. V1 yalnız
-  NOUN taban (nesne/özne rolü net). Baş-bulma NP mantığı NOUN arar → ADJ taban baş-belirsizliği
-  yaratır. Defer.
 - **`çocuk mocuk` gibi disambiguation-quirk** [ölçüldü]: `çocuk` izole analizinde ADJ etiketlenir
   (disambiguation tuhaflığı) → NOUN-taban guard'ıyla tetiklenmez. m-ikilemeye özgü DEĞİL, ayrı
   disambiguation açığı. Defer.
@@ -58,12 +64,13 @@ analizini kullanmaması gibi) → token:analiz arayüz uyuşmazlığını atlar.
 
 Yeni kural **R9_mredup** (`_apply_r9_mredup`):
 - İki bitişik yaprak `a`, `b` (ikisi de `LeafNode`).
-- `a.tag == "NOUN"` (taban gerçek isim; V1 scope).
+- `a.tag in ("NOUN", "ADJ")` (taban gerçek isim VEYA sıfat).
 - **Yüzey m-testi:** `m_reduplicate(_tr_lower(a.token)) == _tr_lower(a.token) + " " + _tr_lower(b.token)`.
   - `_tr_lower` İ/I güvenli (cümle-başı büyük harf: `Kitap Mitap` → küçültülüp test edilir).
   - `m_reduplicate` boş/m-başlı tabanda `ValueError` → `try/except` ile atla (recall-güvenli).
-- Eşleşirse: `PhraseNode.make("NP", (a, mred_leaf))` — `mred_leaf = LeafNode("MRED", b.token, None)`.
-  Taban `a` DEĞİŞMEZ (NOUN, analizli). İ ilerleme +2.
+- Eşleşirse — taban etikete göre öbek: `a.tag=="NOUN"` → `PhraseNode.make("NP", (a, mred))`;
+  `a.tag=="ADJ"` → `PhraseNode.make("AdjP", (a, mred))`. `mred = LeafNode("MRED", b.token, None)`.
+  Taban `a` DEĞİŞMEZ (NOUN/ADJ, analizli). İ ilerleme +2.
 - Eşleşmezse çıktıya `a`, ilerleme +1.
 
 **Recall-güvenli belirsizlik [bilinçli]:** `adam madam` — `madam` gerçek sözcük (madame) ama
@@ -86,20 +93,21 @@ Ayrık "adam + madam" okuması nadir; V1 m-ikilemeyi tercih eder (doc philosophy
 
 ## 4. Düğüm yapısı ve dependency
 
-- `PhraseNode.make("NP", (base_leaf, mred_leaf))` — `base_leaf` orijinal NOUN (analizli),
+- `PhraseNode.make("NP"|"AdjP", (base_leaf, mred_leaf))` — `base_leaf` orijinal NOUN/ADJ (analizli),
   `mred_leaf = LeafNode("MRED", token2, None)`. Ek alan YOK.
 
 **Dependency (`dependency.py`) — açık MRED işlemesi:**
-1. `_find_head_leaf("NP")` — **DEĞİŞMEZ**: mevcut "en sağdaki NOUN" mantığı zaten `base_leaf`'i
-   bulur (`MRED ≠ NOUN`, atlanır). Baş = taban isim. ✓
-2. `_child_deprel` NP dalına: `if child_tag == "MRED": return "compound:redup"` (reduplikant → baş,
-   UD nominal reduplikasyon ilişkisi). Aksi halde MRED son `return "dep"`'e düşer.
-3. **upos eşleme:** `to_conllu`/DepToken `upos = lf.tag` doğrudan → `MRED` GEÇERSİZ UD upos.
-   `upos = "NOUN" if lf.tag == "MRED" else lf.tag` (kullanıcı kararı: reduplikant NOUN, baş isimle
-   aynı; UD nominal-compound geleneği). feats: `MRED` analizsiz (`analysis=None`) → `_analysis_to_feats`
-   NOUN+case=None dalını verir (impl'de doğrulanır; çökme yok).
-4. Dependency golden: `kitap mitap aldı` → id1(kitap) NOUN head=3? HAYIR — `kitap mitap` özne-NP,
-   baş `kitap` fiile `nsubj`; id2(mitap) MRED→NOUN, head=1(kitap), `compound:redup`; id3(aldı) root.
+1. `_find_head_leaf("NP"/"AdjP")` — **mantık DEĞİŞMEZ**: "en sağdaki NOUN/ADJ" zaten `base_leaf`'i
+   bulur (`MRED ≠ NOUN/ADJ`, atlanır). Baş = taban. Fallback'e MRED-atlama guard eklenir (defansif).
+2. `_child_deprel` **top-level** `if child_tag == "MRED": return "compound:redup"` (parent NP VEYA
+   AdjP fark etmez; reduplikant → baş). Aksi halde MRED son `return "dep"`'e düşer.
+3. **upos = taban(head) POS'undan MİRAS:** `to_conllu`/DepToken `upos = lf.tag` doğrudan → `MRED`
+   GEÇERSİZ UD upos. Çözüm: MRED için `deps` head-bağından (`compound:redup` → base id) tabanı bul,
+   `upos = base.tag` (NOUN taban→NOUN, ADJ taban→ADJ). Tek `MRED` etiketi iki taban POS'unu da kapsar.
+   feats: `MRED` analizsiz → `_analysis_to_feats` erken `"_"` döner (çökme yok).
+4. Dependency golden: `kitap mitap aldı` → baş `kitap` fiile `nsubj`; id2(mitap) MRED→NOUN, head=1,
+   `compound:redup`; id3(aldı) root. `güzel müzel elbise` → id1(güzel) ADJ amod→3; id2(müzel) MRED→ADJ
+   head=1 compound:redup; id3(elbise) NOUN root.
 
 **NOT — R8(AdvP) `compound:redup` emsali:** ikinci token birinciye `compound:redup` ile bağlanır;
 aynı UD ilişkisi burada nominal bağlamda kullanılır (tutarlı).
@@ -108,8 +116,10 @@ aynı UD ilişkisi burada nominal bağlamda kullanılır (tutarlı).
 
 ## 5. Kapsam dışı / bilinçli sınır
 
-- **ADJ/başka tabanlı m-ikileme** (`güzel müzel`) → defer (§2).
-- **`çocuk mocuk`** (çocuk→ADJ disambiguation quirk) → NOUN-guard'la tetiklenmez, defer (§2).
+- **ADJ-taban m-ikileme** (`güzel müzel`) → AdjP (V2, kapsama ALINDI, §2).
+- **`çocuk mocuk`** (çocuk→ADJ disambiguation quirk): V2'de ADJ-taban desteğiyle **AdjP** olarak
+  tetiklenir (semantik olarak isim; çocuk→ADJ yanlış-etiketi disambiguation açığı, m-ikilemeye özgü
+  değil). Başıboş X bırakmaz — kabul edilebilir; doğru NOUN-etiketi ayrı disambiguation işi.
 - **Üç+ token** / araya sözcük (`kitap mitap kalem`) → R1 sonraki NOUN'u m-NP'ye modifikatör olarak
   ekleyebilir; nadir, V1 defer (bitişik ikili şart).
 - **Gerçek-sözcük reduplikant belirsizliği** (`adam madam`) → recall-güvenli m-ikileme (§3.2).

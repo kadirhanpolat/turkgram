@@ -63,4 +63,16 @@ DEP_CASES = [
              "head": 0, "deprel": "root"},
         ],
     },
+    {   # ADJ-taban m-ikileme: güzel amod→elbise; müzel MRED→ADJ compound:redup→güzel
+        "text": "güzel müzel elbise",
+        "roots": {"güzel", "elbise"},
+        "expected": [
+            {"id": 1, "form": "güzel",  "lemma": "güzel",  "upos": "ADJ",
+             "head": 3, "deprel": "amod"},
+            {"id": 2, "form": "müzel",                     "upos": "ADJ",
+             "head": 1, "deprel": "compound:redup"},
+            {"id": 3, "form": "elbise", "lemma": "elbise", "upos": "NOUN",
+             "head": 0, "deprel": "root"},
+        ],
+    },
 ]
