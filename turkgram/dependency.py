@@ -149,6 +149,8 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
                 if isinstance(c, LeafNode) and c.tag == "ADJ":
                     return c
             return _find_head_leaf(children[-1])
+        if tag == "AdvP":
+            return _find_head_leaf(children[0])  # ilk yaprak = baş
         if tag == "CoordP":
             return _find_head_leaf(children[0])
         return _find_head_leaf(children[-1])
@@ -173,6 +175,8 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
         if parent_tag == "AdjP":
             if child_tag == "ADJ":
                 return "advmod"
+        if parent_tag == "AdvP":
+            return "compound:redup"          # ikinci token (tekrar) → baş
         if parent_tag == "CoordP":
             if child_tag == "CCONJ":
                 return "cc"
@@ -189,7 +193,7 @@ def constituency_to_dep(tree: "PhraseNode") -> list[DepToken]:
                 return "nsubj"
             if child_tag == "PP":
                 return "obl"
-            if child_tag in ("AdjP",):
+            if child_tag in ("AdjP", "AdvP"):
                 return "advmod"
         return "dep"
 
