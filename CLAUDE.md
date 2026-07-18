@@ -437,6 +437,25 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     predicate (R1 yalnız sola bakar → guard GEREKMEZ). Tek-ADJ koordinasyonu (`kırmızı ve mavi`) da kapsandı.
     Hakem: 2 MEDIUM ikisi de geçersiz (biri yanlış-izleme = doğru predicate davranışı, biri pre-existing özel-isim
     tokenizasyonu, tetiklenmiyor). **4116 test yeşil** (+3).
+  - ✅ **Koordine genitif tamlayan + özel-isim apostrof-ek yeniden kurulum** (2026-07-19; SPEC/tasarım
+    `docs/superpowers/specs/2026-07-19-koordine-genitif-tamlayan-design.md`): `Ali'nin ve Veli'nin evi` →
+    `NP(CoordP(Ali'nin ve Veli'nin), evi)`. İki bağımsız parça, parse katmanında (tokenizer + tokenize golden
+    DEĞİŞMEZ — kullanıcı kararı). **B1 — özel-isim apostrof-ek merge (`_apply_r_proper`, EN BAŞTA):** tokenizer
+    `Ali'nin`'i `["Ali","'nin"]` böler → ön-geçiş tek `NOUN[case]` yaprağına birleştirir. Yüzey tabanlı (apostrof
+    kesin sinyal; leksikon ŞART DEĞİL — edat/bağlaç/diye emsali). **TUZAK — motor yumuşatır, imla yumuşatmaz:**
+    `decline("Ahmet","gen")`→`Ahmedin` ama imla `Ahmet'in` → merged-surface oracle yumuşayan isimde KIRILIR →
+    çözüm: `_classify_apostrophe_suffix` deterministik regex sınıflandırıcı (`_APOS_CASE_PATTERNS`, karşılıklı
+    dışlayıcı anchored; ismi VERBATIM kullanır). Tam-bir eşleşme yoksa (len(hits)!=1) → merge yok (recall-güvenli;
+    hakem 32 allomorf 0 çakışma doğruladı). **B2 — genitif tamlama genellemesi:** `_apply_r_gencoord` (R0'dan ÖNCE):
+    `NOUN[gen] (CCONJ NOUN[gen])+ → CoordP` (her konjunkt NP'ye sarılı); **R0 GENELLEŞTİ:** possessor
+    (`NOUN[gen]`|gen-CoordP) + head (`NOUN`|`NP`) → NP, **head poss-etiketi ŞART DEĞİL** (recall-güvenli — head
+    poss/acc homografı `parse_text` rank_in_context UYGULAMADIĞI için acc sıralanabilir; Türkçede yalın genitif
+    zorunlu possessed-head ister). Yan fayda: `adamın evi` basit tamlaması da düzeldi (önceden `evi`=acc → R0 fire
+    etmiyordu). Common-noun koordinasyonu (`evin ve kapının rengi`) da BEDAVA çalışır. **Dependency:** `_child_deprel`
+    NP-child CoordP konjunkt-kategorisi NP/NOUN + baş gen ise **`nmod:poss`** (amod dalının yanına); CoordP içi
+    cc/conj mevcut. **Kapsam dışı (V1):** plural/iyelik+durum apostrof ekleri (`Ali'ler`, `Ali'sinin`); sıfat-araya-
+    girmiş possessor (`adamın kırmızı arabası` — R0 R1'den önce, ADJ'ı geçemez; pre-existing genel parser sınırı);
+    head poss feats disambiguation. Hakem: SHIP (0 CRITICAL/HIGH/MEDIUM; sweep 1540 çağrı 0 çökme). **4127 test yeşil** (+11).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
