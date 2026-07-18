@@ -316,7 +316,7 @@ Paralel modül; Türkçe param adı → İngilizce kwarg, Türkçe değer → te
   - `zarf_yap(sıfat)` (`adjective.py`'e) — `-CA` eki: `güzelce`, `sıkça`, `hafifçe`.
   57 syntax + 15 zarf golden testi. Toplam: **3372 test**.
 
-Test durumu: son ölçüm **4096 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
+Test durumu: son ölçüm **4102 test yeşil** (slow hariç) + slow round-trip ayrıca `-m slow`.
 
 - **Faz 5** — sözcük-sınıfı tamamlama (Faz 3 devamı; D turu):
   - ✅ **D1 Sayı morfolojisi** (`number.py`, SPEC `spec/number-spec.md`):
@@ -378,7 +378,22 @@ Test durumu: son ölçüm **4096 test yeşil** (slow hariç) + slow round-trip a
     - **`postposition()` iki ValueError:** bilinmeyen edat (Geçerliler yalnız üretilebilir) vs donmuş edat
       (`'dair' donmuş bir edat`). Üretim çıktısı DEĞİŞMEZ (86-girdi golden yeşil).
     - Hakem: sweep 23 edat + 26k leksikon 0 çökme/0 miss; final adversarial (6 soru) SHIP. **4096 test yeşil** (+slow 2).
-    - Kalan defer: ikileme adverbial-yeniden-kurulum; olasılıksal dizi etiketleme (FST adopt-referans).
+    - Kalan defer: olasılıksal dizi etiketleme (FST adopt-referans).
+  - ✅ **İkileme adverbial-yeniden-kurulum** (SPEC/tasarım `docs/superpowers/specs/2026-07-18-ikileme-adverbial-design.md`,
+    plan `docs/superpowers/plans/2026-07-18-ikileme-adverbial.md`): constituency parser ikilemeyi (tam `yavaş yavaş`
+    + ulaç `koşa koşa`) tek **`AdvP`** öbeği olarak yeniden kurar; birleşik (multi-token) analizi HİÇ kullanmaz →
+    token:analiz arayüz uyuşmazlığını atlar (asıl erteleme nedeni). Yeni yüzey-tabanlı kural **R8_redup**
+    (`parse._apply_r8_redup`, R6_ki/R7_diye emsali): bitişik özdeş çift (`_tr_lower` İ/I-güvenli) + POS sınıflaması
+    (VERB çifti → ulaç-tipi guard'sız; ADJ/NOUN çifti → tam-tipi). **TUZAK — NOUN-takip guard'ı:** tam-tipi çiftte
+    sonraki token çıplak NOUN ise AdvP KURMA (adnominal `uzun uzun yollar` → `NP`); R8 R1'den ÖNCE çalışır → guard
+    NOUN **yaprağını** kontrol eder, NP'yi değil (o an NP yok). VERB çifti guard'sız (adnominal olamaz). **TUZAK —
+    `koşa` optatif eşsesli:** bare `-A` converb envanterde YOK (`nonfinite.CONVERBS`); `koşa` optatif çözülür →
+    VERB etiketi; yüzey-çift + POS sınıflaması TEK uygulanabilir signal (oracle `roots` ister, parser'da yok).
+    Pipeline R0'dan önce; R5 absorpsiyon kümesine `"AdvP"` (VP-içi tarz zarfı). **Dependency BEDAVA DEĞİL:**
+    `dependency.py` açık dallar — `_child_deprel` VP/S dalı `("AdjP","AdvP")→advmod` (baş→fiil) + top-level
+    `parent_tag=="AdvP"→compound:redup` (ikinci token→baş, UD-geçerli); `_find_head_leaf` AdvP dalı (`children[0]`=baş).
+    m-ikileme kapsam DIŞI (nominal, defer). Hakem: sweep 7 cümle 0 çökme + adversarial APPROVE (0 CRITICAL/HIGH).
+    **4102 test yeşil** (+6). Kalan defer: m-ikileme nominal + üç+ tekrar + koordine zarf (SPEC §5).
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
