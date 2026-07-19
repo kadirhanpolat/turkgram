@@ -51,3 +51,19 @@ def test_intensify_precision(surface, roots):
         f"analyze({surface!r}, roots={set(roots)!r}): "
         f"Yanlış kökle intensify bulundu: {intensify_hits}"
     )
+
+
+# --- perf optimizasyonu regresyon kilidi: ters-aday üretimi tamlık ---
+def test_adj_root_candidates_completeness():
+    """_adj_root_candidates gerçek lemmayı içermeli (intensify son-ek, diminutive ön-ek).
+    (O(roots)→O(aday) optimizasyonu; ters-aday eksikse recall kaybı olurdu.)"""
+    from turkgram.analysis import _adj_root_candidates
+    from turkgram.adjective import intensify, diminutive
+    # intensify: lemma yüzeyin son-eki
+    assert "beyaz" in _adj_root_candidates(intensify("beyaz"))   # bembeyaz
+    assert "açık" in _adj_root_candidates(intensify("açık"))     # apaçık
+    assert "büyük" in _adj_root_candidates(intensify("büyük"))   # büsbüyük
+    # diminutive: lemma yüzeyin ön-eki (± k-restore)
+    assert "küçük" in _adj_root_candidates(diminutive("küçük", "-CIk"))  # küçücük (k-drop)
+    assert "yeşil" in _adj_root_candidates(diminutive("yeşil", "-ImsI"))  # yeşilimsi
+    assert "sarı" in _adj_root_candidates(diminutive("sarı", "-ImtIrak"))  # sarımtırak

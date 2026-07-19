@@ -1684,19 +1684,43 @@ def _try_postposition_all(surface: str, analyses: list[Analysis], seen: set[tupl
     ))
 
 
+def _adj_root_candidates(surface: str) -> set[str]:
+    """Sıfat yüzeyinden ters kök adayları (perf: O(roots)→O(aday); oracle sonra doğrular).
+
+    intensify PREPEND-only (bembeyaz=bem+beyaz; prefix 2-3) → lemma yüzeyin SON-eki.
+    diminutive APPEND-only + k-düşme (küçük→küçü+cük) → lemma yüzeyin ÖN-eki (± restore-k).
+    Cömert üret (oracle+roots filtreler) → recall-güvenli; eski tam-tarama ile aynı sonuç.
+    """
+    cands: set[str] = set()
+    n = len(surface)
+    for j in (2, 3, 4):                    # intensify prefix uzunluğu ∈ {2,3} (+1 pay)
+        if 0 < j < n:
+            cands.add(surface[j:])
+    for k in range(2, 8):                  # diminutive ek uzunluğu ~2-7
+        if 0 < k < n:
+            stem = surface[: n - k]
+            cands.add(stem)
+            cands.add(stem + "k")          # k-düşme restore (küçük→küçücük)
+    return cands
+
+
 def _try_adj_all(
     surface: str, roots: Collection[str],
     analyses: list[Analysis], seen: set[tuple],
 ) -> None:
     """§Sifat çözümleme (Faz 3 C2) — analysis-by-generation.
 
-    roots'taki her lemma için:
+    Yüzeyden ters kök adayı (`_adj_root_candidates`) ∩ roots için:
     - intensify(lemma) == surface → Analysis(kind='intensify')
     - diminutive(lemma, suffix) == surface → Analysis(kind='diminutive', suffix=suffix)
 
-    Precision: roots-garantili (roots None ise çağrılmaz).
+    Precision: roots-garantili (roots None ise çağrılmaz). Perf: ters-aday ile O(aday)
+    (eski O(roots) tam-tarama ile BİREBİR aynı sonuç — oracle doğrular).
     """
-    for lemma in roots:
+    roots_set = roots if isinstance(roots, (set, frozenset)) else set(roots)
+    for lemma in _adj_root_candidates(surface):
+        if lemma not in roots_set:
+            continue
         # intensify
         try:
             form = intensify(lemma)
