@@ -1150,7 +1150,63 @@ def analyze(surface: str, pos: str | None = None,
     if roots is not None and not _in_voice_pass[0] and pos in (None, "noun", "verb", "adj"):
         _try_voice_participle(surface_token, analyses, seen, roots=roots)
 
+    # Adım 7f: Fiil-türevli çekim (güzelleşti = güzel+-lAş+di) — isim→fiil türetme + çekim
+    if roots is not None and not _in_voice_pass[0] and pos in (None, "verb"):
+        _try_derived_verb_inflected(surface_token, analyses, seen, roots=roots)
+
     return analyses
+
+
+@functools.lru_cache(maxsize=8192)
+def _derived_verb_base(inf: str, roots_fs: "frozenset[str] | None") -> "tuple[str, str] | None":
+    """Türetilmiş fiil mastarı (güzelleşmek) → (base kök, isim→fiil türetme etiketi).
+    analyze(inf) derivation analizinden (verb-output) çıkar. lru_cache + `_in_voice_pass`
+    guard (re-entrancy; genel kompozisyon-sub-analiz guard'ı)."""
+    roots = set(roots_fs) if roots_fs is not None else None
+    _in_voice_pass[0] = True
+    try:
+        results = list(analyze(inf, roots=roots, max_derivation_depth=1))
+    finally:
+        _in_voice_pass[0] = False
+    for a in results:
+        # Yalnız spesifik "olma/edinme" ekleri (-lAş/-lAn): productive -A/-lA çok spurious
+        # verb okuması üretir (eve=ev+A+imp, geliyorum=ge+lA → precision golden kırar).
+        if (not a.hypothetical and a.kind == "derivation"
+                and a.kwargs.get("suffix") in ("-lAş-", "-lAn-")):
+            return a.lemma, a.kwargs["suffix"]
+    return None
+
+
+def _try_derived_verb_inflected(
+    surface: str, analyses: list, seen: set, roots: "set[str] | None",
+) -> None:
+    """Fiil-türevli çekim: isim→fiil türetilmiş fiil (güzelleşmek, leksikonda yok) çekilir
+    (güzelleşti=güzel+-lAş+di). Çatı+fiilimsi emsali: türetilmiş mastar conjugate oracle'a
+    lemma verilir, KÖK + türetme etiketi raporlanır. roots-gate + guard + lru_cache."""
+    roots_fs = frozenset(roots) if roots is not None else None
+    for D in _root_candidates(surface):
+        if not (D.endswith("mak") or D.endswith("mek")) or len(D) <= 3:
+            continue
+        stem = D[:-3]
+        binfo = _derived_verb_base(D, roots_fs)
+        if binfo is None:
+            continue
+        base_lemma, deriv_suffix = binfo
+        for raw_kwargs in _enumerate_conjugate(surface, stem, D):
+            if not _verify("conjugate", D, raw_kwargs, surface):
+                continue
+            canon = _canonicalize("conjugate", raw_kwargs)
+            new_kwargs = dict(canon)
+            new_kwargs["derivation"] = deriv_suffix
+            key = ("derived_verb", surface, base_lemma, _kwargs_key(new_kwargs))
+            if key in seen:
+                continue
+            seen.add(key)
+            segs = _segment("conjugate", D, canon, surface)
+            analyses.append(Analysis(
+                kind="conjugate", lemma=base_lemma, pos="verb",
+                kwargs=new_kwargs, segments=segs, hypothetical=False,
+            ))
 
 
 def _try_voice_participle(
