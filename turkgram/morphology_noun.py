@@ -90,8 +90,7 @@ DROP_VOWEL: set[str] = {
     # 2026-07-19 kapsam genişletme (SPEC unlu-dusme-kapsam; bağımsız golden doğrulandı):
     "omuz", "zihin", "ilim", "beniz", "hışım", "kahır", "kavis",
     "kibir", "kutur", "nabız", "remiz", "sadır", "şahıs", "vecih", "kayıt",
-    # ERTELENDİ — lütuf: ters-disharmonik (kalan ünlü ü ÖN ama ek arka: lütfu, lütfunu).
-    # Motor kalan-ünlüden ön üretir (lütfü, yanlış); back-harmony override mekanizması yok.
+    "lütuf",  # ters-disharmonik: düşer (lütf) + BACK_HARMONY (lütfu, lütfa)
     # ÇIKARILDI (hakem 2026-07-11): sınıf→sınıfı, gurur→gururu DÜŞMEZ;
     # ceht→cehdi (e düşmez, t yumuşar) — ceht dropped'ta "cht" ünlüsüz üretiyordu.
 }
@@ -142,11 +141,18 @@ FRONT_HARMONY: set[str] = {
     # 2026-07-19: disharmonik ünlü-düşmeli alıntılar (nakl→nakli, hacz→haczi, kavm→kavmi,
     # kavs→kavsi: düşünce kalan ünlü arka 'a' ama ek ön)
     "nakil", "haciz", "kavim", "kavis",
+    # NOT: lütuf TERS yönde (kalan ön ü ama ek ARKA) → FRONT değil BACK_HARMONY'de.
     # 2026-07-19 alıntı leksikon kapsam: l-final disharmonik (kontrolü/normali/hayali…)
     "kontrol", "sembol", "santral", "festival", "normal", "hayal", "emsal",
     "misal", "iptal", "mahsul",
     # -aat/-at disharmonik + yumuşamayan (SOFTEN_NO'da da): cemaati/sadakati/ziraati
     "cemaat", "sadakat", "ziraat",
+}
+
+# Ters-disharmonik: ünlü-düşme sonrası kalan ünlü ÖN ama ek ARKA (lütuf→lütfu/lütfa,
+# lütfunu). FRONT_HARMONY'nin aynası (_hsrc back dalı). Kapalı, küratörlü; nadir.
+BACK_HARMONY: set[str] = {
+    "lütuf",
 }
 
 CASES = ("nom", "acc", "dat", "loc", "abl", "gen", "ins")
@@ -281,24 +287,30 @@ def _soften_last(root: str) -> str:
 # FRONT_HARMONY alıntılarında harmoni yönünü çevirmek için, base'in son ünlüsü
 # yerine sanal bir ön ünlü kaynağı kullanılır. Kök sınırına EKLENEN İLK ekte
 # geçerlidir; sonraki eklerin kendi ünlüsü zaten normal harmoniyi taşır.
-def _hsrc(stem: str, front: bool) -> str:
-    """Harmoni kaynağı: front ise base'in yuvarlaklığını koruyup ön-ünlüye çevir."""
-    if not front:
+def _hsrc(stem: str, front: bool, back: bool = False) -> str:
+    """Harmoni kaynağı: front→yuvarlaklığı koruyup ön-ünlüye; back→arka-ünlüye çevir.
+
+    BACK_HARMONY (lütuf): ünlü-düşme sonrası kalan ünlü ÖN (lütf→ü) ama ek ARKA
+    (lütfu). FRONT_HARMONY'nin aynası; ikisi birlikte gelmez.
+    """
+    if not front and not back:
         return stem
     v = last_vowel(stem)
     if v is None:
         return stem
-    # yuvarlaklığı koru, ön yap: a/ı→e/i akışı; o/u→ö/ü; e/i/ö/ü zaten ön
-    swap = {"a": "e", "ı": "i", "o": "ö", "u": "ü"}
+    if front:  # a/ı→e/i, o/u→ö/ü (yuvarlaklık korunur, ön yapılır)
+        swap = {"a": "e", "ı": "i", "o": "ö", "u": "ü"}
+    else:      # back: e/i→a/ı, ö/ü→o/u (yuvarlaklık korunur, arka yapılır)
+        swap = {"e": "a", "i": "ı", "ö": "o", "ü": "u"}
     return stem + swap.get(v, v)
 
 
-def _high(stem: str, front: bool = False) -> str:
-    return high_vowel(_hsrc(stem, front))
+def _high(stem: str, front: bool = False, back: bool = False) -> str:
+    return high_vowel(_hsrc(stem, front, back))
 
 
-def _low(stem: str, front: bool = False) -> str:
-    return low_vowel(_hsrc(stem, front))
+def _low(stem: str, front: bool = False, back: bool = False) -> str:
+    return low_vowel(_hsrc(stem, front, back))
 
 
 def _dt(stem: str) -> str:
@@ -310,10 +322,10 @@ def _dt(stem: str) -> str:
 # İyelik (SPEC §5)
 # ---------------------------------------------------------------------------
 def _apply_possessive(base: str, base_vowel_final: bool, person: str,
-                      front: bool = False) -> str:
+                      front: bool = False, back: bool = False) -> str:
     """base'e iyelik ekle. base_vowel_final: ünlü-final mi (buffer düşer)."""
-    i = _high(base, front)
-    a = _low(base, front)
+    i = _high(base, front, back)
+    a = _low(base, front, back)
     # -lArI (3pl) SON ünlüsü köke değil -lAr'ın ünlüsüne uyar: a→ı, e→i
     # (hep -ları/-leri; kök yuvarlak olsa bile gözlerü DEĞİL gözleri).
     three_pl = "l" + a + "r" + ("ı" if a == "a" else "i")
@@ -337,12 +349,12 @@ def _apply_possessive(base: str, base_vowel_final: bool, person: str,
 # Durum ekleri (SPEC §4, §6)
 # ---------------------------------------------------------------------------
 def _apply_case(base: str, case: str, *, base_vowel_final: bool,
-                has_pron_n: bool, front: bool = False) -> str:
+                has_pron_n: bool, front: bool = False, back: bool = False) -> str:
     """base'e durum eki ekle. has_pron_n: 3. kişi iyelik / zamir gövdesi (§6)."""
     if case == "nom":
         return base
-    i = _high(base, front)
-    a = _low(base, front)
+    i = _high(base, front, back)
+    a = _low(base, front, back)
 
     # §6 pronominal -n-: 3. kişi iyelik ya da zamir gövdesi sonrası tüm durumlar
     if has_pron_n:
@@ -499,27 +511,31 @@ def _decline_core(vs: NounStem, number: str, possessive: str | None,
     # Çoğul araya girince -lAr'ın kendi ön ünlüsü (saatler) harmoniyi sürdürür →
     # sonraki eklere override GEREKMEZ.
     front_root = vs.root in FRONT_HARMONY
+    back_root = vs.root in BACK_HARMONY  # ters-disharmonik (lütuf→lütfu): kalan ön, ek arka
 
     # --- base kur: ROOT (+ çoğul) ---
     if plural:
         # çoğul -lAr ünsüz-başlı → kök KORUNUR (§3.1)
-        base = vs.root + "l" + _low(vs.root, front_root) + "r"
+        base = vs.root + "l" + _low(vs.root, front_root, back_root) + "r"
         base_vowel_final = False  # -lAr r ile biter
         front = False             # -lAr ünlüsü artık harmoniyi taşır
+        back = False
     else:
         # çoğul yoksa: sonraki segment (iyelik ya da durum) ünlü-başlı mı?
         next_vowel = _next_is_vowel_initial(possessive, case, vs)
         base = root_variant(vs, vowel_next=next_vowel)
         base_vowel_final = ends_in_vowel(base)
         front = front_root
+        back = back_root
 
     has_pron_n = False
 
     # --- iyelik ---
     if possessive is not None:
-        base = _apply_possessive(base, base_vowel_final, possessive, front)
+        base = _apply_possessive(base, base_vowel_final, possessive, front, back)
         base_vowel_final = ends_in_vowel(base)
         front = False             # iyelik ünlüsü artık harmoniyi taşır
+        back = False
         if possessive in ("3sg", "3pl"):
             has_pron_n = True
 
@@ -529,7 +545,7 @@ def _decline_core(vs: NounStem, number: str, possessive: str | None,
 
     # --- durum ---
     return _apply_case(base, case, base_vowel_final=base_vowel_final,
-                       has_pron_n=has_pron_n, front=front)
+                       has_pron_n=has_pron_n, front=front, back=back)
 
 
 def _next_is_vowel_initial(possessive: str | None, case: str,

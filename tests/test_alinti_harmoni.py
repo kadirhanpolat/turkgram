@@ -39,3 +39,22 @@ def test_aat_no_soften(lemma):
     """-aat alıntıları yumuşamaz (cemaat→cemaati, cemaadi DEĞİL)."""
     got = decline(lemma, case="acc")
     assert "d" not in got[-2:], f"{got}: t→d yumuşaması olmamalı"
+
+
+# --- lütuf ters-disharmonik (BACK_HARMONY): kalan ünlü ön ü ama ek arka ---
+@pytest.mark.parametrize("kw,exp", [
+    ({"case": "acc"}, "lütfu"), ({"case": "dat"}, "lütfa"),
+    ({"case": "gen"}, "lütfun"),
+    ({"case": "loc"}, "lütufta"), ({"case": "abl"}, "lütuftan"),  # düşmez (ünsüz-başlı)
+    ({"possessive": "3sg", "case": "acc"}, "lütfunu"),
+    ({"number": "pl"}, "lütuflar"),
+])
+def test_lutuf_back_harmony(kw, exp):
+    assert decline("lütuf", **kw) == exp
+
+
+def test_lutuf_analiz():
+    from turkgram.analysis import analyze
+    res = analyze("lütfu", roots={"lütuf"})
+    assert any(a.lemma == "lütuf" and a.kind == "decline" and not a.hypothetical
+               for a in res)
