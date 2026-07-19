@@ -505,7 +505,7 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     aileler morfoloji değişirse `test_copula_prune.py` yakalar (aile-varsayımını motor çıktısıyla sabitler).
     **(4) `_process_kind` verify-first** — raw_kwargs generator-hazır → canonicalize/dedup/raw_from_canon YALNIZ verify'ı
     geçen ~%1'de (545k→birkaç bin); 6.3→3.5ms. **Kümülatif 165→3.5ms ~48×**, test suite ~300→~40-120s.
-  - ✅ **Çatı+türetme + disharmonik-düşme analizi + stacked -ki** (2026-07-19): (a) **çatı+türetme** `_try_voice_derivation`:
+  - ✅ **Çatı+türetme + disharmonik-düşme analizi + stacked -ki** (2026-07-19): (a-b) **çatı+türetme** (`_try_voice_derivation`, yazdırıcı) **+ çatı+fiilimsi** (`_try_voice_participle`, yazdırma/okutmak/yazdırdığı): voiced gövde `_voiced_stem_root` (conjugate/imp/voice_chain, lru_cache + `_in_voice_pass` re-entrancy guard + `_VOICE_STEM_MARKER` ön-filtre) + türetme/participle oracle; KÖK fiil + voice_chain. çatı+türetme:
     voiced verb gövdesi (yazdır, leksikonda yok) + fiil→isim leksik türetme (yazdırıcı=yaz+CAUS+-IcI); `_voiced_stem_root`
     conjugate/imp/voice_chain ile çözer + `derivations()` oracle; `_VOICE_STEM_MARKER` ([ıiuü][lnrşt]$) ön-filtre
     (re-entrant analyze perf: 5.1→3.56ms). Çatı+fiilimsi (-mA) kapsam DIŞI. (b) **disharmonik-düşme analizi** —
