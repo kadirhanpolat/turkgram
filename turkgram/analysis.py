@@ -1120,7 +1120,76 @@ def analyze(surface: str, pos: str | None = None,
                 roots=roots, max_depth=max_derivation_depth,
             )
 
+    # Adım 7b: Türetilmiş gövde + çekim istifi (bencilliği = bencillik+acc)
+    # Gate: roots (precision, _try_adj_all emsali) + max_depth>=2 (perf — iç içe pass
+    # her isim analizinde ~200ms'e mal olurdu; saf çok-katman türetme de depth>=2 ister).
+    if roots is not None and max_derivation_depth >= 2 and pos in (None, "noun", "adj"):
+        _try_derivation_inflected(
+            surface_token, analyses, seen,
+            roots=roots, max_depth=max_derivation_depth,
+        )
+
     return analyses
+
+
+def _try_derivation_inflected(
+    surface: str,
+    analyses: list,
+    seen: set,
+    roots: "set[str] | None",
+    max_depth: int,
+) -> None:
+    """Türetilmiş gövde + çekim istifi (SPEC 2026-07-19-turetme-cekim-istif).
+
+    D = ara türetilmiş gövde (bencillik); `_root_candidates`'te mevcut. D geçerli bir
+    türetme (zinciri) ise ve `decline(D, infl) == surface` ise, türetme + çekim birleşik
+    Analysis üret. Çift oracle (türetme + decline) → precision. A3 istifleme emsali.
+    """
+    from .morphology_noun import decline as _decline_fn
+
+    for D in _root_candidates(surface):
+        if not D or D == surface:
+            continue  # çekimsiz → saf türetme zaten kapsandı
+        # 1) D geçerli türetme mi? (yerel sub-pass, roots ile precision)
+        sub: list = []
+        sub_seen: set = set()
+        _try_derivation_all(D, sub, sub_seen, roots=roots)
+        if max_depth >= 2:
+            _try_derivation_chain(D, sub, sub_seen, roots=roots, max_depth=max_depth)
+        deriv_subs = [a for a in sub if a.kind == "derivation" and not a.hypothetical]
+        if not deriv_subs:
+            continue
+        # 2) çekim: decline(D, infl) == surface (nom-only atlanır → saf türetme)
+        for raw in _ENUMERATE_FN["decline"](surface, D, D):
+            canon = _canonicalize("decline", raw)
+            if not canon:
+                continue  # nom/sg/possessive-yok → çekimsiz, atla
+            raw_full = _raw_from_canon("decline", canon)
+            try:
+                if _decline_fn(D, **raw_full) != surface:
+                    continue
+            except (ValueError, KeyError, TypeError):
+                continue
+            infl_segs = _segment_decline(D, canon, surface)
+            for dsub in deriv_subs:
+                chain_key = (tuple(a.lemma for a in dsub.chain)
+                             if dsub.chain else (dsub.lemma,))
+                key = ("derivation_infl", surface, dsub.lemma,
+                       chain_key, _kwargs_key(canon))
+                if key in seen:
+                    continue
+                seen.add(key)
+                new_kwargs = dict(dsub.kwargs)
+                new_kwargs.update(canon)
+                analyses.append(Analysis(
+                    kind="derivation",
+                    lemma=dsub.lemma,
+                    pos=dsub.pos,
+                    kwargs=new_kwargs,
+                    segments=infl_segs,   # decline segmentasyonu (D gövde + çekim); chain türetmeyi taşır
+                    chain=dsub.chain,
+                    hypothetical=dsub.hypothetical,
+                ))
 
 
 _ENUMERATE_FN: dict[str, Any] = {
@@ -1219,6 +1288,7 @@ def _distributive_root_candidates(last_word: str) -> list[str]:
     return cands
 
 
+@functools.lru_cache(maxsize=4096)
 def _template_to_allomorphs(template: str) -> list[str]:
     """Arşifonem template → tüm olası realize biçimler.
 
@@ -1240,6 +1310,7 @@ def _template_to_allomorphs(template: str) -> list[str]:
     return ["".join(combo) for combo in itertools.product(*positions)]
 
 
+@functools.lru_cache(maxsize=16384)
 def _strip_derivation(
     surface: str,
     label: str,
@@ -1294,10 +1365,13 @@ def _strip_derivation(
     return candidates
 
 
+@functools.lru_cache(maxsize=16384)
 def _strip_one_layer(
     surface: str,
 ) -> list[tuple[str, str, str, str]]:
-    """Verilen yüzeyden tek katman leksik suffix soy.
+    """Verilen yüzeyden tek katman leksik suffix soy. (lru_cache: türetme+çekim istifi
+    BFS'i aynı gövdeyi çok kez ziyaret eder → saf fonksiyon, cache güvenli; ÇIKTISI
+    salt-okunur kullanılmalı.)
 
     Returns:
         List of (stem, label, suffix_surface, src_pos).
