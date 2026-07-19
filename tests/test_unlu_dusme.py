@@ -37,16 +37,16 @@ def test_unlu_dusme_negative(case):
 
 
 @pytest.mark.parametrize("lemma,surface", [
+    # harmonik düşme
     ("omuz", "omzuna"), ("zihin", "zihni"), ("nabız", "nabzı"),
     ("ilim", "ilmi"), ("beniz", "benzi"), ("şahıs", "şahsı"),
+    # DİSHARMONİK düşme (2026-07-19: _root_candidates 4-ünlü ekleme ile ÇÖZÜLDÜ)
+    ("nakil", "nakli"), ("haciz", "haczi"), ("kavim", "kavmi"), ("kavis", "kavsi"),
 ])
 def test_unlu_dusme_analiz_roundtrip(lemma, surface):
-    """HARMONİK düşme: üretim düzelince analiz (oracle + _root_candidates restore) da bulur.
-
-    NOT: DİSHARMONİK düşmeli alıntılar (nakil/haciz/kavim/kavis) analizde kaçar —
-    `_root_candidates` harmonik ünlü-ekleme yapar (nakl→nakıl/nakul, ön 'nakil' değil);
-    pre-existing sınır (CLAUDE.md §6d). Üretim (decline) DOĞRU; yalnız ters-analiz sınırlı.
-    """
+    """Düşme analiz roundtrip (oracle + `_root_candidates` ünlü-restore). Disharmonik
+    alıntılar (nakil→nakli) dahil: `_root_candidates` artık tüm yüksek ünlüleri (ı/i/u/ü)
+    dener → ön 'nakil' restore edilir; precision roots+oracle garantili."""
     res = analyze(surface, roots={lemma})
     assert any(a.lemma == lemma and not a.hypothetical for a in res), \
         f"{surface} → {lemma} analizi bulunamadı"

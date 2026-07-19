@@ -141,19 +141,15 @@ def _reverse_mutations(prefix: str) -> list[str]:
     # Düşen ünlü: ikiz-ünsüz tekleştir (hakk→hak, redd→ret)
     if len(prefix) >= 2 and prefix[-1] == prefix[-2]:
         candidates.append(prefix[:-1])
-    # Düşen ünlü geri-ekle: son hece ünsüz-ünsüz bitiyor, son ünlüden harmoni
-    # (burn→burun, ağzı→ağız). Basit buluşsal: son 2 harf ünsüz mü?
+    # Düşen ünlü geri-ekle: son hece ünsüz-ünsüz bitiyor (burn→burun, ağzı→ağız,
+    # nakl→nakil). TÜM yüksek ünlüleri dene (ı/i/u/ü) — disharmonik alıntılarda kalan
+    # gövde ünlüsü ile ek ünlüsü uyuşmaz (nakl→nakil, hacz→haciz, kavs→kavis: kalan
+    # arka 'a' ama düşen ön). Precision roots+oracle garantili (fazlalık filtrelenir);
+    # recall-güvenli over-generation.
     if len(prefix) >= 2 and prefix[-1] not in _VOWELS and prefix[-2] not in _VOWELS:
-        # Son ünlüyü bul
-        last_v_idx = max((i for i, c in enumerate(prefix) if c in _VOWELS), default=-1)
-        if last_v_idx >= 0:
-            last_v = prefix[last_v_idx]
-            # Harmoni uyumlu yüksek ünlü
-            if last_v in "aıou":
-                insert = "ı" if last_v in "aı" else "u"
-            else:
-                insert = "i" if last_v in "ei" else "ü"
-            candidates.append(prefix[:-1] + insert + prefix[-1])
+        if any(c in _VOWELS for c in prefix):  # gövdede en az bir ünlü olmalı
+            for insert in ("ı", "i", "u", "ü"):
+                candidates.append(prefix[:-1] + insert + prefix[-1])
 
     return candidates
 
