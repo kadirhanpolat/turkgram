@@ -492,7 +492,7 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     roots (fonksiyon sözcükleri); `augment_function_candidates` çok-POS enjeksiyon (bir/çok/o → HMM bağlamla seçer);
     `augment_oov_candidates` OOV→Noun fallback. **CRF-gate KARARI: ERTELENDİ** (HMM covered'da tavana yakın; darboğaz
     dizi-modeli değil coverage). Hakem: 2 HIGH giderildi (her/hep zamir değil; Kİ_ROUND ayrı). Tüm eval opt-in.
-  - ✅ **analyze() PERF ~20× (165→8→6.3ms/tam-leksikon)** (2026-07-19; üç davranış-korunumlu opt, hepsi
+  - ✅ **analyze() PERF ~48× (165→3.5ms/tam-leksikon)** (2026-07-19; üç davranış-korunumlu opt, hepsi
     diferansiyel-testle recall-güvence): **(1) `_try_adj_all` O(roots)→O(aday)** — her lemmayı taramak yerine
     yüzeyden ters aday (`_adj_root_candidates`: intensify PREPEND-only→lemma son-ek; diminutive APPEND-only+k-düşme→
     lemma ön-ek±restore-k), roots∩aday'da oracle (165→59ms; diff 1912 yüzey 0 uyuşmazlık). **(2) `_make_frozen`
