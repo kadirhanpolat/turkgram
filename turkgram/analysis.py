@@ -1135,7 +1135,65 @@ def analyze(surface: str, pos: str | None = None,
             roots=roots, max_depth=max_derivation_depth,
         )
 
+    # Adım 7c: Stacked -ki + çekim (evdekileri = evde+ki+ler+i)
+    # roots-gate (türetme+çekim emsali); marker (ki-gövde) içeride ucuz filtreler.
+    if roots is not None and pos in (None, "noun"):
+        _try_ki_inflected(surface_token, analyses, seen, roots=roots)
+
     return analyses
+
+
+def _try_ki_inflected(
+    surface: str, analyses: list, seen: set, roots: "set[str] | None",
+) -> None:
+    """Stacked -ki + çekim: with_ki gövdesi (evdeki) durum/iyelik/çoğul alır
+    (evdekiler/evdekileri/masadakini). Türetme+çekim istifi emsali (çift oracle:
+    with_ki + decline). D = ara ki-gövde (`_root_candidates`'te mevcut)."""
+    from .morphology_noun import decline as _decline_fn
+    from .analysis_candidates import _KI_MARKER
+
+    for D in _root_candidates(surface):
+        if not D or D == surface or not _KI_MARKER.search(D):
+            continue  # D bir ki-gövdesi olmalı (evdeki)
+        # 1) D geçerli with_ki mi? (base kök D'nin öneklerinden, roots ile precision)
+        ki_subs: list = []
+        ki_seen: set = set()
+        for base in _root_candidates(D):
+            if roots is not None and base not in roots:
+                continue
+            _process_kind("with_ki", "noun", D, base, base, ki_subs, ki_seen,
+                          hyp=(roots is None))
+        ki_subs = [a for a in ki_subs if a.kind == "with_ki"]
+        if not ki_subs:
+            continue
+        # 2) çekim: decline(D, infl) == surface (nom-only atlanır → saf with_ki)
+        for raw in _ENUMERATE_FN["decline"](surface, D, D):
+            canon = _canonicalize("decline", raw)
+            if not canon:
+                continue
+            try:
+                if _decline_fn(D, **_raw_from_canon("decline", canon)) != surface:
+                    continue
+            except (ValueError, KeyError, TypeError):
+                continue
+            infl_segs = _segment_decline(D, canon, surface)
+            for ki in ki_subs:
+                # Dış çekim BİRİNCİL (case/number/possessive = sözcüğün sözdizimsel ekseni);
+                # -ki'nin kendi ekseni ki_case/ki_possessive (case-çakışması önlenir:
+                # evdekileri = {case:acc, number:pl, ki_case:loc}).
+                new_kwargs = dict(canon)
+                new_kwargs["ki_case"] = ki.kwargs.get("case")
+                if ki.kwargs.get("possessive"):
+                    new_kwargs["ki_possessive"] = ki.kwargs["possessive"]
+                key = ("with_ki_infl", surface, ki.lemma, _kwargs_key(new_kwargs))
+                if key in seen:
+                    continue
+                seen.add(key)
+                analyses.append(Analysis(
+                    kind="with_ki", lemma=ki.lemma, pos="noun",
+                    kwargs=new_kwargs, segments=infl_segs,
+                    hypothetical=ki.hypothetical,
+                ))
 
 
 def _try_derivation_inflected(
