@@ -319,8 +319,20 @@ def _enumerate_decline(surface: str, stem: str) -> list[dict[str, Any]]:
     return hyps
 
 
+# Copula person eki SON karakter ailesi (perf prune; question=False için).
+# 15.680 üretimde (tüm case×poss×number×aux) doğrulandı: person eki DAİMA en sonda,
+# case/poss/aux son-karakteri değiştirmez. 3sg değişken (zero-copula/case-sonu) → prune YOK.
+# question=True'da person eki ' mI'dan ÖNCE → ending prune UYGULANMAZ (recall-güvenli).
+_COPULA_PERSON_LASTCHAR: dict[str, frozenset] = {
+    "1sg": frozenset("m"), "2sg": frozenset("n"),
+    "1pl": frozenset("kz"), "2pl": frozenset("z"), "3pl": frozenset("r"),
+}
+
+
 def _enumerate_copula(surface: str, stem: str) -> list[dict[str, Any]]:
     budget = _count_vowels(surface) - _count_vowels(stem)
+    last_char = surface[-1] if surface else ""
+    has_space = " " in surface
     hyps: list[dict[str, Any]] = []
     for aux in _COPULA_AUX:
         if aux and not _cell_allowed(surface, "copula_aux", aux):
@@ -330,6 +342,13 @@ def _enumerate_copula(surface: str, stem: str) -> list[dict[str, Any]]:
         persons = ("3sg",) if aux == "ken" else _PERSONS
         questions = (False,) if aux == "ken" else (False, True)
         for person in persons:
+            # Person-ending prune (recall-güvenli): question=False'ta yüzey son-karakteri
+            # person ailesinde değilse o person imkânsız. question=True (mI son-ekli) muaf.
+            fam = _COPULA_PERSON_LASTCHAR.get(person)
+            qfalse_ok = fam is None or last_char in fam
+            qtrue_ok = (True in questions) and has_space
+            if not qfalse_ok and not qtrue_ok:
+                continue
             for number in ("sg", "pl"):
                 for poss in (None,) + tuple(_POSSESSIVES):
                     poss_cost = 0 if poss is None else 1
@@ -338,6 +357,8 @@ def _enumerate_copula(surface: str, stem: str) -> list[dict[str, Any]]:
                         for question in questions:
                             if question and " " not in surface:
                                 continue
+                            if not question and not qfalse_ok:
+                                continue  # person-ending prune (question=False dalı)
                             total = aux_cost + poss_cost + case_cost
                             if total > budget + 2:
                                 continue
