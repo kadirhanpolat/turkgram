@@ -267,10 +267,16 @@ def call_count() -> int:
 
 
 def _make_frozen(kwargs: dict[str, Any]) -> tuple:
-    """kwargs → hashable tuple. voice_chain list/tuple → list (conjugate için), frozen olarak tuple."""
+    """kwargs → hashable tuple (cache anahtarı). voice_chain list/tuple → tuple (hashable).
+
+    Perf: `sorted(items)` anahtara göre sıralar (dict anahtarları BENZERSİZ → değerler
+    hiç karşılaştırılmaz, TypeError yok) → eski `key=lambda x: str(x)` ile AYNI sıra
+    (str-sort da tuple'ı önce anahtara göre sıralar) ama 3.3M lambda+str() çağrısı elenir.
+    voice_chain nadir → hızlı yol önce."""
+    if "voice_chain" not in kwargs:
+        return tuple(sorted(kwargs.items()))
     items = []
-    for k, v in sorted(kwargs.items(), key=lambda x: str(x)):
-        # voice_chain liste ya da tuple → tuple (hashable)
+    for k, v in sorted(kwargs.items()):
         if k == "voice_chain" and isinstance(v, (list, tuple)):
             items.append((k, tuple(v)))
         else:
