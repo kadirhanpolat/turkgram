@@ -1142,19 +1142,72 @@ def analyze(surface: str, pos: str | None = None,
 
     # Adım 7d: Çatı + türetme istifi (yazdırıcı = yaz+CAUS+IcI)
     # roots-gate; voiced gövde conjugate/imp/voice_chain ile çözülür + türetme oracle.
-    if roots is not None and pos in (None, "noun", "adj"):
+    # _in_voice_pass: _voiced_stem_root içi analyze'da voice-pass'ler atlanır (re-entrancy).
+    if roots is not None and not _in_voice_pass[0] and pos in (None, "noun", "adj"):
         _try_voice_derivation(surface_token, analyses, seen, roots=roots)
+
+    # Adım 7e: Fiilimsi + çatı istifi (yazdırma/okutmak/yazdırdığı = voiced + fiilimsi)
+    if roots is not None and not _in_voice_pass[0] and pos in (None, "noun", "verb", "adj"):
+        _try_voice_participle(surface_token, analyses, seen, roots=roots)
 
     return analyses
 
 
+def _try_voice_participle(
+    surface: str, analyses: list, seen: set, roots: "set[str] | None",
+) -> None:
+    """Fiilimsi + çatı istifi: voiced verb gövdesi + fiilimsi (yazdırma=yaz+CAUS+-mA,
+    okutmak=oku+CAUS+-mAk, yazdırdığı=yaz+CAUS+-DIk+P3sg). Çatı+türetme emsali: voiced
+    mastar (yazdırmak) participle oracle'ına lemma olarak verilir, KÖK fiil + voice_chain
+    raporlanır. roots-gate + `_VOICE_STEM_MARKER` ön-filtre (re-entrant analyze perf)."""
+    roots_fs = frozenset(roots) if roots is not None else None
+    for D in _root_candidates(surface):
+        if not (D.endswith("mak") or D.endswith("mek")) or len(D) <= 3:
+            continue                       # fiil mastarı adayı olmalı
+        stem = D[:-3]
+        if not _VOICE_STEM_MARKER.search(stem):
+            continue                       # voiced gövde deseni değil → atla
+        vinfo = _voiced_stem_root(stem, roots_fs)
+        if vinfo is None:
+            continue
+        root_lemma, vc = vinfo
+        for raw_kwargs in _enumerate_participle(surface, stem):
+            if not _verify("participle", D, raw_kwargs, surface):
+                continue
+            canon = _canonicalize("participle", raw_kwargs)
+            new_kwargs = dict(canon)
+            new_kwargs["voice_chain"] = vc
+            key = ("voice_participle", surface, root_lemma, _kwargs_key(new_kwargs))
+            if key in seen:
+                continue
+            seen.add(key)
+            # segmentasyon voiced mastar (D) üzerinden (voiced gövde + fiilimsi ekleri)
+            segs = _segment("participle", D, canon, surface)
+            analyses.append(Analysis(
+                kind="participle", lemma=root_lemma, pos="verb",
+                kwargs=new_kwargs, segments=segs, hypothetical=False,
+            ))
+
+
 _VOICE_STEM_MARKER = re.compile(r"[ıiuü][lnrşt]$")  # voiced bare gövde son deseni
+_in_voice_pass = [False]  # re-entrancy guard: voice pass içindeki analyze voice-pass'i atlar
 
 
-def _voiced_stem_root(stem: str, roots: "set[str] | None") -> "tuple[str, tuple] | None":
+@functools.lru_cache(maxsize=8192)
+def _voiced_stem_root(stem: str, roots_fs: "frozenset[str] | None") -> "tuple[str, tuple] | None":
     """Voiced verb gövdesi (yazdır) → (kök fiil, voice_chain). imp-2sg = bare voiced gövde
-    → conjugate/imp/voice_chain analizinden çıkar (mevcut çatı-çekim mekanizması)."""
-    for a in analyze(stem, roots=roots, max_derivation_depth=1):
+    → conjugate/imp/voice_chain analizinden çıkar (mevcut çatı-çekim mekanizması).
+
+    lru_cache (her iki voice-pass + aday/sözcük tekrarları paylaşır; re-entrant analyze
+    pahalı — perf kritik). Re-entrancy guard: içteki analyze voice-pass'leri ÇAĞIRMAZ
+    (sonsuz özyineleme önlenir — _root_candidates mak-ekleme ile stem azalmaz)."""
+    roots = set(roots_fs) if roots_fs is not None else None
+    _in_voice_pass[0] = True
+    try:
+        results = list(analyze(stem, roots=roots, max_derivation_depth=1))
+    finally:
+        _in_voice_pass[0] = False
+    for a in results:
         if (not a.hypothetical and a.kind == "conjugate"
                 and a.kwargs.get("tense") == "imp"
                 and a.kwargs.get("voice_chain")):
@@ -1173,6 +1226,7 @@ def _try_voice_derivation(
     from .derivation import derivations as _derivations, _DERIVED_POS
     from .morphology import low_vowel
 
+    roots_fs = frozenset(roots) if roots is not None else None
     for (stem, label, suffix_surface, src_pos) in _strip_one_layer(surface):
         if src_pos != "verb":       # yalnız fiil-input türetme (base bir fiil gövdesi)
             continue
@@ -1180,7 +1234,7 @@ def _try_voice_derivation(
         # ([ıiuü][lnrşt]: -DIr/-t/-Il/-In/-Iş/-Ir…). Değilse pahalı re-entrant analyze ATLA.
         if not _VOICE_STEM_MARKER.search(stem):
             continue
-        vinfo = _voiced_stem_root(stem, roots)
+        vinfo = _voiced_stem_root(stem, roots_fs)
         if vinfo is None:
             continue                # gövde voiced değil → çatı+türetme değil
         root_lemma, vc = vinfo
