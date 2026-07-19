@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import Any, Collection, Mapping
 
 from .morphology import conjugate
-from .morphology_noun import decline, copula
+from .morphology_noun import decline, copula, with_ki
 from .nonfinite import converb, participle, converb_casina, converb_ken
 from .adjective import intensify, diminutive, _VALID_SUFFIXES as _ADJ_SUFFIXES
 from .number import ordinal as _ordinal, distributive as _distributive
@@ -30,6 +30,7 @@ from .analysis_candidates import (
     _root_candidates,
     _enumerate_conjugate, _enumerate_decline, _enumerate_copula,
     _enumerate_converb, _enumerate_participle, _enumerate_casina, _enumerate_ken,
+    _enumerate_ki,
 )
 
 # ---------------------------------------------------------------------------
@@ -116,7 +117,7 @@ def analysis_to_dict(
 # ---------------------------------------------------------------------------
 _POS = ("verb", "noun", "adj", "num", "conj", "postp")
 _KINDS = ("conjugate", "decline", "copula", "converb",
-          "converb_casina", "converb_ken", "participle",
+          "converb_casina", "converb_ken", "participle", "with_ki",
           "intensify", "diminutive", "ordinal", "distributive",
           "conjunction", "derivation",
           "reduplication_full", "reduplication_converb", "reduplication_m",
@@ -131,6 +132,7 @@ _KIND_FUNCS: dict[str, Any] = {
     "converb_casina": converb_casina,
     "converb_ken": converb_ken,
     "participle": participle,
+    "with_ki": with_ki,
 }
 
 
@@ -218,6 +220,15 @@ def _canon_casina(kwargs: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _canon_ki(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """-ki aitlik: case daima; possessive yalnız None-dışı (nom/None atılır, §4)."""
+    out: dict[str, Any] = {"case": kwargs["case"]}
+    poss = kwargs.get("possessive")
+    if poss is not None:
+        out["possessive"] = poss
+    return out
+
+
 def _canonicalize(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     if kind == "conjugate":
         return _canon_conjugate(kwargs)
@@ -233,6 +244,8 @@ def _canonicalize(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
         return _canon_casina(kwargs)  # aynı şema: base daima, negative yalnız True
     if kind == "participle":
         return _canon_participle(kwargs)
+    if kind == "with_ki":
+        return _canon_ki(kwargs)
     return dict(kwargs)
 
 
@@ -297,6 +310,9 @@ def _call_generator(kind: str, lemma: str, frozen_kwargs: tuple) -> str | None:
         elif kind == "participle":
             ptype = kwargs.pop("ptype")
             return fn(lemma, ptype, **kwargs)
+        elif kind == "with_ki":
+            case = kwargs.pop("case", "loc")
+            return fn(lemma, case=case, **kwargs)
         else:
             return None
     except (ValueError, KeyError, TypeError):
@@ -388,6 +404,9 @@ def _raw_from_canon(kind: str, canon: dict[str, Any]) -> dict[str, Any]:
     elif kind == "participle":
         raw.setdefault("possessive", None)
         raw.setdefault("case", None)
+    elif kind == "with_ki":
+        raw.setdefault("case", "loc")
+        raw.setdefault("possessive", None)
     return raw
 
 
@@ -693,6 +712,28 @@ def _segment_converb_ken(lemma: str, canon: dict[str, Any],
     return _segs_to_tuple(pairs)
 
 
+def _segment_with_ki(lemma: str, canon: dict[str, Any],
+                     surface: str) -> tuple[Segment, ...]:
+    """-ki aitlik segmentasyonu — DELEGASYON (casina §6g emsali): decline tabanını
+    _segment_decline'a ver, sonra tek 'ki' dilimini ekle. Taban = decline(lemma, case, poss).
+    Kİ_ROUND'da (bugünkü) taban decline'a eşlenmez → güvenli geri-düşüş (surface, KÖK)."""
+    case = canon["case"]
+    possessive = canon.get("possessive")
+    base_raw: dict[str, Any] = {"case": case, "number": "sg", "possessive": possessive}
+    base_form = _gen_with_raw("decline", lemma, base_raw)
+    if base_form is None or not surface.startswith(base_form):
+        return _segs_to_tuple([(surface, "KÖK")])  # Kİ_ROUND / güvenli geri-düşüş
+    base_canon: dict[str, Any] = {"case": case}
+    if possessive:
+        base_canon["possessive"] = possessive
+    base_segs = _segment_decline(lemma, base_canon, base_form)
+    pairs = [(s.surface, s.label) for s in base_segs]
+    suffix = surface[len(base_form):]
+    if suffix:
+        pairs.append((suffix, "ki"))
+    return _segs_to_tuple(pairs)
+
+
 def _segment_participle(lemma: str, canon: dict[str, Any],
                         surface: str) -> tuple[Segment, ...]:
     """
@@ -755,6 +796,8 @@ def _segment(kind: str, lemma: str, canon_kwargs: dict[str, Any],
         return _segment_converb_ken(lemma, canon_kwargs, surface_token)
     if kind == "participle":
         return _segment_participle(lemma, canon_kwargs, surface_token)
+    if kind == "with_ki":
+        return _segment_with_ki(lemma, canon_kwargs, surface_token)
     # Fallback: tüm yüzey = KÖK
     return _segs_to_tuple([(surface_token, "KÖK")])
 
@@ -1088,6 +1131,7 @@ _ENUMERATE_FN: dict[str, Any] = {
     "participle": lambda surface, stem, lemma: _enumerate_participle(surface, stem),
     "decline":   lambda surface, stem, lemma: _enumerate_decline(surface, stem),
     "copula":    lambda surface, stem, lemma: _enumerate_copula(surface, stem),
+    "with_ki":   lambda surface, stem, lemma: _enumerate_ki(surface, stem),
 }
 
 
@@ -1130,7 +1174,7 @@ def _try_noun(surface: str, lemma: str, stem: str,
     if roots is not None and lemma not in roots:
         return
     hyp = roots is None
-    for kind in ("decline", "copula"):
+    for kind in ("decline", "copula", "with_ki"):
         _process_kind(kind, "noun", surface, lemma, stem, analyses, seen, hyp)
 
 

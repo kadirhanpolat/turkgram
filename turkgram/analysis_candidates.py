@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from .nonfinite import CONVERBS, PARTICIPLES
+from .morphology_noun import Kİ_ROUND as _Kİ_ROUND
 
 # ---------------------------------------------------------------------------
 # Ünlüler
@@ -354,6 +355,32 @@ def _enumerate_converb(surface: str, stem: str) -> list[dict[str, Any]]:
         if kind == "dikce" and not _cell_allowed(surface, "converb_kind", "dikce"):
             continue
         hyps.append({"kind": kind})
+    return hyps
+
+
+# -ki aitlik eki markerı: yüzey k[ıiuü] ile biter (loc/gen -ki + Kİ_ROUND -kü).
+# Değişmez ek (ünlü uyumu istisnası) ama yuvarlak -kü için ıiuü kapsanır. Recall-güvenli.
+_KI_MARKER = re.compile(r"k[ıiuü]$")
+
+
+def _enumerate_ki(surface: str, stem: str) -> list[dict[str, Any]]:
+    """-ki aitlik hipotezleri: case ∈ {loc, gen} × possessive ∈ {None, 3sg} = 4.
+    Marker yoksa hiç enumerate etme (yüzey k[ıiuü] ile bitmeli). V1: yalnız 3sg iyelik.
+
+    Kİ_ROUND (bugün/dün/gün/öbür): üretim case/possessive'i YOK SAYAR (donmuş -kü) →
+    4 hipotezin dördü de oracle'ı geçerdi (çelişkili 4x belirsizlik, hakem HIGH). Bu
+    köklerde TEK kanonik hipotez üret (case=loc, iyeliksiz)."""
+    if not _KI_MARKER.search(surface):
+        return []
+    if stem in _Kİ_ROUND:
+        return [{"case": "loc"}]
+    hyps: list[dict[str, Any]] = []
+    for case in ("loc", "gen"):
+        for possessive in (None, "3sg"):
+            h: dict[str, Any] = {"case": case}
+            if possessive is not None:
+                h["possessive"] = possessive
+            hyps.append(h)
     return hyps
 
 
