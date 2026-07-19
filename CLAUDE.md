@@ -456,6 +456,28 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     cc/conj mevcut. **Kapsam dışı (V1):** plural/iyelik+durum apostrof ekleri (`Ali'ler`, `Ali'sinin`); sıfat-araya-
     girmiş possessor (`adamın kırmızı arabası` — R0 R1'den önce, ADJ'ı geçemez; pre-existing genel parser sınırı);
     head poss feats disambiguation. Hakem: SHIP (0 CRITICAL/HIGH/MEDIUM; sweep 1540 çağrı 0 çökme). **4127 test yeşil** (+11).
+  - ✅ **`-ki` aitlik eki ÇÖZÜMLEMESİ** (2026-07-19, yeni kind `with_ki`; SPEC `docs/superpowers/specs/2026-07-19-ki-aitlik-analizi-design.md`):
+    üretim vardı (`morphology_noun.with_ki`) çözümleme yoktu (`evdeki`/`masadaki`→NO-REAL) → Faz 2b casina/ken
+    "motor-dışı biçim çözümlemesi" deseni. `evdeki`→(ev,{case:loc}), `benimki`→(ben,{case:gen}),
+    `içindeki`→(iç,{case:loc,possessive:3sg}), `bugünkü`→(bugün,{case:loc}). **Enumerate** (`_enumerate_ki`,
+    candidates.py): marker `k[ıiuü]$` (değişmez -ki + Kİ_ROUND yuvarlak -kü) yoksa hiç enumerate etme;
+    case∈{loc,gen}×possessive∈{None,3sg}=4 hipotez, oracle (`with_ki==surface`) doğrular. **Delegasyonlu
+    segmentasyon** (`_segment_with_ki`, §6g emsali): decline tabanını `_segment_decline`'a ver + tek `ki` dilimi
+    (`iç|i=3sg|nde=loc|ki`). **TUZAK — Kİ_ROUND 4x belirsizlik (hakem HIGH):** `with_ki` bugün/dün/gün/öbür'de
+    case/possessive'i YOK SAYAR (donmuş -kü) → 4 hipotez de oracle geçerdi (çelişkili 4 analiz); `_enumerate_ki`
+    stem∈Kİ_ROUND ise TEK hipotez (`case=loc`) üretir. **Kapsam dışı (V1):** stacked -ki (`dakileri`/`evdekinin`,
+    ki-gövde yeniden çekimi), possessive≠3sg + çoğul; `_root_candidates` düşen-ünlü sınırı (`naklınki`, pre-existing).
+    Wiring: `_KINDS`/`_KIND_FUNCS`/`_ENUMERATE_FN`/`_canon_ki`/`_raw_from_canon`/`_call_generator`/`_try_noun`
+    (with_ki SONA). Golden 11+belirsizlik+negatif (Opus motor-körü). Hakem SHIP (1 HIGH giderildi; sweep 1000
+    çağrı 0 çökme, 1 pre-existing düşen-ünlü miss). **4179 test yeşil** (+14).
+  - ✅ **İstatistiksel disambiguation COVERAGE artışı** (2026-07-19, `statistical.py`; bulgu+kararlar
+    `docs/superpowers/specs/2026-07-19-statistical-eval-bulgular.md`): TrMor2018 gold değerlendirmesi
+    (`tools/eval_statistical.py`) → HMM doğruluğu **%44.2→%74.8** (+30.6pt), coverage **%45.1→%80.7** (+35.6pt);
+    TAMAMI saf-Python, CRF/dış-bağımlılık YOK, analyze() çekirdeği DEĞİŞMEDEN. Adımlar: (a) `_analysis_pos` pos-tabanlı
+    eşleme (postp→Postp, conj→Conj…); (b) `_analysis_pos_lex` lexicon-aware refine + `viterbi(pos_fn=)`; full-POS
+    roots (fonksiyon sözcükleri); `augment_function_candidates` çok-POS enjeksiyon (bir/çok/o → HMM bağlamla seçer);
+    `augment_oov_candidates` OOV→Noun fallback. **CRF-gate KARARI: ERTELENDİ** (HMM covered'da tavana yakın; darboğaz
+    dizi-modeli değil coverage). Hakem: 2 HIGH giderildi (her/hep zamir değil; Kİ_ROUND ayrı). Tüm eval opt-in.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
