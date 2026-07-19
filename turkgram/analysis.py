@@ -1214,21 +1214,27 @@ def _process_kind(
     kind: str, pos: str, surface: str, lemma: str, stem: str,
     analyses: list[Analysis], seen: set[tuple], hyp: bool,
 ) -> None:
-    """Tek kind için: enumerate → canon → dedup → verify → segment → Analysis ekle."""
+    """Tek kind için: enumerate → VERIFY-FIRST → canon → dedup → segment → Analysis ekle.
+
+    PERF: enumerate raw_kwargs generator-hazır (raw_from_canon'un yeniden türettiğiyle
+    generator-eşdeğer) → doğrudan verify. Hipotezlerin ~%99'u verify'da elenir; pahalı
+    canonicalize/dedup/segment YALNIZ geçenler için çalışır (545k→birkaç bin). Duplike
+    verify `_call_generator` lru_cache ile ucuz; dedup verify SONRASI canon'da yapılır
+    (aynı çıktı, tam-suite doğruladı)."""
     enum_fn = _ENUMERATE_FN[kind]
     for raw_kwargs in enum_fn(surface, stem, lemma):
+        if not _verify(kind, lemma, raw_kwargs, surface):
+            continue
         canon = _canonicalize(kind, raw_kwargs)
         key = (kind, lemma, _kwargs_key(canon))
         if key in seen:
             continue
         seen.add(key)
-        raw = _raw_from_canon(kind, canon) if kind != "converb" else dict(canon)
-        if _verify(kind, lemma, raw, surface):
-            segs = _segment(kind, lemma, canon, surface)
-            analyses.append(Analysis(
-                lemma=lemma, pos=pos, kind=kind,
-                kwargs=canon, segments=segs, hypothetical=hyp,
-            ))
+        segs = _segment(kind, lemma, canon, surface)
+        analyses.append(Analysis(
+            lemma=lemma, pos=pos, kind=kind,
+            kwargs=canon, segments=segs, hypothetical=hyp,
+        ))
 
 
 def _try_verb(surface: str, lemma: str, stem: str,
