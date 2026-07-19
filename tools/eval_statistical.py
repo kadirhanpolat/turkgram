@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from turkgram import analysis as an, context as ctx, disambiguation as dis, lexicon as lx
 from turkgram.statistical import (
     load_model, viterbi, parse_oflazer, _analysis_pos, _analysis_pos_lex,
-    augment_function_candidates,
+    augment_function_candidates, augment_oov_candidates,
 )
 
 _GOLD = Path(__file__).parent / "trmor2018" / "TrMor2018" / "handtagged" / "trmor2018.gold"
@@ -73,6 +73,8 @@ def main() -> None:
     ap.add_argument("--funcwords", action="store_true",
                     help="çok-POS fonksiyon sözcüklerine sentetik POS adayları enjekte et "
                          "(bir/çok/o/ne… → HMM bağlamla seçer)")
+    ap.add_argument("--oov-noun", action="store_true",
+                    help="OOV (aday üretilmeyen) token → Noun adayı (özel-ad/alıntı fallback)")
     args = ap.parse_args()
 
     if args.full_roots:
@@ -113,6 +115,8 @@ def main() -> None:
         if args.funcwords:
             cand = [augment_function_candidates(tok, c, _pm)
                     for tok, c in zip(tokens, cand)]
+        if args.oov_noun:
+            cand = [augment_oov_candidates(tok, c) for tok, c in zip(tokens, cand)]
 
         iso = [dis.rank(c) for c in cand]
         rule = ctx.rank_in_context(tokens, cand, freq=freq)

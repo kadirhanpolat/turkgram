@@ -182,6 +182,34 @@ kapalı küme) + `_PRONOUN_LEMMAS` (eğik zamir → Pron) + `_FuncWordAnalysis` 
 **Sonuç:** İstatistiksel disambiguation HMM doğruluğu %44.2→%70.4; CRF gereksiz, saf-Python +
 MIT değişmezi korundu. Kalan: OOV/özel-ad recall (%9.9), içsel `unmapped` (%2.4) — ayrı iş.
 
+## 5f. Uygulama — (b) OOV → Noun fallback (özel-ad recall, 2026-07-19)
+
+**Bulgu (138 OOV token/150 cümle):** %25 büyük-harf özel-ad sinyali (Henry/Lord/
+Aleksandrovna → hepsi Noun); %73 küçük-harf **derin morfoloji açığı** (`-ki` eki:
+melodramlardaki/içindeki; ünlü-düşme: omzuna=omuz; çok-katmanlı türetme:
+bencilliklerinden/sürdürenlerin; alıntı: melodram/dürbün; nominalize fiil+ekfiil:
+korkmamızdır). OOV gold POS: Noun 80 / unmapped 23 / Adj 20 / Verb 8.
+
+**Uygulama:** `augment_oov_candidates(token, analyses)` — gerçek aday YOKSA `Noun`
+sentetik adayı enjekte eder. Bilinmeyen ≈ ad (özel-ad + alıntı + leksikon açığı, hepsi
+major=Noun). `analyze()` çekirdeği DOKUNULMAZ (oracle özel-adı üretemez — heuristik
+fallback disambiguation katmanında). Recall-güvenli. `eval_statistical --oov-noun`.
+
+| Metrik (150 cümle) | +funcwords | **+oov-noun** |
+|--------------------|------------|---------------|
+| OOV | 9.9% | **0.0%** |
+| Coverage | 75.0% | **80.7%** |
+| **HMM acc(tüm)** | 70.4% | **74.8%** |
+| rule acc(tüm) | 58.8% | 64.5% |
+| isolated acc(tüm) | 58.3% | 64.0% |
+
+- **Kümülatif başlangıçtan: coverage 45.1→80.7 (+35.6pt), HMM acc 44.2→74.8 (+30.6pt).**
+- Noun-fallback yalnız Noun-gold OOV'yi kurtarır; Verb/Adj OOV zaten yanlıştı → net pozitif, zarar yok.
+
+**Kalan (ayrı/büyük iş):** küçük-harf OOV'nin derin morfoloji açıkları — `-ki` eki,
+ünlü-düşme genişletme, çok-katmanlı türetme derinliği, alıntı leksikonu. Her biri ayrı
+morfoloji özelliği (analysis-by-generation genişletmesi). CRF hâlâ gereksiz.
+
 ## 5. Notlar
 
 - `tools/diff_harness.py` gold-reader `*.txt` glob'lar; gerçek gold tek dosya

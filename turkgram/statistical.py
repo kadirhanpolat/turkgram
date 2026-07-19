@@ -560,6 +560,25 @@ def augment_function_candidates(token: str, analyses: Sequence,
     return out
 
 
+def augment_oov_candidates(token: str, analyses: Sequence) -> List:
+    """OOV (gerçek aday üretilmeyen) token → Noun adayı enjekte et (recall fallback).
+
+    Bilinmeyen sözcük Türkçede büyük olasılıkla addır (leksikon açığı, alıntı, özel-ad).
+    Büyük-harf (cümle-başı dışı) özel-ad sinyalidir; ama özel-ad da common-ad da major
+    POS = Noun → tek Noun adayı ikisini de kapsar. Yalnız disambiguation-içi (`analyze()`
+    çekirdeği DOKUNULMAZ; analysis-by-generation oracle özel-adı üretemez — bu katman
+    heuristik fallback'tir). Recall-güvenli: yalnız aday YOKSA ekler.
+
+    NOT: küçük-harf OOV'lerin çoğu derin morfoloji açığıdır (-ki eki, ünlü-düşme,
+    çok-katmanlı türetme) → Noun fallback yalnız Noun-gold olanları kurtarır; Verb/Adj
+    OOV zaten yanlıştı, Noun ile de yanlış kalır (zarar yok, net pozitif).
+    """
+    real = [a for a in analyses if not getattr(a, "hypothetical", False)]
+    if real:
+        return list(analyses)
+    return list(analyses) + [_FuncWordAnalysis(lemma=token.lower(), major_pos="Noun")]
+
+
 # ---------------------------------------------------------------------------
 # Çarpımsal skorlama (bağlamsız, token-başına)
 # ---------------------------------------------------------------------------

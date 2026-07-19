@@ -168,3 +168,30 @@ def test_augment_no_spurious_pron(token):
     cand = [a for a in an.analyze(token, roots=full) if not a.hypothetical]
     aug = augment_function_candidates(token, cand, pm)
     assert "Pron" not in {_analysis_pos_lex(a, pm) for a in aug}
+
+
+# --- OOV → Noun fallback (augment_oov_candidates) ---
+from turkgram.statistical import augment_oov_candidates
+
+
+def test_oov_injects_noun():
+    """OOV (aday yok) → Noun adayı enjekte edilir (özel-ad/alıntı fallback)."""
+    aug = augment_oov_candidates("Aleksandrovna", [])
+    assert "Noun" in {_analysis_pos_lex(a, lx.pos_map()) for a in aug}
+
+
+def test_oov_capitalized_proper_noun():
+    """Büyük-harf OOV özel-ad → Noun."""
+    full = _full_roots()
+    cand = [a for a in an.analyze("Xylophonium", roots=full) if not a.hypothetical]
+    aug = augment_oov_candidates("Xylophonium", cand)
+    assert "Noun" in {_analysis_pos_lex(a, lx.pos_map()) for a in aug}
+
+
+def test_oov_noninjection_when_covered():
+    """Gerçek adayı olan token dokunulmaz (recall-güvenli, additive değil-gerekli)."""
+    full = _full_roots()
+    cand = [a for a in an.analyze("kitap", roots=full) if not a.hypothetical]
+    assert cand
+    aug = augment_oov_candidates("kitap", cand)
+    assert len(aug) == len(cand)
