@@ -269,10 +269,21 @@ def _estimate_morphs(combo: tuple[Any, ...]) -> int:
 # ---------------------------------------------------------------------------
 # Grid enumerasyon — her kind için hipotez kümesi
 # ---------------------------------------------------------------------------
+# Conjugate person eki SON-karakter ailesi (perf prune; question=False dalı).
+# 47.040 üretimde (tüm tense×neg×abil×aux×aspect) doğrulandı: 1sg/1pl/2pl ekleri
+# DAR aile. 2sg/3sg/3pl GENİŞ (imperative bare-stem + tense çeşitliliği) → prune YOK
+# (tabloda yoklar). Person eki en sonda; voice/aux/aspect/neg/abil değiştirmez.
+# question=True'da person eki ' mI'dan ÖNCE → prune UYGULANMAZ (recall-güvenli).
+_CONJ_PERSON_LASTCHAR: dict[str, frozenset] = {
+    "1sg": frozenset("m"), "1pl": frozenset("kmz"), "2pl": frozenset("nz"),
+}
+
+
 def _enumerate_conjugate(surface: str, stem: str, lemma: str) -> list[dict[str, Any]]:
     """Conjugate hipotezleri; ses filtreleri + ünlü-yuvası guard."""
     budget = max(0, _count_vowels(surface) - _count_vowels(stem))
     multi = " " in surface
+    last_char = surface[-1] if surface else ""
     hyps: list[dict[str, Any]] = []
 
     for combo in itertools.product(
@@ -284,6 +295,12 @@ def _enumerate_conjugate(surface: str, stem: str, lemma: str) -> list[dict[str, 
         # Soru multi-token gerektiriyor
         if quest and not multi:
             continue
+        # Person-ending prune (question=False; recall-güvenli dar aileler): yüzey
+        # son-karakteri person ailesinde değilse imkânsız. question=True (mI son-ekli) muaf.
+        if not quest:
+            fam = _CONJ_PERSON_LASTCHAR.get(person)
+            if fam is not None and last_char not in fam:
+                continue
         if not _passes_filters(surface, combo):
             continue
         n_morphs = _estimate_morphs(combo)

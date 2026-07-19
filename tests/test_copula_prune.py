@@ -46,3 +46,36 @@ def test_copula_prune_recall_sample():
                            and a.kwargs.get("person") == p
                            and a.kwargs.get("aux") == aux for a in res), \
                     f"{surf} (n={n},aux={aux},p={p}) copula analizi kayıp"
+
+
+# --- conjugate person-ending prune aile-varsayımı kilidi ---
+from turkgram.morphology import conjugate as _conjugate
+from turkgram.analysis_candidates import (
+    _CONJ_PERSON_LASTCHAR, _FINITE_TENSES, _CONJ_AUX, _ASPECTS,
+)
+
+_VERBS = ["gelmek", "okumak", "yazmak", "gitmek", "yemek", "bakmak", "almak", "vermek"]
+
+
+@pytest.mark.parametrize("person,family", sorted(_CONJ_PERSON_LASTCHAR.items()))
+def test_conjugate_person_lastchar_family_holds(person, family):
+    """Tight-aile person'ların (1sg/1pl/2pl) çekim eki SON-karakteri ailede kalmalı
+    (tüm tense×neg×abil×aux×aspect). Prune recall'ının temeli."""
+    for v in _VERBS:
+        for tense in _FINITE_TENSES:
+            for neg in (False, True):
+                for abil in (False, True):
+                    for aux in _CONJ_AUX:
+                        for asp in _ASPECTS:
+                            try:
+                                f = _conjugate(v, tense, person, negative=neg,
+                                               ability=abil, question=False,
+                                               aux=aux, aspect=asp)
+                            except Exception:
+                                continue
+                            if not f or " " in f:
+                                continue
+                            assert f[-1] in family, (
+                                f"{f} ({person}) son-karakter {f[-1]!r} ∉ {set(family)} "
+                                f"→ conjugate prune recall'ı kırar!"
+                            )
