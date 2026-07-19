@@ -503,7 +503,18 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     `_CONJ_PERSON_LASTCHAR`); question=True (mI son-ekli) MUAF (31→8→6.3ms). **TUZAK — recall-güvenlik person eki
     en-sonda + aile-tamlığı varsayımına bağlı:** copula 40k + conjugate 50k exhaustive diferansiyel 0 recall-miss;
     aileler morfoloji değişirse `test_copula_prune.py` yakalar (aile-varsayımını motor çıktısıyla sabitler).
-    Kalan darboğaz: enumerate-verify iç döngüsü (`_passes_filters`/`_cell_allowed` — daha fazla prune correctness-hassas).
+    **(4) `_process_kind` verify-first** — raw_kwargs generator-hazır → canonicalize/dedup/raw_from_canon YALNIZ verify'ı
+    geçen ~%1'de (545k→birkaç bin); 6.3→3.5ms. **Kümülatif 165→3.5ms ~48×**, test suite ~300→~40-120s.
+  - ✅ **Çatı+türetme + disharmonik-düşme analizi + stacked -ki** (2026-07-19): (a) **çatı+türetme** `_try_voice_derivation`:
+    voiced verb gövdesi (yazdır, leksikonda yok) + fiil→isim leksik türetme (yazdırıcı=yaz+CAUS+-IcI); `_voiced_stem_root`
+    conjugate/imp/voice_chain ile çözer + `derivations()` oracle; `_VOICE_STEM_MARKER` ([ıiuü][lnrşt]$) ön-filtre
+    (re-entrant analyze perf: 5.1→3.56ms). Çatı+fiilimsi (-mA) kapsam DIŞI. (b) **disharmonik-düşme analizi** —
+    `_root_candidates` CC-prefix'e 4 yüksek ünlü ekler (nakli→nakil). (c) **stacked -ki** `_try_ki_inflected`
+    (evdekileri=evde+ki+ler+i; dış çekim birincil, `ki_case`/`ki_possessive` ekseni → case-çakışması yok). Hepsi roots-gate.
+  - ✅ **morphology_noun kapsam** (2026-07-19): DROP_VOWEL +16 (omuz/zihin/…), FRONT_HARMONY +17 (nakil/kontrol/hayal/
+    cemaat/…), SOFTEN_NO +2 (cemaat/sadakat), **BACK_HARMONY YENİ** (lütuf→lütfu/lütfa, ters-disharmonik: `_hsrc` back
+    dalı sanal arka-ünlü, `back` bayrağı `_high`/`_low`/`_apply_*`'e threadli default False). Set-üyeliği lemma-özel
+    → false-drop/false-front YOK; her ekleme TDK-doğrulandı + BACK/NEGATIVE kontrol grupları.
   - ✅ **Ünlü düşmesi kapsam genişletme** (2026-07-19, `morphology_noun.py`; SPEC `docs/superpowers/specs/2026-07-19-unlu-dusme-kapsam-design.md`):
     `DROP_VOWEL` eksikti (omuz→omuzu yanlış). `DROP_VOWEL` += 15 harmonik (omuz/zihin/ilim/beniz/hışım/kahır/kavis/
     kibir/kutur/nabız/remiz/sadır/şahıs/vecih/kayıt); `FRONT_HARMONY` += 4 disharmonik alıntı (nakil/haciz/kavim/kavis
