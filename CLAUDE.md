@@ -537,6 +537,27 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     **Ayrıca red→reddi:** `morphology_noun.DOUBLE` += "red" (ünsüz ikizleşme; TDK std "ret" ama "red" yaygın varyant;
     set-üyeliği lemma-özel → false-pos yok). Golden 45 (Opus motor-körü, additive `want⊆got`). Hakem APPROVE (0
     CRITICAL/HIGH/MEDIUM, 1 LOW docstring giderildi); sweep 3073 çağrı 0 çökme.
+  - ✅ **Cümle çözümleme katmanı — öge etiketleme + cümle türü** (2026-07-20, 4417 test; SPEC
+    `docs/superpowers/specs/2026-07-20-cumle-cozumleme-design.md`): YENİ modül `sentence.py`
+    `analyze_sentence(text, roots)` → `SentenceAnalysis(elements, sentence_type)`. `parse.py`/
+    `dependency.py`/`analyze()` DOKUNULMAZ, opt-in. **MİMARİ KARARI (ampirik):** öge grubu
+    constituency ağacından DEĞİL, doğrudan **token-düzeyi en-iyi analiz + morfolojik durumdan**
+    (parser yapısı kırılgan: özel-ad/çoğul→ADJ, özne yutulması, değil→VERB, mI düşer). **Öge
+    etiketleri:** özne/yüklem/belirtili nesne(acc)/belirtisiz nesne(nom)/dolaylı tümleç(dat/loc/
+    abl, alias 'yer tamlayıcısı')/zarf tümleci/edat tümleci/cümle dışı unsur. **Cümle türü 7 eksen:**
+    yuklem_turu(fiil/isim), yuklem_yeri(kurallı/devrik), olumluluk, soru, kip(emir/istek/şart/
+    gereklilik/haber), yapi(basit/birleşik/sıralı/bağlı), eksiltili. **Yüzey kapalı-set:** mI regex/
+    değil/yok/edat(`_POSTPOSITIONS`)/bağlaç/demonstratif/derece sözcükleri (motor çözemez).
+    **TUZAKLAR (hakem 2 HIGH giderildi):** (1) fiil-eşsesli ad özne (Kar/Yaz=ad+imperatif homograf)
+    → gövde finit-fiil yalnız ANLATI zamanı/bağlaçla koordinat yüklem, imperatif homograf→özne
+    (yanlış `sıralı` engellendi); (2) cümle-son olmayan mI → soru GLOBAL taramayla; (3) edat
+    fiil-homografı (göre=gör-e) yüklem tespitinde atlanır; (4) modifier-zinciri derece-sözcüğüyle
+    başlarsa zarf, yoksa son token isim başı (pos_map ali/çocuk=adj kuruntusu); (5) emir→yalın ad=hitap.
+    **KULLANICI KARARI:** kanonik='dolaylı tümleç' (okul grameri), alias='yer tamlayıcısı' (§4 sapma).
+    **Dokümante SINIR (§6):** proper-noun-adj homograf + SOV (Ali kitabı/Çocuk topu) öge idealini
+    tutturamaz (özne kaybolabilir) → golden 2 vaka skip, TÜR yine tam; leksikon-POS/disambiguation
+    kök nedeni, motor değişmeden iyileşir. Golden 38 cümle (Opus motor-körü bağımsız). **ÖGE 36/38 +
+    TÜR 38/38.** Hakem WARNING→2 HIGH giderildi; sweep 6508 çağrı 0 çökme. `tr.cümle_çözümle`.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.

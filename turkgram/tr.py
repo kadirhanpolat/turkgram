@@ -815,3 +815,13 @@ def koordinasyon(
     """Koordinasyon öbeği. koordine_np() sarmalayıcı."""
     from .syntax import koordine_np
     return koordine_np(ogeler, baglac)
+
+
+# ── Cümle çözümleme (öge + tür) ───────────────────────────────────────────
+def cümle_çözümle(metin: str, *, kökler=None):
+    """Cümleyi öge + tür olarak çözümle. sentence.analyze_sentence() sarmalayıcı.
+
+    kökler=lexicon.load() ÖNERİLİR (gerçek POS için).
+    """
+    from .sentence import analyze_sentence
+    return analyze_sentence(metin, roots=kökler)

@@ -26,7 +26,7 @@ from __future__ import annotations
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
     lexicon, disambiguation, compound, context, adjective, syntax, postposition, conjunction,
-    spellcheck, reduplication, parse, dependency, interjection, onomatopoeia,
+    spellcheck, reduplication, parse, dependency, interjection, onomatopoeia, sentence,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -101,6 +101,9 @@ from .conjunction import conjoin, coordinate, CONJUNCTIONS
 from .interjection import INTERJECTIONS
 from .onomatopoeia import ONOMATOPOEIA
 
+# ── Cümle çözümleme (öge + tür) ──────────────────────────────────────────
+from .sentence import analyze_sentence, Element, SentenceType, SentenceAnalysis
+
 # ── Tokenizasyon (Faz 9) ─────────────────────────────────────────────────
 from .tokenize import tokenize
 
@@ -164,6 +167,7 @@ __all__ = [
     # bağlaç yönetimi
     "conjunction", "conjoin", "coordinate", "CONJUNCTIONS",
     "interjection", "onomatopoeia", "INTERJECTIONS", "ONOMATOPOEIA",
+    "sentence", "analyze_sentence", "Element", "SentenceType", "SentenceAnalysis",
     # normalleştirme + IPA
     "number_to_words", "float_to_words", "date_to_words",
     "time_to_words", "expand_abbreviation", "normalize",
