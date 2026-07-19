@@ -153,6 +153,35 @@ en temiz; kullanıcı kararı öncesi test edildi).
 **Kalan (ayrı iş):** tagset uyuşmazlığı (turkgram leksikonu `her`/`şu`/`hangi`→adj, TrMor
 Det/Pron) — POS eşleme tablosu düzeltmesi; içsel çok-katmanlı `unmapped` (%2.4). CRF hâlâ gereksiz.
 
+## 5e. Uygulama — (b) çok-POS fonksiyon sözcüğü aday enjeksiyonu (2026-07-19)
+
+**Bulgu:** Kalan uncovered'ın en büyük payı bağlama-bağlı çok-sınıflı fonksiyon
+sözcükleri (`bir` 46: Det/Num; `çok`/`öyle`/`pek`: Adverb/Adj; `o`/`bu`: Pron/Det;
+`ne`: Pron/Adj; `en`: Adverb). Leksikon TEK POS verir → statik override YANLIŞ
+(bağlam belirler: `çok güzel`=Adverb / `çok insan`=Adj). Doğru çözüm: her POS için
+sentetik aday üret, **viterbi dizi-geçişiyle seçsin**.
+
+**Uygulama** (`statistical.py`): `_MULTI_POS_FUNCTION_WORDS` (22 sözcük, dilbilimsel-haklı
+kapalı küme) + `_PRONOUN_LEMMAS` (eğik zamir → Pron) + `_FuncWordAnalysis` sentetik aday
++ `augment_function_candidates(token, analyses, pos_map)` (recall-güvenli, yalnız EKLER).
+`_analysis_pos_lex` sentetik adayın `major_pos`'unu okur. `eval_statistical --funcwords`.
+
+| Metrik (150 cümle) | base | +full-roots | **+funcwords** |
+|--------------------|------|-------------|----------------|
+| Coverage | 45.1% | 65.5% | **75.0%** |
+| **HMM acc(tüm)** | 44.2% | 61.9% | **70.4%** |
+| rule acc(tüm) | 43.7% | 57.4% | 58.8% |
+| isolated acc(tüm) | 42.6% | 58.3% | 58.3% |
+
+- **Kümülatif başlangıçtan: coverage +29.9pt, HMM acc +26.2pt.**
+- **HMM izole/kuraldan +12pt önde** (70.4 vs 58.x): çok-POS adayları HMM'e dizi-bağlamıyla
+  ayıklayacak sinyal verir; bağlamsız yöntemler seçemez → HMM'in değeri kesin doğrulandı.
+- Overfit DEĞİL: tablo dilbilimsel olgudur (betimleyici gramer); TrMor tagset'iyle örtüşür.
+- Testler: `tests/test_statistical_pos_mapping.py` (funcword augmentation + tablo geçerliliği).
+
+**Sonuç:** İstatistiksel disambiguation HMM doğruluğu %44.2→%70.4; CRF gereksiz, saf-Python +
+MIT değişmezi korundu. Kalan: OOV/özel-ad recall (%9.9), içsel `unmapped` (%2.4) — ayrı iş.
+
 ## 5. Notlar
 
 - `tools/diff_harness.py` gold-reader `*.txt` glob'lar; gerçek gold tek dosya

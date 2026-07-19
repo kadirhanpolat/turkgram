@@ -8,7 +8,15 @@ gerçek analiz pos alanına dayanır).
 """
 import pytest
 from turkgram import analysis as an, lexicon as lx
-from turkgram.statistical import _analysis_pos, _analysis_fine_state, _analysis_pos_lex
+from turkgram.statistical import (
+    _analysis_pos, _analysis_fine_state, _analysis_pos_lex,
+    augment_function_candidates, _MULTI_POS_FUNCTION_WORDS,
+)
+
+
+def _full_roots():
+    return lx.load(pos={"noun", "verb", "adj", "adv", "pron", "num",
+                        "conj", "postp", "det", "interj"})
 
 
 @pytest.fixture(scope="module")
@@ -102,3 +110,61 @@ def test_full_roots_function_words(token, expected):
     cands = [a for a in an.analyze(token, roots=full) if not a.hypothetical]
     assert cands, f"{token!r} full-roots'ta aday üretmeli"
     assert expected in {_analysis_pos_lex(a, pm) for a in cands}
+
+
+# --- çok-POS fonksiyon sözcüğü aday enjeksiyonu (augment_function_candidates) ---
+@pytest.mark.parametrize("token,expected_subset", [
+    ("çok",  {"Adverb", "Adj"}),
+    ("bir",  {"Det", "Num"}),
+    ("o",    {"Pron", "Det"}),
+    ("her",  {"Det"}),
+    ("ne",   {"Pron", "Adj"}),
+    ("en",   {"Adverb"}),
+])
+def test_augment_function_candidates(token, expected_subset):
+    """Çok-POS fonksiyon sözcüğü → tüm POS seçenekleri aday olur (HMM ayırır)."""
+    full = _full_roots()
+    pm = lx.pos_map()
+    cand = [a for a in an.analyze(token, roots=full) if not a.hypothetical]
+    aug = augment_function_candidates(token, cand, pm)
+    poss = {_analysis_pos_lex(a, pm) for a in aug}
+    assert expected_subset <= poss, f"{token}: {poss} ⊉ {expected_subset}"
+
+
+def test_augment_preserves_and_additive():
+    """Fonksiyon sözcüğü olmayan token dokunulmaz; augment yalnız EKLER (recall-güvenli)."""
+    full = _full_roots()
+    pm = lx.pos_map()
+    cand = [a for a in an.analyze("kitap", roots=full) if not a.hypothetical]
+    aug = augment_function_candidates("kitap", cand, pm)
+    assert len(aug) == len(cand)          # kitap funcword değil → değişmez
+    assert all(x in aug for x in cand)    # additive
+
+
+def test_augment_pronoun_oblique():
+    """Bağımsız zamir eğik biçimi → Pron adayı eklenir (onu = o+acc)."""
+    full = _full_roots()
+    pm = lx.pos_map()
+    cand = [a for a in an.analyze("onu", roots=full) if not a.hypothetical]
+    aug = augment_function_candidates("onu", cand, pm)
+    assert "Pron" in {_analysis_pos_lex(a, pm) for a in aug}
+
+
+def test_multi_pos_table_labels_valid():
+    """Tablo yalnız model pos_set'te bulunan geçerli major etiketler içerir."""
+    from turkgram.statistical import load_model
+    valid = load_model().pos_set | {"Noun", "Verb"}
+    for word, opts in _MULTI_POS_FUNCTION_WORDS.items():
+        for p in opts:
+            assert p in valid, f"{word}: geçersiz POS {p!r}"
+
+
+@pytest.mark.parametrize("token", ["her", "hep"])
+def test_augment_no_spurious_pron(token):
+    """her(belirteç)/hep(zarf) zamir DEĞİL → bare biçimde Pron adayı enjekte edilmez
+    (hakem HIGH regresyon kilidi)."""
+    full = _full_roots()
+    pm = lx.pos_map()
+    cand = [a for a in an.analyze(token, roots=full) if not a.hypothetical]
+    aug = augment_function_candidates(token, cand, pm)
+    assert "Pron" not in {_analysis_pos_lex(a, pm) for a in aug}

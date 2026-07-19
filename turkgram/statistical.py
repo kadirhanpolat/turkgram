@@ -456,6 +456,9 @@ def _analysis_pos_lex(analysis, pos_map: "Optional[Dict[str, str]]" = None) -> s
     `pos_map=None` → dokunmadan `_analysis_pos` (geriye uyum). Fiil/postp/conj/num/adj
     zaten analizden geldiği için yalnız (kind=decline, pos=noun) durumu refine edilir.
     """
+    mp = getattr(analysis, "major_pos", None)  # sentetik funcword adayı
+    if mp:
+        return mp
     base = _analysis_pos(analysis)
     if pos_map is None or base != "Noun":
         return base
@@ -463,6 +466,98 @@ def _analysis_pos_lex(analysis, pos_map: "Optional[Dict[str, str]]" = None) -> s
         return base
     lemma = (getattr(analysis, "lemma", "") or "").lower()
     return _LEX_POS_TO_MAJOR.get(pos_map.get(lemma, ""), base)
+
+
+# ---------------------------------------------------------------------------
+# Çok-POS fonksiyon sözcükleri (bağlama-bağlı; HMM dizi-bağlamıyla ayırır)
+# ---------------------------------------------------------------------------
+
+# Kapalı-küme çok-sınıflı fonksiyon sözcükleri: yüzey → aday major-POS demeti.
+# Leksikon bunlara TEK POS verir (bir→adj, çok→adj), ama gerçekte bağlam belirler
+# (çok güzel=Adverb / çok insan=Adj; bir kişi=Num / bir adam=Det). Statik override
+# YANLIŞ olur → her POS için sentetik aday üretilir, viterbi dizi-geçişiyle seçer.
+# Dilbilimsel olgu (betimleyici gramer); TrMor tagset'iyle örtüşür ama eval'e
+# overfit DEĞİL. Bulgu: 2026-07-19-statistical-eval-bulgular §5e.
+_MULTI_POS_FUNCTION_WORDS: Dict[str, Tuple[str, ...]] = {
+    "bir":    ("Det", "Num"),
+    "çok":    ("Adverb", "Adj"),
+    "az":     ("Adverb", "Adj"),
+    "daha":   ("Adverb",),
+    "en":     ("Adverb",),
+    "pek":    ("Adverb",),
+    "hep":    ("Adverb",),
+    "hemen":  ("Adverb",),
+    "öyle":   ("Adverb", "Adj"),
+    "böyle":  ("Adverb", "Adj"),
+    "şöyle":  ("Adverb", "Adj"),
+    "her":    ("Det",),
+    "tüm":    ("Det", "Adj"),
+    "bütün":  ("Det", "Adj"),
+    "bazı":   ("Det", "Adj"),
+    "birçok": ("Det", "Adj"),
+    "hangi":  ("Adj", "Pron"),
+    "kaç":    ("Adj", "Pron"),
+    "ne":     ("Pron", "Adj"),
+    "o":      ("Pron", "Det"),
+    "bu":     ("Pron", "Det"),
+    "şu":     ("Pron", "Det"),
+}
+
+# Zamir lemmaları → Pron adayı (onu/bunu/bana… eğik + bağımsız yalın ben/sen/o).
+# Bu lemmalar decline'da o/bu/ben olarak çözülür; leksikon o→det/ben→noun der ama
+# bunlar bağımsız zamirdir (TrMor Pron). YALNIZ gerçek zamirler: `her`(belirteç) ve
+# `hep`(zarf) DIŞLANDI (hakem HIGH: zamir değiller → bare biçimde hatalı Pron enjekte
+# ederlerdi). `o`/`bu`/`şu`/`ne` zaten `_MULTI_POS_FUNCTION_WORDS`'te (bare); burada
+# eğik biçimleri (onu/bunu/neyi) için Pron sağlar.
+_PRONOUN_LEMMAS: frozenset = frozenset({
+    "ben", "sen", "o", "biz", "siz", "onlar", "bu", "şu", "bunlar", "şunlar",
+    "kendi", "kim", "ne",
+})
+
+
+@dataclass(frozen=True)
+class _FuncWordAnalysis:
+    """Çok-POS fonksiyon sözcüğü için sentetik aday (yalnız disambiguation-içi).
+
+    `major_pos` doğrudan TrMor major etiketi taşır → `_analysis_pos_lex` onu okur.
+    Gerçek Analysis DEĞİL; analyze() çıktısına GİRMEZ, yalnız disambiguation adayı.
+    """
+    lemma: str
+    major_pos: str
+    pos: str = "x"
+    kind: str = "funcword"
+    kwargs: dict = field(default_factory=dict)
+    hypothetical: bool = False
+    segments: tuple = ()
+
+
+def augment_function_candidates(token: str, analyses: Sequence,
+                                pos_map: "Optional[Dict[str, str]]" = None) -> List:
+    """Çok-POS fonksiyon sözcüğüne sentetik POS adayları ekle (mevcut adayları korur).
+
+    Yüzey `_MULTI_POS_FUNCTION_WORDS`'te ise her POS seçeneği için (zaten mevcut
+    değilse) `_FuncWordAnalysis` ekle. Ayrıca bağımsız zamir eğik biçimi (lemma
+    `_PRONOUN_LEMMAS`'ta) için Pron adayı ekle. Aksi halde analizler dokunulmaz.
+    Recall-güvenli: yalnız EKLER, silmez.
+    """
+    out = list(analyses)
+    present = {_analysis_pos_lex(a, pos_map) for a in out}
+    tok = token.lower()
+    opts = _MULTI_POS_FUNCTION_WORDS.get(tok)
+    if opts:
+        for p in opts:
+            if p not in present:
+                out.append(_FuncWordAnalysis(lemma=tok, major_pos=p))
+                present.add(p)
+    # Bağımsız zamir eğik biçimi → Pron adayı (lemma-tabanlı)
+    if "Pron" not in present:
+        for a in analyses:
+            if (getattr(a, "kind", "") == "decline"
+                    and (getattr(a, "lemma", "") or "").lower() in _PRONOUN_LEMMAS):
+                out.append(_FuncWordAnalysis(lemma=(a.lemma or "").lower(),
+                                             major_pos="Pron"))
+                break
+    return out
 
 
 # ---------------------------------------------------------------------------
