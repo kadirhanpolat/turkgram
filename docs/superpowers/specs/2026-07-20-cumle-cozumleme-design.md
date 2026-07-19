@@ -170,6 +170,11 @@ Dependency root'u YOKSA veya yüklem konumu boşsa (yüklemsiz cümle: "Herkes i
   (`topu`=acc/nom). **Etkisi yalnız yanlış etiket DEĞİL — özne TAMAMEN kaybolabilir:** `Çocuklar
   bahçede oynuyor`'da `Çocuklar`(adj-homograf) modifier zinciriyle `bahçede`'yi yutar → özne düşer.
   Golden'da 2 vaka işaretli (skip); parser/leksikon-POS iyileşince motor DEĞİŞMEDEN düzelir.
+- **V2 İYİLEŞTİRME (2026-07-20):** çoğul/iyelik özne kurtarma — niteleme sıfatı morfolojik
+  olarak ÇIPLAKtır; çekim eki (çoğul `-lAr`/iyelik) alan adj-etiketli token aslında İSİMdir
+  (`Çocuklar`=çoğul→isim başı) → `_classify` MOD/ADV yalnız ÇIPLAK adj-etiketli tokende üretir.
+  `Çocuklar bahçede oynuyor` öznesi geri kazanıldı; `kırmızı araba` (çıplak sıfat) bozulmadı.
+  KALAN sınır yalnız ÇIPLAK tekil homograf (Ali/Çocuk — çekimsiz, ayırt edilemez).
 - **DÜZELTİLDİ (hakem sonrası):** (a) fiil-eşsesli ad özne (Kar/Yaz/Gül = ad + imperatif homograf)
   → gövde finit-fiil yalnız ANLATI zamanında (past/evid/pres/fut/aorist) veya açık bağlaçla
   koordinat yüklem sayılır; imperatif/optatif homograf → özne (yanlış `sıralı` engellendi).

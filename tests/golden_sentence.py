@@ -434,6 +434,31 @@ GOLDEN_SENTENCES = [
         },
     },
 
+    # ── Ek: çoğul/iyelik özne (leksikon adj-kuruntusu; çekimli adj → isim) ──
+    {
+        "text": "Çocuklar bahçede oynuyor",
+        "elements": [
+            ("özne", ("Çocuklar",), 1, ()),
+            ("dolaylı tümleç", ("bahçede",), 2, ("yer tamlayıcısı",)),
+            ("yüklem", ("oynuyor",), 3, ()),
+        ],
+        "type": {
+            "yuklem_turu": "fiil", "yuklem_yeri": "kurallı", "olumluluk": "olumlu",
+            "soru": False, "kip": "haber", "yapi": "basit", "eksiltili": False,
+        },
+    },
+    {
+        "text": "Öğretmenler geldi",
+        "elements": [
+            ("özne", ("Öğretmenler",), 1, ()),
+            ("yüklem", ("geldi",), 2, ()),
+        ],
+        "type": {
+            "yuklem_turu": "fiil", "yuklem_yeri": "kurallı", "olumluluk": "olumlu",
+            "soru": False, "kip": "haber", "yapi": "basit", "eksiltili": False,
+        },
+    },
+
     # ── Ek: fiil-eşsesli ad özne (Kar/Yaz = ad + imperatif homografı) ──────
     {
         "text": "Kar yağdı",

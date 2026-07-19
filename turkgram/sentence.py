@@ -156,12 +156,16 @@ def _classify(idx: int, surface: str, best, pos_map: dict) -> _Tok:
         return _Tok(idx, surface, best, _R_ORTAC, None, "verb")
     if best.kind == "copula":
         return _Tok(idx, surface, best, _R_NOMPRED, case, "noun")
-    # nominal (decline) — leksikon POS refine
+    # nominal (decline) — leksikon POS refine. TUZAK: niteleme sıfatı morfolojik olarak
+    # ÇIPLAKtır; çekim eki (çoğul/iyelik) alan adj-etiketli token aslında İSİMdir (Çocuklar,
+    # Annem) → pos_map ali/çocuk=adj kuruntusunu çekimli biçimlerde geçersiz kılar (özne kaybı fix).
+    inflected = bool(best.kwargs.get("number") or best.kwargs.get("possessive"))
     lex_pos = pos_map.get(best.lemma) or pos_map.get(low)
-    if case is None and (lex_pos == "adv" or _CA_ADVERB_RE.search(low) and lex_pos != "noun"):
-        return _Tok(idx, surface, best, _R_ADV, None, "adv")
-    if case is None and lex_pos in _MOD_POS:
-        return _Tok(idx, surface, best, _R_MOD, None, lex_pos)
+    if case is None and not inflected:
+        if lex_pos == "adv" or (_CA_ADVERB_RE.search(low) and lex_pos != "noun"):
+            return _Tok(idx, surface, best, _R_ADV, None, "adv")
+        if lex_pos in _MOD_POS:
+            return _Tok(idx, surface, best, _R_MOD, None, lex_pos)
     return _Tok(idx, surface, best, _R_AD, case, "noun")
 
 

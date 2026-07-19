@@ -556,8 +556,11 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     **KULLANICI KARARI:** kanonik='dolaylı tümleç' (okul grameri), alias='yer tamlayıcısı' (§4 sapma).
     **Dokümante SINIR (§6):** proper-noun-adj homograf + SOV (Ali kitabı/Çocuk topu) öge idealini
     tutturamaz (özne kaybolabilir) → golden 2 vaka skip, TÜR yine tam; leksikon-POS/disambiguation
-    kök nedeni, motor değişmeden iyileşir. Golden 38 cümle (Opus motor-körü bağımsız). **ÖGE 36/38 +
-    TÜR 38/38.** Hakem WARNING→2 HIGH giderildi; sweep 6508 çağrı 0 çökme. `tr.cümle_çözümle`.
+    kök nedeni, motor değişmeden iyileşir. **ÖGE 38/40 + TÜR 40/40** (golden 40 cümle, Opus motor-körü).
+    Hakem WARNING→2 HIGH giderildi; sweep 6508 çağrı 0 çökme. `tr.cümle_çözümle`. **V2 (2026-07-20):**
+    çoğul/iyelik özne kurtarma — niteleme sıfatı morfolojik ÇIPLAK, çekim eki (çoğul/iyelik) alan
+    adj-etiketli token İSİMdir (`Çocuklar`→özne geri kazanıldı; `kırmızı araba` bozulmadı). Kalan
+    sınır yalnız ÇIPLAK tekil homograf (Ali/Çocuk). 4417→4421 test.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
