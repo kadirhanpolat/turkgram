@@ -417,6 +417,9 @@ def load_model(
 _POS_TO_MAJOR: Dict[str, str] = {
     "noun": "Noun", "verb": "Verb", "adj": "Adj",
     "num": "Num", "conj": "Conj", "postp": "Postp",
+    # ünlem → Interj (Oflazer tagset'inde var); yansıma → Noun (gömülü modelde
+    # güvenilir Onom etiketi yok → güvenli fallback; işlevsel olarak ad/zarf gibi).
+    "ünlem": "Interj", "yansıma": "Noun",
 }
 
 

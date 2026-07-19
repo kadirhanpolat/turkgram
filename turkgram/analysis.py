@@ -115,13 +115,13 @@ def analysis_to_dict(
 # ---------------------------------------------------------------------------
 # Sabitler (orchestration katmanı)
 # ---------------------------------------------------------------------------
-_POS = ("verb", "noun", "adj", "num", "conj", "postp")
+_POS = ("verb", "noun", "adj", "num", "conj", "postp", "ünlem", "yansıma")
 _KINDS = ("conjugate", "decline", "copula", "converb",
           "converb_casina", "converb_ken", "participle", "with_ki",
           "intensify", "diminutive", "ordinal", "distributive",
           "conjunction", "derivation",
           "reduplication_full", "reduplication_converb", "reduplication_m",
-          "postposition")
+          "postposition", "interjection", "onomatopoeia")
 
 # _KIND_FUNCS özel sabit (SPEC §Adım 3)
 _KIND_FUNCS: dict[str, Any] = {
@@ -1113,6 +1113,12 @@ def analyze(surface: str, pos: str | None = None,
     if pos in (None, "postp"):
         _try_postposition_all(surface_token, analyses, seen)
 
+    # Adım 5c: Ünlem + yansıma çözümlemesi (kapalı liste, oracle dışı, additive)
+    if pos in (None, "ünlem"):
+        _try_interjection_all(surface_token, analyses, seen)
+    if pos in (None, "yansıma"):
+        _try_onomatopoeia_all(surface_token, analyses, seen)
+
     # Adım 6: Sayı çözümlemesi (ordinal + distributive)
     if pos in (None, "num"):
         _try_number_all(surface_token, analyses, seen, roots)
@@ -1920,6 +1926,52 @@ def _try_postposition_all(surface: str, analyses: list[Analysis], seen: set[tupl
         lemma=edat,
         pos="postp",
         kind="postposition",
+        kwargs={},
+        segments=_segs_to_tuple([(surface, "kök")]),
+        hypothetical=False,
+    ))
+
+
+def _try_interjection_all(surface: str, analyses: list[Analysis], seen: set[tuple]) -> None:
+    """Ünlem çözümlemesi — oracle dışı, kapalı-liste (SPEC §2).
+
+    Bağlaç/edat deseninin aynası: closed-set, additive, roots-bağımsız.
+    Bilinçli belirsizlik: 'of'=ünlem+ofmak imp; 'işte'=ünlem+iş loc (bkz. SPEC §4).
+    """
+    from .interjection import INTERJECTIONS
+    if surface not in INTERJECTIONS:
+        return
+    key = ("interjection", surface, frozenset())
+    if key in seen:
+        return
+    seen.add(key)
+    analyses.append(Analysis(
+        lemma=surface,
+        pos="ünlem",
+        kind="interjection",
+        kwargs={},
+        segments=_segs_to_tuple([(surface, "kök")]),
+        hypothetical=False,
+    ))
+
+
+def _try_onomatopoeia_all(surface: str, analyses: list[Analysis], seen: set[tuple]) -> None:
+    """Yansıma çözümlemesi — oracle dışı, kapalı-liste (SPEC §3).
+
+    Ünlem deseninin aynası. Bilinçli belirsizlik: 'çat'=yansıma+çatmak imp;
+    'pat'=yansıma+pat isim (bkz. SPEC §4). INTERJECTIONS/ONOMATOPOEIA AYRIK.
+    """
+    from .onomatopoeia import ONOMATOPOEIA
+    if surface not in ONOMATOPOEIA:
+        return
+    key = ("onomatopoeia", surface, frozenset())
+    if key in seen:
+        return
+    seen.add(key)
+    analyses.append(Analysis(
+        lemma=surface,
+        pos="yansıma",
+        kind="onomatopoeia",
         kwargs={},
         segments=_segs_to_tuple([(surface, "kök")]),
         hypothetical=False,

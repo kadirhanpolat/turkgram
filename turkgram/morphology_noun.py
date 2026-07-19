@@ -99,7 +99,7 @@ DROP_VOWEL: set[str] = {
 # ret/cet: DOUBLE + t→d birlikte (ret→redd, cet→cedd; root_variant double dalı).
 DOUBLE: set[str] = {
     "hak", "his", "af", "sır", "ret", "had", "hat", "tıp", "zam", "şık",
-    "cet", "zan", "hac", "set", "üs", "fen",
+    "cet", "zan", "hac", "set", "üs", "fen", "red",
 }
 
 # §8 — zamir / özel-ad istisnaları. Her durum tam biçim (kapalı tablo).

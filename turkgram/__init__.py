@@ -26,7 +26,7 @@ from __future__ import annotations
 from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
     lexicon, disambiguation, compound, context, adjective, syntax, postposition, conjunction,
-    spellcheck, reduplication, parse, dependency,
+    spellcheck, reduplication, parse, dependency, interjection, onomatopoeia,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -97,6 +97,10 @@ from .postposition import postposition
 # ── Bağlaç yönetimi (Faz 5 D4) ──────────────────────────────────────────
 from .conjunction import conjoin, coordinate, CONJUNCTIONS
 
+# ── Ünlem + yansıma (kapalı sözcük sınıfları) ────────────────────────────
+from .interjection import INTERJECTIONS
+from .onomatopoeia import ONOMATOPOEIA
+
 # ── Tokenizasyon (Faz 9) ─────────────────────────────────────────────────
 from .tokenize import tokenize
 
@@ -159,6 +163,7 @@ __all__ = [
     "postposition",
     # bağlaç yönetimi
     "conjunction", "conjoin", "coordinate", "CONJUNCTIONS",
+    "interjection", "onomatopoeia", "INTERJECTIONS", "ONOMATOPOEIA",
     # normalleştirme + IPA
     "number_to_words", "float_to_words", "date_to_words",
     "time_to_words", "expand_abbreviation", "normalize",

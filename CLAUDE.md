@@ -524,6 +524,19 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     roundtrip'i de düzeldi; **disharmonik-düşme ANALİZİ hâlâ kaçar** (`_root_candidates` harmonik ünlü-ekleme:
     nakl→nakıl/nakul, ön 'nakil' değil — pre-existing §6d sınırı; üretim DOĞRU). Golden 19 CASES+8 NEGATIVE (Opus
     motor-körü; ana oturum uzlaştırma: kavis disharmonik-front DOĞRU, lütuf ertelendi). **4229 test yeşil**.
+  - ✅ **Ünlem + yansıma tanıma + red→reddi** (2026-07-20, 4339 test; SPEC `spec/interjection-onomatopoeia-spec.md`):
+    Wikipedia "Türkçe dilbilgisi" navbox taksonomisi × kapsam haritası çıkarıldı → boşluk: ünlem/yansıma sözcük
+    sınıfları `analyze()`'da tanınmıyordu. İki YENİ kapalı sözcük sınıfı — `interjection.py` (`INTERJECTIONS`: asıl
+    ünlemler ah/of/eyvah/haydi/işte/bravo…) + `onomatopoeia.py` (`ONOMATOPOEIA`: asıl yansımalar şır/güm/çat/miyav…).
+    `_try_interjection_all`/`_try_onomatopoeia_all` **conjunction/postposition deseninin AYNASI** (closed-set,
+    oracle-DIŞI, **additive**, roots-bağımsız, `hypothetical=False`); `_POS` += ("ünlem","yansıma"), `_KINDS` +=
+    ("interjection","onomatopoeia") SONA. `statistical._POS_TO_MAJOR` += {ünlem→Interj, yansıma→Noun (gömülü modelde
+    Onom yok)}. İki küme AYRIK (drift-lock). Homograf sıralaması `_KIND_PRIOR`'da OLMAMASINA bağlı (öncelik 0 →
+    of/ay/çat çekim/isim tepede). **Kapsam DIŞI V1** (bilinçli): ünlem→fiil (oflamak) + yansıma türetmesi (-TI şırıltı,
+    -dA- şırıldamak) düzensiz-tabanlı+leksikon-dışı. Üretim YOK (donmuş) → tr.py sarmalayıcı yok, yalnız set export.
+    **Ayrıca red→reddi:** `morphology_noun.DOUBLE` += "red" (ünsüz ikizleşme; TDK std "ret" ama "red" yaygın varyant;
+    set-üyeliği lemma-özel → false-pos yok). Golden 45 (Opus motor-körü, additive `want⊆got`). Hakem APPROVE (0
+    CRITICAL/HIGH/MEDIUM, 1 LOW docstring giderildi); sweep 3073 çağrı 0 çökme.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
