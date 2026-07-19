@@ -67,6 +67,8 @@ SOFTEN_NO: set[str] = {
     "hizmet", "hürriyet", "kuvvet", "gayret", "işaret", "surat", "ziraat",
     "cumhuriyet", "millet", "sürat", "şefkat", "cesaret",
     "faaliyet", "hakikat", "seyahat",
+    # 2026-07-19 alıntı leksikon: -aat yumuşamayan (cemaati/sadakati; ziraat zaten var)
+    "cemaat", "sadakat",
     # drops_vowel ama t SERT kalan (SPEC §3.3: vakit→vakti, vakdi DEĞİL)
     "vakit",
 }
@@ -140,6 +142,11 @@ FRONT_HARMONY: set[str] = {
     # 2026-07-19: disharmonik ünlü-düşmeli alıntılar (nakl→nakli, hacz→haczi, kavm→kavmi,
     # kavs→kavsi: düşünce kalan ünlü arka 'a' ama ek ön)
     "nakil", "haciz", "kavim", "kavis",
+    # 2026-07-19 alıntı leksikon kapsam: l-final disharmonik (kontrolü/normali/hayali…)
+    "kontrol", "sembol", "santral", "festival", "normal", "hayal", "emsal",
+    "misal", "iptal", "mahsul",
+    # -aat/-at disharmonik + yumuşamayan (SOFTEN_NO'da da): cemaati/sadakati/ziraati
+    "cemaat", "sadakat", "ziraat",
 }
 
 CASES = ("nom", "acc", "dat", "loc", "abl", "gen", "ins")
