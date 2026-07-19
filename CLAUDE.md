@@ -492,6 +492,27 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     roots (fonksiyon sözcükleri); `augment_function_candidates` çok-POS enjeksiyon (bir/çok/o → HMM bağlamla seçer);
     `augment_oov_candidates` OOV→Noun fallback. **CRF-gate KARARI: ERTELENDİ** (HMM covered'da tavana yakın; darboğaz
     dizi-modeli değil coverage). Hakem: 2 HIGH giderildi (her/hep zamir değil; Kİ_ROUND ayrı). Tüm eval opt-in.
+  - ✅ **analyze() PERF ~20× (165→8→6.3ms/tam-leksikon)** (2026-07-19; üç davranış-korunumlu opt, hepsi
+    diferansiyel-testle recall-güvence): **(1) `_try_adj_all` O(roots)→O(aday)** — her lemmayı taramak yerine
+    yüzeyden ters aday (`_adj_root_candidates`: intensify PREPEND-only→lemma son-ek; diminutive APPEND-only+k-düşme→
+    lemma ön-ek±restore-k), roots∩aday'da oracle (165→59ms; diff 1912 yüzey 0 uyuşmazlık). **(2) `_make_frozen`
+    lambda+str elendi** — dict anahtarları benzersiz → `sorted(items)` aynı sıra (59→31ms). **(3) copula+conjugate
+    enumerate person-ending prune** — person eki DAİMA en sonda + son-karakter person'a SABİT (copula: 1sg→m/2sg→n/
+    1pl→kz/2pl→z/3pl→r hepsi dar; conjugate: yalnız 1sg→m/1pl→kmz/2pl→nz DAR, 2sg/3sg/3pl GENİŞ→prune yok);
+    `question=False`'ta yüzey son-karakteri ailede değilse combo atlanır (`_COPULA_PERSON_LASTCHAR`/
+    `_CONJ_PERSON_LASTCHAR`); question=True (mI son-ekli) MUAF (31→8→6.3ms). **TUZAK — recall-güvenlik person eki
+    en-sonda + aile-tamlığı varsayımına bağlı:** copula 40k + conjugate 50k exhaustive diferansiyel 0 recall-miss;
+    aileler morfoloji değişirse `test_copula_prune.py` yakalar (aile-varsayımını motor çıktısıyla sabitler).
+    Kalan darboğaz: enumerate-verify iç döngüsü (`_passes_filters`/`_cell_allowed` — daha fazla prune correctness-hassas).
+  - ✅ **Ünlü düşmesi kapsam genişletme** (2026-07-19, `morphology_noun.py`; SPEC `docs/superpowers/specs/2026-07-19-unlu-dusme-kapsam-design.md`):
+    `DROP_VOWEL` eksikti (omuz→omuzu yanlış). `DROP_VOWEL` += 15 harmonik (omuz/zihin/ilim/beniz/hışım/kahır/kavis/
+    kibir/kutur/nabız/remiz/sadır/şahıs/vecih/kayıt); `FRONT_HARMONY` += 4 disharmonik alıntı (nakil/haciz/kavim/kavis
+    → nakli/haczi/kavmi/kavsi). **Set-üyeliği lemma-özel → false-drop imkânsız** (yalnız eklenen düşer; NEGATIVE
+    kontrol grubu + full suite doğruladı). **TUZAK — lütuf ERTELENDİ:** ters-disharmonik (lütfu/lütfünü ARKA ama
+    kalan ünlü ü ÖN; motor kalan-ünlüden lütfü üretir, back-harmony override mekanizması YOK). Harmonik düşme analiz
+    roundtrip'i de düzeldi; **disharmonik-düşme ANALİZİ hâlâ kaçar** (`_root_candidates` harmonik ünlü-ekleme:
+    nakl→nakıl/nakul, ön 'nakil' değil — pre-existing §6d sınırı; üretim DOĞRU). Golden 19 CASES+8 NEGATIVE (Opus
+    motor-körü; ana oturum uzlaştırma: kavis disharmonik-front DOĞRU, lütuf ertelendi). **4229 test yeşil**.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
