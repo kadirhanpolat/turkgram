@@ -85,6 +85,11 @@ DROP_VOWEL: set[str] = {
     "koyun", "ömür", "vakit", "metin", "zehir", "nehir", "hüküm", "emir",
     "kavim", "cürüm", "keşif", "kısım", "şükür", "asıl", "nesil",
     "seyir", "devir", "kayıp", "meyil", "haciz",
+    # 2026-07-19 kapsam genişletme (SPEC unlu-dusme-kapsam; bağımsız golden doğrulandı):
+    "omuz", "zihin", "ilim", "beniz", "hışım", "kahır", "kavis",
+    "kibir", "kutur", "nabız", "remiz", "sadır", "şahıs", "vecih", "kayıt",
+    # ERTELENDİ — lütuf: ters-disharmonik (kalan ünlü ü ÖN ama ek arka: lütfu, lütfunu).
+    # Motor kalan-ünlüden ön üretir (lütfü, yanlış); back-harmony override mekanizması yok.
     # ÇIKARILDI (hakem 2026-07-11): sınıf→sınıfı, gurur→gururu DÜŞMEZ;
     # ceht→cehdi (e düşmez, t yumuşar) — ceht dropped'ta "cht" ünlüsüz üretiyordu.
 }
@@ -132,6 +137,9 @@ FRONT_HARMONY: set[str] = {
     "istikbal", "ideal", "lokal", "moral", "petrol", "protokol",
     # ünlü-düşmeli alıntı: kalan ünlü arka (vakt) ama ek ön (vakti/vakte)
     "vakit",
+    # 2026-07-19: disharmonik ünlü-düşmeli alıntılar (nakl→nakli, hacz→haczi, kavm→kavmi,
+    # kavs→kavsi: düşünce kalan ünlü arka 'a' ama ek ön)
+    "nakil", "haciz", "kavim", "kavis",
 }
 
 CASES = ("nom", "acc", "dat", "loc", "abl", "gen", "ins")
