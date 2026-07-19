@@ -470,6 +470,20 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     Wiring: `_KINDS`/`_KIND_FUNCS`/`_ENUMERATE_FN`/`_canon_ki`/`_raw_from_canon`/`_call_generator`/`_try_noun`
     (with_ki SONA). Golden 11+belirsizlik+negatif (Opus motor-körü). Hakem SHIP (1 HIGH giderildi; sweep 1000
     çağrı 0 çökme, 1 pre-existing düşen-ünlü miss). **4179 test yeşil** (+14).
+  - ✅ **Türetilmiş gövde + çekim istifi** (2026-07-19; SPEC `docs/superpowers/specs/2026-07-19-turetme-cekim-istif-design.md`):
+    saf çok-katman türetme zaten çalışıyordu (`gözlükçülük`), ama türetilmiş gövde ÇEKİM alamıyordu →
+    `bencilliği`/`evsizliğini`/`bencilliklerinden` NO-REAL. `_try_derivation_inflected`: `_root_candidates`'ten ara
+    türetilmiş gövde D (bencillik, leksikonda lemma değil ama aday kümesinde VAR) → D geçerli türetme (zinciri) ise ve
+    `decline(D,infl)==surface` ise birleşik `kind="derivation"` Analysis (lemma=en-derin kök, chain=türetme katmanları,
+    kwargs=türetme+çekim ekseni). Çift oracle (türetme + decline) → precision. A3 istifleme emsali. **TUZAK — GATE
+    `max_derivation_depth>=2` (perf):** iç içe pass (~50 aday × türetme-BFS) her isim analizinde ~100-120ms'e mal olur;
+    default depth=1 ETKİLENMEZ (saf çok-katman türetme de depth>=2 ister — opt-in). depth=1'de çalıştırılınca precision
+    golden `gelin`/`okuyunca` bozuluyordu → gate şart. `_strip_one_layer`/`_strip_derivation`/`_template_to_allomorphs`
+    lru_cache'lendi (98→66ms). **Kapsam dışı V1:** fiil-türevli çekim, çatı+türetme, `_root_candidates` düşen-ünlü.
+    Golden 9 (Opus motor-körü; chain konvansiyonu uzlaştırıldı — motor: single→[], multi→ara-tabanlar). Hakem SHIP
+    (0 CRITICAL/HIGH; cache güvenli+yanlış-pozitif yok doğrulandı; 1 MEDIUM perf dokümante, 2 LOW pre-existing).
+    sweep 1196 çağrı 0 çökme 0 miss. **4187 test yeşil** (+8). NOT: tam-leksikon analyze ~165ms (`_try_adj_all`
+    O(roots)) pre-existing perf borcu — bu feature'a özgü değil.
   - ✅ **İstatistiksel disambiguation COVERAGE artışı** (2026-07-19, `statistical.py`; bulgu+kararlar
     `docs/superpowers/specs/2026-07-19-statistical-eval-bulgular.md`): TrMor2018 gold değerlendirmesi
     (`tools/eval_statistical.py`) → HMM doğruluğu **%44.2→%74.8** (+30.6pt), coverage **%45.1→%80.7** (+35.6pt);
