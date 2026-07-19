@@ -66,9 +66,16 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=0, help="ilk N cümle (0=hepsi)")
     ap.add_argument("--lex", action="store_true",
                     help="lexicon-aware POS (decline-noun → pos_map ile refine)")
+    ap.add_argument("--full-roots", action="store_true",
+                    help="tüm POS'ları roots'a al (conj/det/postp/interj dahil → "
+                         "fonksiyon sözcükleri aday üretir; B-cover)")
     args = ap.parse_args()
 
-    roots = lx.load()  # leksikon güdümlü aday üretimi (recall için şart)
+    if args.full_roots:
+        roots = lx.load(pos={"noun", "verb", "adj", "adv", "pron", "num",
+                             "conj", "postp", "det", "interj"})
+    else:
+        roots = lx.load()  # leksikon güdümlü aday üretimi (recall için şart)
     model = load_model()  # Artım-1 major-POS emisyon+geçiş
     freq = lx.load_freq()
 

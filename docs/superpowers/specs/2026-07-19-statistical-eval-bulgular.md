@@ -124,6 +124,35 @@ testleri DOKUNULMAZ). `_analysis_pos`'a pos_map KOYULMADI bilinçli: golden vite
 adayı üretmiyor (`bu`/`o`/`ve`/`ki` → NO-REAL). Kapalı-küme fonksiyon-sözcük analiz dalı
 (conjunction/postposition emsali) veya aday-enjeksiyonu gerekir. CRF hâlâ gereksiz.
 
+## 5d. Uygulama — (b) B-cover dilimi: full-POS roots (2026-07-19)
+
+**Bulgu:** `bu`/`o`/`ve`/`ki`/`çünkü` → NO-REAL nedeni analyze() değil — `lexicon.load()`
+VARSAYILANI conj/det/postp/interj POS'larını HARİÇ tutuyor (yalnız çekilebilir alt-küme:
+noun/verb/adj/adv/pron/num). Bu lemmalar roots'a alınırsa bare-`decline(noun)` üretilir →
+`_analysis_pos_lex` pos_map ile Conj/Det/Postp/Interj'e refine eder. **analyze() çekirdeğine
+DOKUNMA GEREKMEZ** — closed-set analiz dalı yerine yalnız roots genişletme (mimari açıdan
+en temiz; kullanıcı kararı öncesi test edildi).
+
+`eval_statistical --full-roots` → `lexicon.load(pos={...tüm...})`.
+
+| Metrik (150 cümle) | başlangıç | fix-a | +lex | **+full-roots** |
+|--------------------|-----------|-------|------|-----------------|
+| Coverage | 45.1% | 51.4% | 59.3% | **65.5%** |
+| HMM acc(tüm) | 44.2% | 49.1% | 55.9% | **61.9%** |
+| rule acc(tüm) | 43.7% | 47.3% | 52.9% | 57.4% |
+| isolated acc(tüm) | 42.6% | 44.6% | 51.8% | 58.3% |
+| OOV | 15.1% | 15.1% | 15.1% | **9.9%** |
+
+- **Kümülatif: coverage +20.4pt, HMM acc +17.7pt** (hepsi analyze() değişmeden).
+- Analizör aday POS: +Conj(75)/Det(64)/Postp(52)/Interj(26).
+- Tüm yöntemlerde accuracy arttı (degradasyon yok; +209 fonksiyon lemma gürültü katmadı).
+- **Kullanım deseni (öneri):** istatistiksel/kural disambiguation → `lexicon.load(pos={tüm})` +
+  lexicon-aware `pos_fn`. `lexicon.load()` varsayılanı DEĞİŞMEDİ (çekim üretimi çekilebilir
+  alt-küme ister; mimari kararı korunur).
+
+**Kalan (ayrı iş):** tagset uyuşmazlığı (turkgram leksikonu `her`/`şu`/`hangi`→adj, TrMor
+Det/Pron) — POS eşleme tablosu düzeltmesi; içsel çok-katmanlı `unmapped` (%2.4). CRF hâlâ gereksiz.
+
 ## 5. Notlar
 
 - `tools/diff_harness.py` gold-reader `*.txt` glob'lar; gerçek gold tek dosya

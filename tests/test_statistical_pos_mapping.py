@@ -87,3 +87,18 @@ def test_analysis_pos_lex_preserves_nonnoun(roots):
     """decline-noun olmayan analiz pos_map'ten etkilenmez (için=Postp kalır)."""
     a = _first("için", roots, pos="postp", kind="postposition")
     assert _analysis_pos_lex(a, lx.pos_map()) == "Postp"
+
+
+# --- B-cover: full-POS roots fonksiyon sözcüklerine aday üretir ---
+@pytest.mark.parametrize("token,expected", [
+    ("ve", "Conj"), ("ki", "Conj"), ("bu", "Det"), ("o", "Det"),
+])
+def test_full_roots_function_words(token, expected):
+    """conj/det POS'ları roots'a alınınca fonksiyon sözcükleri decline(noun) üretir;
+    _analysis_pos_lex pos_map ile doğru sınıfa refine eder (varsayılan load()'da NO-REAL)."""
+    full = lx.load(pos={"noun", "verb", "adj", "adv", "pron", "num",
+                        "conj", "postp", "det", "interj"})
+    pm = lx.pos_map()
+    cands = [a for a in an.analyze(token, roots=full) if not a.hypothetical]
+    assert cands, f"{token!r} full-roots'ta aday üretmeli"
+    assert expected in {_analysis_pos_lex(a, pm) for a in cands}
