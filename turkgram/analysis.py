@@ -1140,7 +1140,69 @@ def analyze(surface: str, pos: str | None = None,
     if roots is not None and pos in (None, "noun"):
         _try_ki_inflected(surface_token, analyses, seen, roots=roots)
 
+    # Adım 7d: Çatı + türetme istifi (yazdırıcı = yaz+CAUS+IcI)
+    # roots-gate; voiced gövde conjugate/imp/voice_chain ile çözülür + türetme oracle.
+    if roots is not None and pos in (None, "noun", "adj"):
+        _try_voice_derivation(surface_token, analyses, seen, roots=roots)
+
     return analyses
+
+
+_VOICE_STEM_MARKER = re.compile(r"[ıiuü][lnrşt]$")  # voiced bare gövde son deseni
+
+
+def _voiced_stem_root(stem: str, roots: "set[str] | None") -> "tuple[str, tuple] | None":
+    """Voiced verb gövdesi (yazdır) → (kök fiil, voice_chain). imp-2sg = bare voiced gövde
+    → conjugate/imp/voice_chain analizinden çıkar (mevcut çatı-çekim mekanizması)."""
+    for a in analyze(stem, roots=roots, max_derivation_depth=1):
+        if (not a.hypothetical and a.kind == "conjugate"
+                and a.kwargs.get("tense") == "imp"
+                and a.kwargs.get("voice_chain")):
+            return a.lemma, tuple(a.kwargs["voice_chain"])
+    return None
+
+
+def _try_voice_derivation(
+    surface: str, analyses: list, seen: set, roots: "set[str] | None",
+) -> None:
+    """Çatı + türetme: voiced verb gövdesi + fiil→isim türetme (yazdırıcı=yaz+CAUS+-IcI).
+
+    Türetme-stripper base'i (yazdır) leksikonda lemma değil → voiced gövde olarak çözülür
+    (conjugate/imp/voice_chain). Oracle: voiced mastardan derivations() surface üretir mi.
+    İzole + roots-gate. lemma = KÖK fiil, kwargs.voice_chain = çatı zinciri."""
+    from .derivation import derivations as _derivations, _DERIVED_POS
+    from .morphology import low_vowel
+
+    for (stem, label, suffix_surface, src_pos) in _strip_one_layer(surface):
+        if src_pos != "verb":       # yalnız fiil-input türetme (base bir fiil gövdesi)
+            continue
+        # PERF ön-filtre: voiced gövde yüksek-ünlü + voice-suffix ünsüzüyle biter
+        # ([ıiuü][lnrşt]: -DIr/-t/-Il/-In/-Iş/-Ir…). Değilse pahalı re-entrant analyze ATLA.
+        if not _VOICE_STEM_MARKER.search(stem):
+            continue
+        vinfo = _voiced_stem_root(stem, roots)
+        if vinfo is None:
+            continue                # gövde voiced değil → çatı+türetme değil
+        root_lemma, vc = vinfo
+        try:
+            voiced_inf = stem + "m" + low_vowel(stem) + "k"   # yazdır → yazdırmak
+            derived = _derivations(voiced_inf, "verb")
+        except (ValueError, IndexError):
+            continue
+        for r in (derived or []):
+            if r["form"] != surface or r["suffix"] != label:
+                continue
+            key = ("voice_deriv", surface, root_lemma, label, vc)
+            if key in seen:
+                continue
+            seen.add(key)
+            analyses.append(Analysis(
+                kind="derivation", lemma=root_lemma,
+                pos=_DERIVED_POS.get(label, "noun"),
+                kwargs={"suffix": label, "src_pos": "verb", "voice_chain": vc},
+                segments=_segs_to_tuple([(stem, "kök"), (suffix_surface, label)]),
+                hypothetical=False,
+            ))
 
 
 def _try_ki_inflected(
