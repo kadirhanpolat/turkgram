@@ -36,7 +36,9 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Hecelemleme + vurgu** | `turkgram.syllabify` | **`syllabify`** (hece listesi: gel·di·ği·miz), **`stress`** (0-tabanlı vurgulu hece indeksi), **`stress_mark`** (AN·ka·ra; Türkçe büyük harf) |
 | **Yazım denetimi** | `turkgram.spellcheck` | **`is_valid`** (morfoloji tabanlı geçerlilik), **`suggest`** (BK-tree + Türkçe-ağırlıklı Levenshtein; **V2:** morfolojik şablon → yüzey yeniden üretim: `"goruyorum"→["görüyorum",…]`), **`check`** → `SpellResult(word, is_valid, suggestions)` |
 | **İkileme (reduplication)** | `turkgram.reduplication` | **`full_reduplicate`** (yavaş yavaş), **`converb_reduplicate`** (koşa koşa; -A ulaç × 2), **`m_reduplicate`** (kitap mitap; m-ikileme) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`**, **`isim_obeği`**, **`derece_obeği`**, **`koordinasyon`** |
+| **Ünlem + yansıma** | `turkgram.interjection` / `turkgram.onomatopoeia` | **`INTERJECTIONS`** (asıl ünlemler: ah/eyvah/haydi), **`ONOMATOPOEIA`** (asıl yansımalar: şır/güm/miyav); `analyze` kapalı-set tanıma (`pos="ünlem"`/`"yansıma"`) |
+| **Cümle çözümleme** | `turkgram.sentence` | **`analyze_sentence`** (öge etiketleme: özne/yüklem/nesne/dolaylı tümleç/zarf tümleci/edat tümleci + cümle türü 7 eksen: fiil/isim, kurallı/devrik, olumlu/olumsuz, soru, kip, basit/birleşik/sıralı/bağlı, eksiltili) |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`**, **`isim_obeği`**, **`derece_obeği`**, **`koordinasyon`**, **`cümle_çözümle`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
@@ -297,6 +299,14 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
 
 - **Ünlü düşmesi kapsam ✅ (2026-07-19)** — `DROP_VOWEL` += 15 (omuz/zihin/…/kayıt), `FRONT_HARMONY` += 4 disharmonik (nakil/haciz/kavim/kavis). Set-üyeliği → false-drop yok; lütuf ertelendi (ters-disharmonik). **4229 test.**
 
+- **Çatı analizi TAM ✅ (2026-07-20)** — çatı × {çekim, türetme, fiilimsi} × {tek, çok-katman}: `yazdırdı` (çatı+çekim) + `yazdırıcı` (çatı+türetme, `_try_voice_derivation`) + `yazdırma` (çatı+fiilimsi, `_try_voice_participle`) + çok-katmanlı (`yazdırttı`=caus+caus, `yazdırttırıcı`=caus³+IcI). Fiil-türevli çekim (`güzelleşti`=güzel+-lAş+di). `_voiced_stem_root` (lru_cache + re-entrancy guard + ön-filtre). **4294 test.**
+
+- **Ünlem + yansıma tanıma ✅ (2026-07-20)** — iki yeni kapalı sözcük sınıfı: `interjection.py` (`INTERJECTIONS`: asıl ünlemler ah/of/eyvah/haydi/işte/bravo) + `onomatopoeia.py` (`ONOMATOPOEIA`: asıl yansımalar şır/güm/çat/miyav). `analyze` bağlaç/edat deseninin aynası (closed-set, additive, roots-bağımsız). `red→reddi` ünsüz ikizleşme eklendi. Hakem APPROVE; sweep 3073 çağrı 0 çökme. **4339 test.**
+
+- **Cümle çözümleme katmanı ✅ (2026-07-20)** — `sentence.py` (`analyze_sentence`, `tr.cümle_çözümle`): **öge etiketleme** (özne/yüklem/belirtili+belirtisiz nesne/dolaylı tümleç [alias yer tamlayıcısı]/zarf tümleci/edat tümleci/cümle dışı unsur) + **cümle türü 7 eksen** (fiil/isim · kurallı/devrik · olumlu/olumsuz · soru · emir/istek/şart/gereklilik/haber · basit/birleşik/sıralı/bağlı · eksiltili). Token-düzeyi morfolojik durumdan (constituency ağacına güvenmez); `değil`/`mI`/edat yüzey kapalı-set. `parse.py`/`dependency.py`/`analyze()` DOKUNULMAZ, opt-in.
+  - **V2 (2026-07-20):** çoğul/iyelik özne kurtarma (çekimli adj-etiketli token = isim); zaman-adı zarf-değeri (`akşama gittik`); kişi zamiri eğik biçim (bana/sana FİİL rank fix); cümle-başı pür ünlem → cümle dışı unsur; edat birleştirme (`Sabaha kadar`); yüklem tespiti 2-adım; çok-cümle öge gate (`Ali geldi ve Veli gitti`→Veli=özne).
+  - Golden ÖGE 42/44 + TÜR 44/44 (2 dokümante sınır: çıplak tekil proper-noun-adj homograf). Hakem 2 tur → 3 HIGH+4 MEDIUM giderildi; sweep 6508 çağrı 0 çökme. **4431 test.**
+
 Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
 
 ## Kurulum
@@ -525,6 +535,28 @@ tree2 = parse_phrase(tokens2, analyses2)
 dep2 = constituency_to_dep(tree2)
 # dep2[0]  → DepToken(form='evin',     deprel='nmod:poss', head=2)
 # dep2[1]  → DepToken(form='kapısını', deprel='obj',       head=3)
+
+# Ünlem + yansıma tanıma (kapalı sözcük sınıfları)
+from turkgram import analyze
+# analyze("eyvah")  → Analysis(pos='ünlem',   kind='interjection')
+# analyze("miyav")  → Analysis(pos='yansıma', kind='onomatopoeia')
+# (additive: 'of'/'çat' gibi homograflar hem ünlem/yansıma hem fiil/isim okuması verir)
+
+# Cümle çözümleme — öge etiketleme + cümle türü (turkgram.sentence)
+from turkgram import lexicon
+from turkgram.sentence import analyze_sentence
+sa = analyze_sentence("Ben eve gidiyorum", roots=lexicon.load())
+# sa.elements → (
+#   Element(label='özne',           tokens=('Ben',),       head_id=1),
+#   Element(label='dolaylı tümleç',  tokens=('eve',),       head_id=2, aliases=('yer tamlayıcısı',)),
+#   Element(label='yüklem',          tokens=('gidiyorum',), head_id=3),
+# )
+# sa.sentence_type → SentenceType(yuklem_turu='fiil', yuklem_yeri='kurallı',
+#   olumluluk='olumlu', soru=False, kip='haber', yapi='basit', eksiltili=False)
+#
+# tr.cümle_çözümle("Akşama gittik", kökler=lexicon.load())  → zarf tümleci(Akşama) [zaman adı]
+# analyze_sentence("Kitabı okudun mu", roots=...)           → soru=True; belirtili nesne + yüklem
+# analyze_sentence("Ali geldi ve Veli gitti", roots=...)    → yapi='bağlı'; iki özne + iki yüklem
 
 # CLI — python -m turkgram
 # python -m turkgram analyze okudum
