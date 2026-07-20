@@ -21,7 +21,7 @@ from .disambiguation import rank as _rank
 from .postposition import _POSTPOSITIONS as _POSTPOSITION_TABLE
 from .interjection import INTERJECTIONS as _INTERJECTIONS
 
-__all__ = ["Element", "SentenceType", "SentenceAnalysis", "analyze_sentence"]
+__all__ = ["Element", "SentenceType", "Clause", "SentenceAnalysis", "analyze_sentence"]
 
 # "Pür" ünlemler — yaygın isim/fiil homografı OLMAYAN alt küme. Cümle-başı bunlar
 # cümle dışı unsur (hitap/seslenme) sayılır; homograflar (of/ay/ey/işte) HARİÇ
@@ -128,10 +128,26 @@ class SentenceType:
 
 
 @dataclass(frozen=True)
+class Clause:
+    """Yargı (cümle-içi bağımsız/yan cümle) — V3 clause segmentation.
+
+    SPEC: docs/superpowers/specs/2026-07-20-clause-segmentation-design.md.
+    `role`: 'temel' | 'yan' | 'bağımsız' (SPEC §3). `predicate_id`: yüklemin
+    1-tabanlı GLOBAL token id'si (yüklemsiz→0). `connector`: bu yargıyı bağlayan
+    koordinat bağlaç yüzeyi ('ve'/'ama'…) veya None (ilk yargı + yan cümleler).
+    """
+    role: str
+    elements: tuple[Element, ...]
+    predicate_id: int
+    connector: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class SentenceAnalysis:
     text: str
     elements: tuple[Element, ...]
     sentence_type: SentenceType
+    clauses: tuple["Clause", ...] = ()
 
 
 # ── Token rolü ────────────────────────────────────────────────────────────────
@@ -238,108 +254,13 @@ def _label_nominal(case: Optional[str]) -> tuple[str, tuple[str, ...]]:
     return "özne", ()   # nom — özne/belirtisiz-nesne ayrımı sonradan
 
 
-def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> SentenceAnalysis:
-    """Cümleyi öge + tür olarak çözümle (SPEC §4-§5).
+def _label_body(body: "list[_Tok]") -> "tuple[list[Element], bool]":
+    """Yüklem-dışı gövde tokenlarını ögelere etiketle (özne/tümleç/zarf/edat…).
 
-    roots=lexicon.load() ÖNERİLİR (gerçek POS için); roots=None gürültü modu → etiketler
-    güvenilmez.
+    Düz yol (`analyze_sentence`) ve yargı yolu (`_segment_clauses`) PAYLAŞIR → tek
+    doğruluk kaynağı. `subordinate` = gövdede fiilimsi/şart yan-yargı görüldü mü
+    (birleşik tespiti). Özne/belirtisiz-nesne heuristiği + yüklem ögesi ÇAĞIRANDA.
     """
-    surfaces = _tokenize(text)
-    from .lexicon import pos_map as _pos_map_fn
-    try:
-        pos_map = _pos_map_fn()
-    except Exception:
-        pos_map = {}
-    pairs = _best_per_token(text, roots)
-    bests = [b for b, _v in pairs]
-    verbs = [v for _b, v in pairs]
-    toks = [_classify(i + 1, s, b, pos_map) for i, (s, b) in enumerate(zip(surfaces, bests))]
-
-    n = len(toks)
-    if n == 0:
-        return SentenceAnalysis(text, (), SentenceType(
-            "isim", "kurallı", "olumlu", False, None, "basit", True))
-
-    # 1. Soru: HERHANGİ bir token ayrı mI ise soru cümlesi (yüklem-bitişik olmasa da)
-    soru = any(t.role == _R_SORU for t in toks)
-    neg_nominal = False
-
-    # Sondaki soru edatı + değil'i yüklem eklentisi olarak ayır (yüklem-bitişik)
-    tail = n  # yüklem-bloğu sonrası ekler bitişi
-    trailing: list = []
-    while tail > 0 and toks[tail - 1].role in (_R_SORU, _R_NEG):
-        t = toks[tail - 1]
-        if t.role == _R_NEG:
-            neg_nominal = True
-        trailing.insert(0, t)
-        tail -= 1
-
-    if tail == 0:
-        return SentenceAnalysis(text, (), SentenceType(
-            "isim", "kurallı", "olumlu", soru, "haber", "basit", True))
-
-    # 2. Yüklem = en sağdaki FİİL-yeteneği olan token; yoksa son NOMİNAL (edat/bağlaç atla)
-    _NONPRED_ROLES = (_R_SORU, _R_NEG, _R_ADP, _R_CONJ, _R_UNLEM)
-    # Adım 1: en sağdaki TOP-RANK gerçek fiil (role FIIL/ULAC/ORTAC) → devrik yüklem
-    # yakalar (Gittim okula). göre=gör-e gibi ADP homografı NONPRED ile atlanır.
-    pred_i = None
-    for k in range(tail - 1, -1, -1):
-        if toks[k].role in _NONPRED_ROLES:
-            continue
-        if toks[k].role in (_R_FIIL, _R_ULAC, _R_ORTAC):
-            pred_i = k
-            break
-    # Adım 2: gerçek fiil yok → en sağdaki içerik token (yüklem SON'dadır). verb_reading'i
-    # varsa fiil yüklem (verdi=noun-rank ama fiil), yoksa nominal yüklem (yanlış). Bu,
-    # cümle-BAŞI fiil-homografının (Bana=banmak) yüklem sanılmasını ÖNLER.
-    if pred_i is None:
-        for k in range(tail - 1, -1, -1):
-            if toks[k].role not in _NONPRED_ROLES:
-                pred_i = k
-                break
-    if pred_i is None:
-        return SentenceAnalysis(text, (), SentenceType(
-            "isim", "kurallı", "olumlu", soru, "haber", "basit", True))
-
-    pred = toks[pred_i]
-    pred_verb = verbs[pred_i]           # yüklemin fiil-okuması (varsa)
-    is_verb_pred = pred_verb is not None or pred.role in (_R_FIIL, _R_ULAC, _R_ORTAC)
-    yuklem_turu = "fiil" if is_verb_pred else "isim"
-
-    pred_tokens = [pred] + trailing
-    pred_tokens.sort(key=lambda t: t.idx)
-
-    # 3. Olumluluk
-    pred_ana = pred_verb if pred_verb is not None else pred.best
-    olumsuz = neg_nominal
-    if pred_ana is not None and pred_ana.kwargs.get("negative"):
-        olumsuz = True
-    if _tr_lower(pred.surface) in _NEG_EXISTENTIAL:
-        olumsuz = True
-    olumluluk = "olumsuz" if olumsuz else "olumlu"
-
-    # 4. Soru: yüklem Analysis'inde question=True de sayılır
-    if pred_ana is not None and pred_ana.kwargs.get("question"):
-        soru = True
-
-    # 5. Kip (yalnız fiil yüklem)
-    if is_verb_pred and pred_verb is not None:
-        tense = pred_verb.kwargs.get("tense")
-        if tense == "aorist" and _COND_SURFACE_RE.search(_tr_lower(pred.surface)):
-            kip = "şart"
-        else:
-            kip = _TENSE_TO_KIP.get(tense, "haber")
-    else:
-        kip = "haber"
-
-    # 6. Yüklemin yeri: yüklem bloğu (pred + trailing) cümle sonunda mı?
-    last_pred_idx = max(t.idx for t in pred_tokens)
-    yuklem_yeri = "kurallı" if last_pred_idx == n else "devrik"
-
-    # 7. Öge çözümleme — yüklem DIŞI tüm gövde tokenları (yüklem-öncesi + devrik-kuyruk)
-    body = [t for k, t in enumerate(toks)
-            if k != pred_i and t.role not in (_R_SORU, _R_NEG)]
-
     elements: list[Element] = []
     subordinate = False  # birleşik tespiti
     has_conj_body = any(t.role == _R_CONJ for t in body)
@@ -442,6 +363,223 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
             continue
         elements.append(Element("cümle dışı unsur", (t.surface,), t.idx))
         i += 1
+    return elements, subordinate
+
+
+def _apply_subj_object_heuristic(elements: "list[Element]") -> "list[Element]":
+    """nom öbekler: gövdede yüklem yok + ≥2 nom 'özne' → sonuncusu belirtisiz nesne.
+    Tek yargıda (yargı yolu) güvenli; düz yolda V2 çok-cümle gate ayrıca uygular."""
+    body_has_verb = any(e.label == "yüklem" for e in elements)
+    nom_subj = [e for e in elements if e.label == "özne"]
+    if not body_has_verb and len(nom_subj) >= 2:
+        last = max(nom_subj, key=lambda e: e.head_id)
+        return [
+            Element("belirtisiz nesne", e.tokens, e.head_id, e.aliases)
+            if e is last else e
+            for e in elements
+        ]
+    return elements
+
+
+def _pred_is_yan(t: "_Tok") -> bool:
+    """Yargı yüklemi bağımlı mı (fiilimsi/şart) → 'yan' rolü sinyali."""
+    if t.role in (_R_ULAC, _R_ORTAC):
+        return True
+    if t.role == _R_FIIL:
+        tense = t.best.kwargs.get("tense") if t.best else None
+        if tense == "cond" or (
+                tense == "aorist" and _COND_SURFACE_RE.search(_tr_lower(t.surface))):
+            return True
+    return False
+
+
+def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
+                     trailing: "list[_Tok]") -> "tuple[Clause, ...]":
+    """Cümleyi yargılara böl (SPEC §4). Yüklem-sınırı token akışını segmentler;
+    koordinat bağlaç sonraki yargının connector'ı; devrik kuyruk son yargıya iliştirilir.
+    Her yargı `_label_body` ile öge-etiketlenir (yüklem hariç → fiilimsi kendi tümlecini
+    yutmaz). `analyze_sentence`/düz `elements` DOKUNULMAZ (bu SALT-EK)."""
+    if tail <= 0:
+        return ()
+    has_conj = any(t.role == _R_CONJ and _tr_lower(t.surface) in _COORD_CONJ
+                   for t in toks[:tail])
+
+    def _is_boundary(k: int) -> bool:
+        if k == pred_i:
+            return True
+        t = toks[k]
+        if t.role in (_R_ULAC, _R_ORTAC):
+            return True
+        if t.role == _R_NOMPRED:
+            # ek-fiilli nominal yüklem (güzeldi/öğretmendi) → finit yüklem → sınır
+            # (copula-yüklem koordinasyonu: 'Hava güzeldi ve deniz sıcaktı'). Copulasız
+            # çıplak nominal (güzel=decline) tespit edilemez → best-effort sınır (§6).
+            return True
+        if t.role == _R_FIIL:
+            tense = t.best.kwargs.get("tense") if t.best else None
+            surf = _tr_lower(t.surface)
+            if tense == "cond" or (tense == "aorist" and _COND_SURFACE_RE.search(surf)):
+                return True
+            if tense in _NARRATIVE_TENSES or has_conj:
+                return True
+            return False   # imperatif/optatif homografı → sınır değil (özne)
+        return False
+
+    bidx = sorted({k for k in range(tail) if _is_boundary(k)} | {pred_i})
+
+    # Segmentle: [prev .. b] (b dahil); kuyruk (devrik) son segmente iliştir
+    segments: list[tuple[list["_Tok"], int]] = []
+    prev = 0
+    for b in bidx:
+        segments.append((toks[prev:b + 1], b))
+        prev = b + 1
+    if prev < tail:                       # devrik: son yüklemden sonra kalan tümleç
+        if segments:
+            seg, b = segments[-1]
+            segments[-1] = (seg + toks[prev:tail], b)
+        else:                             # yüklem yok → tek yargı, predicate yok
+            segments.append((toks[0:tail], -1))
+
+    non_yan = sum(1 for _seg, b in segments if b >= 0 and not _pred_is_yan(toks[b]))
+    last_i = len(segments) - 1
+
+    clauses: list[Clause] = []
+    for si, (seg, b) in enumerate(segments):
+        connector = None
+        # baştaki koordinat bağlacı sıyır → connector (yargı ögesi değil)
+        while seg and seg[0].role == _R_CONJ and _tr_lower(seg[0].surface) in _COORD_CONJ:
+            connector = seg[0].surface
+            seg = seg[1:]
+        pred = toks[b] if b >= 0 else None
+        pred_trailing = trailing if si == last_i else []
+        body = [t for t in seg if t is not pred]
+        els, _sub = _label_body(body)
+        # yargı yüklemi imperatif → yalın ad özne = hitap (V1 §7b emsali)
+        if pred is not None and pred.role == _R_FIIL:
+            if (pred.best.kwargs.get("tense") if pred.best else None) == "imp":
+                els = [Element("cümle dışı unsur", e.tokens, e.head_id)
+                       if e.label == "özne" else e for e in els]
+        els = _apply_subj_object_heuristic(els)
+        if pred is not None:
+            pred_surf = (pred.surface,) + tuple(t.surface for t in pred_trailing)
+            els.append(Element("yüklem", pred_surf, pred.idx))
+        els.sort(key=lambda e: e.head_id)
+        yan = pred is not None and _pred_is_yan(pred)
+        if yan and non_yan >= 1:
+            role = "yan"
+        elif non_yan >= 2:
+            role = "bağımsız"
+        else:
+            role = "temel"
+        pid = pred.idx if pred is not None else 0
+        clauses.append(Clause(role, tuple(els), pid, connector))
+    return tuple(clauses)
+
+
+def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> SentenceAnalysis:
+    """Cümleyi öge + tür olarak çözümle (SPEC §4-§5).
+
+    roots=lexicon.load() ÖNERİLİR (gerçek POS için); roots=None gürültü modu → etiketler
+    güvenilmez.
+    """
+    surfaces = _tokenize(text)
+    from .lexicon import pos_map as _pos_map_fn
+    try:
+        pos_map = _pos_map_fn()
+    except Exception:
+        pos_map = {}
+    pairs = _best_per_token(text, roots)
+    bests = [b for b, _v in pairs]
+    verbs = [v for _b, v in pairs]
+    toks = [_classify(i + 1, s, b, pos_map) for i, (s, b) in enumerate(zip(surfaces, bests))]
+
+    n = len(toks)
+    if n == 0:
+        return SentenceAnalysis(text, (), SentenceType(
+            "isim", "kurallı", "olumlu", False, None, "basit", True))
+
+    # 1. Soru: HERHANGİ bir token ayrı mI ise soru cümlesi (yüklem-bitişik olmasa da)
+    soru = any(t.role == _R_SORU for t in toks)
+    neg_nominal = False
+
+    # Sondaki soru edatı + değil'i yüklem eklentisi olarak ayır (yüklem-bitişik)
+    tail = n  # yüklem-bloğu sonrası ekler bitişi
+    trailing: list = []
+    while tail > 0 and toks[tail - 1].role in (_R_SORU, _R_NEG):
+        t = toks[tail - 1]
+        if t.role == _R_NEG:
+            neg_nominal = True
+        trailing.insert(0, t)
+        tail -= 1
+
+    if tail == 0:
+        return SentenceAnalysis(text, (), SentenceType(
+            "isim", "kurallı", "olumlu", soru, "haber", "basit", True))
+
+    # 2. Yüklem = en sağdaki FİİL-yeteneği olan token; yoksa son NOMİNAL (edat/bağlaç atla)
+    _NONPRED_ROLES = (_R_SORU, _R_NEG, _R_ADP, _R_CONJ, _R_UNLEM)
+    # Adım 1: en sağdaki TOP-RANK gerçek fiil (role FIIL/ULAC/ORTAC) → devrik yüklem
+    # yakalar (Gittim okula). göre=gör-e gibi ADP homografı NONPRED ile atlanır.
+    pred_i = None
+    for k in range(tail - 1, -1, -1):
+        if toks[k].role in _NONPRED_ROLES:
+            continue
+        if toks[k].role in (_R_FIIL, _R_ULAC, _R_ORTAC):
+            pred_i = k
+            break
+    # Adım 2: gerçek fiil yok → en sağdaki içerik token (yüklem SON'dadır). verb_reading'i
+    # varsa fiil yüklem (verdi=noun-rank ama fiil), yoksa nominal yüklem (yanlış). Bu,
+    # cümle-BAŞI fiil-homografının (Bana=banmak) yüklem sanılmasını ÖNLER.
+    if pred_i is None:
+        for k in range(tail - 1, -1, -1):
+            if toks[k].role not in _NONPRED_ROLES:
+                pred_i = k
+                break
+    if pred_i is None:
+        return SentenceAnalysis(text, (), SentenceType(
+            "isim", "kurallı", "olumlu", soru, "haber", "basit", True))
+
+    pred = toks[pred_i]
+    pred_verb = verbs[pred_i]           # yüklemin fiil-okuması (varsa)
+    is_verb_pred = pred_verb is not None or pred.role in (_R_FIIL, _R_ULAC, _R_ORTAC)
+    yuklem_turu = "fiil" if is_verb_pred else "isim"
+
+    pred_tokens = [pred] + trailing
+    pred_tokens.sort(key=lambda t: t.idx)
+
+    # 3. Olumluluk
+    pred_ana = pred_verb if pred_verb is not None else pred.best
+    olumsuz = neg_nominal
+    if pred_ana is not None and pred_ana.kwargs.get("negative"):
+        olumsuz = True
+    if _tr_lower(pred.surface) in _NEG_EXISTENTIAL:
+        olumsuz = True
+    olumluluk = "olumsuz" if olumsuz else "olumlu"
+
+    # 4. Soru: yüklem Analysis'inde question=True de sayılır
+    if pred_ana is not None and pred_ana.kwargs.get("question"):
+        soru = True
+
+    # 5. Kip (yalnız fiil yüklem)
+    if is_verb_pred and pred_verb is not None:
+        tense = pred_verb.kwargs.get("tense")
+        if tense == "aorist" and _COND_SURFACE_RE.search(_tr_lower(pred.surface)):
+            kip = "şart"
+        else:
+            kip = _TENSE_TO_KIP.get(tense, "haber")
+    else:
+        kip = "haber"
+
+    # 6. Yüklemin yeri: yüklem bloğu (pred + trailing) cümle sonunda mı?
+    last_pred_idx = max(t.idx for t in pred_tokens)
+    yuklem_yeri = "kurallı" if last_pred_idx == n else "devrik"
+
+    # 7. Öge çözümleme — yüklem DIŞI tüm gövde tokenları (yüklem-öncesi + devrik-kuyruk)
+    body = [t for k, t in enumerate(toks)
+            if k != pred_i and t.role not in (_R_SORU, _R_NEG)]
+
+    elements, subordinate = _label_body(body)
+    has_conj_body = any(t.role == _R_CONJ for t in body)
 
     # 7b. Emir cümlesinde özne kişi ekinde gramerleşir → yalın ad = hitap (cümle dışı unsur)
     if kip == "emir":
@@ -484,4 +622,5 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
         yuklem_turu=yuklem_turu, yuklem_yeri=yuklem_yeri, olumluluk=olumluluk,
         soru=soru, kip=kip, yapi=yapi, eksiltili=eksiltili,
     )
-    return SentenceAnalysis(text, tuple(elements), stype)
+    clauses = _segment_clauses(toks, tail, pred_i, trailing)
+    return SentenceAnalysis(text, tuple(elements), stype, clauses)

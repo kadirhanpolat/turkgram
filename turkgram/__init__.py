@@ -102,7 +102,7 @@ from .interjection import INTERJECTIONS
 from .onomatopoeia import ONOMATOPOEIA
 
 # ── Cümle çözümleme (öge + tür) ──────────────────────────────────────────
-from .sentence import analyze_sentence, Element, SentenceType, SentenceAnalysis
+from .sentence import analyze_sentence, Element, SentenceType, Clause, SentenceAnalysis
 
 # ── Tokenizasyon (Faz 9) ─────────────────────────────────────────────────
 from .tokenize import tokenize
@@ -167,7 +167,7 @@ __all__ = [
     # bağlaç yönetimi
     "conjunction", "conjoin", "coordinate", "CONJUNCTIONS",
     "interjection", "onomatopoeia", "INTERJECTIONS", "ONOMATOPOEIA",
-    "sentence", "analyze_sentence", "Element", "SentenceType", "SentenceAnalysis",
+    "sentence", "analyze_sentence", "Element", "SentenceType", "Clause", "SentenceAnalysis",
     # normalleştirme + IPA
     "number_to_words", "float_to_words", "date_to_words",
     "time_to_words", "expand_abbreviation", "normalize",

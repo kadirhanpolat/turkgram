@@ -570,6 +570,27 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     demonstratif (O/Bu MOD) eğik ZAMİRİ yutmamalı (O bana→özne+dolaylı, 'O bana' değil) → modifier
     zinciri pos=="pron" atlar. ÖGE 42/44 + TÜR 44/44. Hakem WARNING→1 HIGH+2 MEDIUM+1 LOW giderildi.
     4421→4431 test.
+  - ✅ **CÜMLE KATMANI V3 — yargı bölme (clause segmentation)** (2026-07-20, 4449 test; SPEC
+    `docs/superpowers/specs/2026-07-20-clause-segmentation-design.md`): `analyze_sentence` artık
+    cümleyi yargılara böler + her yargının kendi öge çözümlemesini çıkarır. **ADDITIVE:** düz
+    `elements` + `sentence_type` DEĞİŞMEZ (44 V1 golden kilitli); `SentenceAnalysis`'e yeni
+    `clauses: tuple[Clause,...]=()` alanı. **Clause** = `(role, elements, predicate_id, connector)`
+    (sade — kip/tür YOK, kullanıcı kararı). **Rol (SPEC §3):** yüklem fiilimsi/şart → `yan`;
+    yan-olmayan yüklem ≥2 → her biri `bağımsız`; aksi (basit tek yargı / birleşiğin ana yargısı) →
+    `temel`. **KAPSAM (kullanıcı kararı):** koordinat (bağlı/sıralı) + fiilimsi/şart yan cümle;
+    ki/diye/iç-içe DEFER. **Mimari:** V1'in token-düzeyi yaklaşımı (parser'a güvenmez); `_label_body`
+    EXTRACT edildi (düz yol + yargı yolu paylaşır → tek doğruluk kaynağı, davranış-korunumlu).
+    **`_segment_clauses`:** yüklem-sınırı token akışını segmentler (ULAC/ORTAC/şart-FIIL/anlatı-FIIL/
+    NOMPRED/pred_i); koordinat bağlaç (`_COORD_CONJ`) sonraki yargının connector'ı (öge DEĞİL);
+    devrik kuyruk son yargıya iliştirilir; fiilimsi yüklem span'den çıkınca kendi sol tümlecini
+    YUTMAZ (V1 flat'te tek zarf tümleci, yargıda dolaylı tümleç+yüklem AYRI). Yargı-içi özne/nesne
+    heuristiği güvenli (tek yüklem → V2 çok-cümle gate'e gerek yok). **TUZAK — fiil-eşsesli ad özne
+    (Kar/Yaz):** anlatı-dışı/şartsız/bağlaçsız FIIL sınır SAYILMAZ (V1 `_NARRATIVE_TENSES` gate).
+    **Hakem SHIP** (0 CRITICAL/HIGH): MEDIUM giderildi — `_is_boundary`'ye NOMPRED dalı (copula-yüklem
+    koordinasyonu `Hava güzeldi ve deniz sıcaktı`→2 bağımsız; çıplak nominal `güzel`=decline tespit
+    edilemez → best-effort §6). Fiil-homografı under-segment (`…aldı…verdi`, verdi→noun-rank) V1
+    `pred_i`'den miras pre-existing borç, V3-özgü değil. Golden 15 (Opus motor-körü; Yorulunca→Görünce
+    swap: yorulmak edilgen-türev converb üretmiyor, pre-existing leksikon açığı). sweep 20 cümle 0 çökme.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
