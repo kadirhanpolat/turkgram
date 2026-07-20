@@ -601,6 +601,21 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     (gerçek sıfat, sette yok) + `Küçük çocuk` (çocuk=AD baş) bozulmaz. **`Ali kitabı okudu` skip'ten
     çıktı** (tam geçiyor); `Çocuk topu…` özne kurtuldu ama `topu`→'topu' nom lemması→belirtisiz (AYRI
     nom/acc disambiguation borcu, çocuk=adj değil; golden 1 skip kaldı). Regresyon-kilidi test_bare_noun_override.
+  - ✅ **Disambiguation homograf çekimli-üstünlük düzeltmesi** (2026-07-20; SPEC
+    `docs/superpowers/specs/2026-07-20-homograph-inflected-correction-design.md`): freq'siz rank'te
+    morfem-ekonomisi rare **bare-lemma**'yı (verdi/girdi=leksikon-çöpü ad) çok-sık **net-fiil** okumaya
+    (vermek/girmek past) tercih ediyordu → yüklem tespiti + yargı bölme yanlış (`…aldı…verdi` tek yargı).
+    **`disambiguation.rank(prefer_inflected=False)` YENİ opt-in param** (default BİREBİR aynı — statistical/
+    lemmatize/context DOKUNULMAZ): True → base FREQ'SİZ+POS'SUZ (eski `_rank(real)`) + hedefli düzeltme:
+    bare-decline en-iyi, **DAR rakip** (yalnız `conjugate` tense∈{past,evid,pres,fut}, voice_chain yok)
+    çok daha sıksa (≥2× + taban 1000) → fiili seç. `sentence.py::_best_per_token` freq + prefer_inflected=True.
+    **TUZAK — HAKEM HIGH: acc-isim dalı ÇIKARILDI.** İlk tasarım `decline case=='acc'` rakibini de içeriyordu
+    (topu→top:acc); adversarial geniş tarama (top-2000 ad) sistematik yanlış-flip buldu: `-CI` sonlu gerçek
+    adlar/sıfatlar (yarı→yar:acc, arı→ar:acc, salı/koyu/sıkı/dişi/birileri…) kısa-stem freq'iyle deviriliyordu;
+    `topu`(pron) ile `yarı`(noun) POS'la ayrılamıyor → acc-dalı güvensiz, çıkarıldı. Kayıp: topu→top:acc YOK
+    (Çocuk topu golden skip kaldı). Korunan yüksek-değer: verdi/girdi/çıktı→net-fiil (segmentasyon + yüklem).
+    imperatif/aorist/gen/poss zaten HARİÇ (yazar/yarın korunur). Test `test_homograph_correction.py`; base
+    freq'siz+pos'suz → 44 cümle golden `elements` DEĞİŞMEZ. Tam paket 4476 yeşil.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.

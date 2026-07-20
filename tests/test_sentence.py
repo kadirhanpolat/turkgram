@@ -11,13 +11,12 @@ from turkgram import lexicon
 from turkgram.sentence import analyze_sentence
 from tests.golden_sentence import GOLDEN_SENTENCES
 
-# SPEC §6 dokümante sınır: SOV yalın-nom disambiguation. `Ali kitabı okudu` ARTIK GEÇER
-# (çıplak-tekil ad override, _PERSON_NAMES/_NOUN_OVERRIDE — özne kurtarıldı). Kalan tek
-# vaka: `Çocuk topu…` — özne(Çocuk) kurtuldu ama `topu` ayrı 'topu' lemmasına (nom)
-# sıralanıyor → belirtisiz nesne (golden belirtili bekler). topu nom/acc disambiguation
-# kök nedeni (çocuk=adj DEĞİL); disambiguation iyileşince bedava düzelir (motor DEĞİŞMEDEN).
+# Dokümante sınır: `Ali kitabı okudu` çıplak-tekil ad override ile ÇÖZÜLDÜ. Kalan tek vaka:
+# `Çocuk topu bahçede oynadı` — özne(Çocuk) kurtuldu ama `topu` gerçek bir bare lemma ('topu'
+# = hepsi/pron) olduğu için top+acc'e devrilemez (homograf düzeltmesi acc-dalı hakem HIGH ile
+# ÇIKARILDI: -CI sonlu gerçek adları yarı/arı bozuyordu). topu→belirtisiz (golden: belirtili).
 _OGE_KNOWN_LIMITS = frozenset({
-    "Çocuk topu bahçede oynadı",  # topu → 'topu' nom lemması → belirtisiz (golden: belirtili)
+    "Çocuk topu bahçede oynadı",  # topu (gerçek pron lemma) → belirtisiz (golden: belirtili)
 })
 
 _ROOTS = lexicon.load()

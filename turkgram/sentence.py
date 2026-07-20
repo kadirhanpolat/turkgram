@@ -265,14 +265,15 @@ def _classify(idx: int, surface: str, best, pos_map: dict) -> _Tok:
 
 
 # ── Öge etiketleme + tür ──────────────────────────────────────────────────────
-def _best_per_token(text: str, roots) -> list:
+def _best_per_token(text: str, roots, freq=None, pos=None) -> list:
     """Her token için (best, verb_reading). verb_reading = ilk finit fiil analizi (varsa)
-    → yüklem tespiti top-rank noun homografına (verdi=noun) takılmaz."""
+    → yüklem tespiti top-rank noun homografına (verdi=noun) takılmaz. `prefer_inflected`
+    homograf düzeltmesi (topu→top:acc, verdi→vermek) freq+pos verilince uygulanır."""
     analyses = parse_text(text, roots=roots)
     out = []
     for al in analyses:
         real = [a for a in al if not a.hypothetical]
-        best = _rank(real)[0] if real else None
+        best = _rank(real, freq=freq, pos=pos, prefer_inflected=True)[0] if real else None
         verb = next((a for a in real if a.kind == "conjugate"), None)
         out.append((best, verb))
     return out
@@ -516,12 +517,18 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
     güvenilmez.
     """
     surfaces = _tokenize(text)
-    from .lexicon import pos_map as _pos_map_fn
+    from .lexicon import pos_map as _pos_map_fn, load_freq as _load_freq
     try:
         pos_map = _pos_map_fn()
     except Exception:
         pos_map = {}
-    pairs = _best_per_token(text, roots)
+    try:
+        freq = _load_freq()
+    except Exception:
+        freq = None
+    # NOT: pos base sıralamaya GEÇMEZ (eski _rank(real) posless idi → 44 golden); homograf
+    # düzeltmesi yalnız freq ister (bare-decline vs çekimli), pos gerektirmez.
+    pairs = _best_per_token(text, roots, freq=freq)
     bests = [b for b, _v in pairs]
     verbs = [v for _b, v in pairs]
     toks = [_classify(i + 1, s, b, pos_map) for i, (s, b) in enumerate(zip(surfaces, bests))]

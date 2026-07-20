@@ -128,6 +128,24 @@ GOLDEN_CLAUSES = [
             ], "predicate_id": 2, "connector": None},
         ],
     },
+    # 7b. Ali kitabı aldı Veli defteri verdi — iki tam-öge sıralı yargı
+    # NOT: verdi homograf çekimli-üstünlük düzeltmesiyle vermek:past (yüklem) olur →
+    # yargı doğru bölünür (düzeltme öncesi verdi=noun → tek yargı under-segment idi).
+    {
+        "text": "Ali kitabı aldı Veli defteri verdi",
+        "clauses": [
+            {"role": "bağımsız", "elements": [
+                ("özne", ("Ali",), 1, ()),
+                ("belirtili nesne", ("kitabı",), 2, ()),
+                ("yüklem", ("aldı",), 3, ()),
+            ], "predicate_id": 3, "connector": None},
+            {"role": "bağımsız", "elements": [
+                ("özne", ("Veli",), 4, ()),
+                ("belirtili nesne", ("defteri",), 5, ()),
+                ("yüklem", ("verdi",), 6, ()),
+            ], "predicate_id": 6, "connector": None},
+        ],
+    },
     # 7. Ben geldim sen gittin — iki özneli sıralı
     {
         "text": "Ben geldim sen gittin",
