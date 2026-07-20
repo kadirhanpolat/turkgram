@@ -37,8 +37,9 @@ saf-Python, bağımlılıksız bir kütüphane.
 | **Yazım denetimi** | `turkgram.spellcheck` | **`is_valid`** (morfoloji tabanlı geçerlilik), **`suggest`** (BK-tree + Türkçe-ağırlıklı Levenshtein; **V2:** morfolojik şablon → yüzey yeniden üretim: `"goruyorum"→["görüyorum",…]`), **`check`** → `SpellResult(word, is_valid, suggestions)` |
 | **İkileme (reduplication)** | `turkgram.reduplication` | **`full_reduplicate`** (yavaş yavaş), **`converb_reduplicate`** (koşa koşa; -A ulaç × 2), **`m_reduplicate`** (kitap mitap; m-ikileme) |
 | **Ünlem + yansıma** | `turkgram.interjection` / `turkgram.onomatopoeia` | **`INTERJECTIONS`** (asıl ünlemler: ah/eyvah/haydi), **`ONOMATOPOEIA`** (asıl yansımalar: şır/güm/miyav); `analyze` kapalı-set tanıma (`pos="ünlem"`/`"yansıma"`) |
-| **Cümle çözümleme** | `turkgram.sentence` | **`analyze_sentence`** (öge etiketleme: özne/yüklem/nesne/dolaylı tümleç/zarf tümleci/edat tümleci + cümle türü 7 eksen: fiil/isim, kurallı/devrik, olumlu/olumsuz, soru, kip, basit/birleşik/sıralı/bağlı, eksiltili) |
-| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`**, **`isim_obeği`**, **`derece_obeği`**, **`koordinasyon`**, **`cümle_çözümle`** |
+| **Cümle çözümleme** | `turkgram.sentence` | **`analyze_sentence`** → `SentenceAnalysis(elements, sentence_type, clauses)`: öge etiketleme (özne/yüklem/nesne/dolaylı tümleç/zarf tümleci/edat tümleci) + cümle türü 7 eksen (fiil/isim, kurallı/devrik, olumlu/olumsuz, soru, kip, basit/birleşik/sıralı/bağlı, eksiltili) + **`clauses`** (yargı bölme: koordinat/fiilimsi/şart/**ki**/**diye**/**aktarma**/**adlaşmış**; temel/yan/bağımsız rol) |
+| **Özel-ad etiketleme** | `turkgram.proper_noun` | **`tag`** (kural-tabanlı; NER DEĞİL: gazetteer + Türkçe imla) → `list[ProperNoun(surface, type∈{PER,LOC,ORG,PROPER}, index, tokens)]`; **çok-token span** (`Mustafa Kemal Atatürk`→tek PER), **`proper_type`** |
+| Türkçe yüz | `turkgram.tr` | `çekimle`, `ad_çekimle`, `ekfiil`, `ulaç`, `fiilimsi`, `gibilik`, `iken`, `birleşik_çekim`, `türet`, **`çözümle`**, **`yoğunlaştır`**, **`küçült`**, **`sıralı`**, **`dağıtımlı`**, **`edat_obeği`**, **`bağla`**, **`koordine_et`**, **`hecele`**, **`vurgu`**, **`vurgu_işaretle`**, **`yazım_geçerli`**, **`öneri`**, **`denetle`**, **`tam_ikile`**, **`ulaç_ikile`**, **`m_ikile`**, **`isim_obeği`**, **`derece_obeği`**, **`koordinasyon`**, **`cümle_çözümle`**, **`özel_adlar`** |
 
 Fiil: 9 kip (5 haber + 4 dilek) + birleşik zaman (`geliyordu`/`gelirmiş`, 3çoğul `geliyorlardı`) +
 soru + olumsuz + yeterlik + **tasvir** (tezlik/sürerlik) + **çatı** (ettirgen/edilgen/dönüşlü/
@@ -307,7 +308,21 @@ garantisi. **Zincirli türetme** (`max_derivation_depth=5`): `gözlükçülük` 
   - **V2 (2026-07-20):** çoğul/iyelik özne kurtarma (çekimli adj-etiketli token = isim); zaman-adı zarf-değeri (`akşama gittik`); kişi zamiri eğik biçim (bana/sana FİİL rank fix); cümle-başı pür ünlem → cümle dışı unsur; edat birleştirme (`Sabaha kadar`); yüklem tespiti 2-adım; çok-cümle öge gate (`Ali geldi ve Veli gitti`→Veli=özne).
   - Golden ÖGE 42/44 + TÜR 44/44 (2 dokümante sınır: çıplak tekil proper-noun-adj homograf). Hakem 2 tur → 3 HIGH+4 MEDIUM giderildi; sweep 6508 çağrı 0 çökme. **4431 test.**
 
-Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`.
+- **Yargı bölme (clause segmentation) V3–V5.1 ✅ (2026-07-20)** — `SentenceAnalysis.clauses`: cümleyi yargılara böler, her yargının kendi ögeleri (`Clause(role, elements, predicate_id, connector)`; rol temel/yan/bağımsız). **Additive** (düz `elements`+`sentence_type` değişmez):
+  - **V3** koordinat (bağlı/sıralı) + fiilimsi/şart yan cümle: `Eve gelince yattım` → yan+temel; `Ali geldi ve Veli gitti` → bağımsız+bağımsız. `_label_body` düz+yargı yolu paylaşır. NOMPRED copula-yüklem koordinasyonu (`Hava güzeldi ve deniz sıcaktı`).
+  - **V4** leksik subordinatör: **`ki`** ileri (`Biliyorum ki gelecek`→temel+yan; ki-domain zincir) + **`diye`** geri (`Gelsin diye bekledim`→yan+temel). `yapi` clauses'ten türer (yan varsa birleşik).
+  - **V5** gerçek gömme: **adlaşmış** (-DIK/-mA participle: `Ali geldiğini biliyorum`→yan+temel) + **aktarma** (bildirme fiili + gömülü finit tümce: `Yağmur yağacak sandı`→yan+temel; `_REPORTING_VERBS`). Guard: `Ali bir şey söyledi` (nesne NP) gömülmez.
+  - **V5.1** aktarma sağlamlaştırma: koordine-içi gömme (`Ali koştu ve Veli geldi dedi`→yan+yan+temel) + koordinasyon ayrımı; homograf-finit (`Yarın geleceğim dedi`→geleceğim=yüklem); tırnak (`"Eve gel" dedi`, ASCII `"` sıyırma).
+  - Hakem: her artım SHIP; V3/V4/V5/V5.1 golden + 44 cümle golden değişmez. sweep 41 cümle 0 çökme.
+
+- **Çıplak-tekil ad + bağlam homografı (K6) ✅ (2026-07-20)** — cümle katmanı öge doğruluğu (golden skip'siz):
+  - **Çıplak-tekil ad override** — leksikon Zemberek-collapse `çocuk`/`ali`'yi 'adj' etiketler → özne kaybı. Küratlü kapalı-set: `PERSON_NAMES` (büyük-harf gate) + `_NOUN_OVERRIDE` (çocuk/memur, konservatif) → `Ali kitabı okudu`=özne(Ali). `Kırmızı araba`/`İhtiyar adam` bozulmaz.
+  - **Homograf çekimli-üstünlük düzeltmesi** (`disambiguation.rank(prefer_inflected=True)`) — bare-lemma (verdi/girdi=leksikon-çöpü ad) → net-fiil (vermek/girmek past). Hakem HIGH: acc-dalı çıkarıldı (-CI adları yarı/arı bozuyordu).
+  - **K6 bağlam-tabanlı acc-nesne homografı** (`context.py`) — curated `_ACC_OBJECT_PRON={topu}`; `Çocuk topu bahçede oynadı`→topu belirtili nesne (nesne bağlamında top:acc). birileri/kimi/hepsi bilinçli dışarıda.
+
+- **Özel-ad etiketleme (kural-tabanlı, NER DEĞİL) ✅ (2026-07-20)** — `proper_noun.py`: gazetteer (`PERSON_NAMES`/`PLACE_NAMES` 81 il+ülke/`ORG_NAMES`) + `_NEVER_PROPER` (işlev/belgisiz) + Türkçe imla (büyük harf, apostrof). `proper_type`→PER/LOC/ORG/PROPER; **büyük-harf zorunlu** + cümle-başı `analyze()` danışması. **Çok-token span** (`_can_join` yön+tip-farkındalıklı: PER+PER/soyad birleşir, LOC/ORG+head-noun, farklı-tip ayrı). Hakem 2 HIGH giderildi; FP sweep 3000 ortak ad küçük-harf %0.00. Kimlik: saf-Python, ML/dış-veri YOK.
+
+Geliştirme kuralları (SPEC → bağımsız golden → motor → hakem): `CLAUDE.md`. **Test durumu: 4547 yeşil** (slow hariç).
 
 ## Kurulum
 
@@ -557,6 +572,26 @@ sa = analyze_sentence("Ben eve gidiyorum", roots=lexicon.load())
 # tr.cümle_çözümle("Akşama gittik", kökler=lexicon.load())  → zarf tümleci(Akşama) [zaman adı]
 # analyze_sentence("Kitabı okudun mu", roots=...)           → soru=True; belirtili nesne + yüklem
 # analyze_sentence("Ali geldi ve Veli gitti", roots=...)    → yapi='bağlı'; iki özne + iki yüklem
+
+# Yargı bölme (clause segmentation) — sa.clauses (V3–V5.1)
+r = lexicon.load()
+analyze_sentence("Eve gelince yattım", roots=r).clauses
+# (Clause(role='yan',   elements=(dolaylı tümleç(Eve), yüklem(gelince)), predicate_id=2, connector=None),
+#  Clause(role='temel', elements=(yüklem(yattım),),                       predicate_id=3, connector=None))
+analyze_sentence("Biliyorum ki gelecek", roots=r).clauses     # temel + yan(connector='ki')
+analyze_sentence("Gelsin diye bekledim", roots=r).clauses     # yan(connector='diye') + temel
+analyze_sentence("Yağmur yağacak sandı", roots=r).clauses     # aktarma: yan(Yağmur yağacak) + temel(sandı)
+analyze_sentence("Ali geldiğini biliyorum", roots=r).clauses  # adlaşmış: yan + temel
+analyze_sentence('"Eve gel" dedi', roots=r).clauses           # tırnak sıyrılır → yan(Eve gel) + temel(dedi)
+
+# Kural-tabanlı özel-ad etiketleme (turkgram.proper_noun) — NER DEĞİL
+from turkgram import proper_noun as pn
+pn.tag("Mustafa Kemal Atatürk İstanbul'da doğdu", roots=r)
+# [ProperNoun(surface='Mustafa Kemal Atatürk', type='PER', index=1, tokens=('Mustafa','Kemal','Atatürk')),
+#  ProperNoun(surface='İstanbul', type='LOC', index=4, tokens=('İstanbul',))]
+pn.tag("Ankara Üniversitesi büyük", roots=r)   # [ProperNoun('Ankara Üniversitesi', 'LOC', 1, ...)]
+pn.proper_type("Ali")                          # 'PER'   ·   pn.proper_type("deniz")  → None (küçük harf)
+# tr.özel_adlar("Ali Ankara'ya gitti", kökler=r) → [Ali(PER), Ankara(LOC)]  (farklı tip → ayrı)
 
 # CLI — python -m turkgram
 # python -m turkgram analyze okudum
