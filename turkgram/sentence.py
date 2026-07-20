@@ -277,10 +277,23 @@ def _best_per_token(text: str, roots, freq=None, pos=None) -> list:
     → yüklem tespiti top-rank noun homografına (verdi=noun) takılmaz. `prefer_inflected`
     homograf düzeltmesi (topu→top:acc, verdi→vermek) freq+pos verilince uygulanır."""
     analyses = parse_text(text, roots=roots)
+    surfaces = _tokenize(text)
+    reals = [[a for a in al if not a.hypothetical] for al in analyses]
+    from . import context as _ctx
+    from .disambiguation import _rank_key as _rk
     out = []
-    for al in analyses:
-        real = [a for a in al if not a.hypothetical]
-        best = _rank(real, freq=freq, pos=pos, prefer_inflected=True)[0] if real else None
+    for i, real in enumerate(reals):
+        if not real:
+            out.append((None, None))
+            continue
+        # K6: bağlam-tabanlı acc-nesne homografı (topu) — YALNIZ curated sette; freqless
+        # tiebreak (K6 belirleyici, freq base'i topu'yu her yerde acc yapmasın). §3.
+        if i < len(surfaces) and _tr_lower(surfaces[i]) in _ctx._ACC_OBJECT_PRON:
+            best = sorted(real, key=lambda a, i=i: (
+                -_ctx.context_evidence(a, i, surfaces, reals, freq=freq, pos=pos),
+                *_rk(a, None, None)))[0]
+        else:
+            best = _rank(real, freq=freq, pos=pos, prefer_inflected=True)[0]
         verb = next((a for a in real if a.kind == "conjugate"), None)
         out.append((best, verb))
     return out

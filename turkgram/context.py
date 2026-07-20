@@ -71,9 +71,14 @@ _GEN_PRON_POSS: dict[str, frozenset[str]] = {
 
 _DIGIT_RE = re.compile(r"^\d")
 
+# K6 (2026-07-20): bağlam-tabanlı acc-nesne homografı. Bare quantifier-pron ama acc okuması
+# NESNE konumunda baskın olan CURATED küme (top:acc). `birileri`/`kimi`/`hepsi` DIŞLANDI
+# (bare-baskın veya rakipsiz — genel kural bozar). Yeni doğrulanmış vaka → sete eklenir.
+_ACC_OBJECT_PRON: frozenset[str] = frozenset({"topu"})
+
 # Ağırlıklar (SPEC §3)
 _W_K1, _W_K2_POS, _W_K2_NEG = 3, 4, 2
-_W_K3, _W_K4, _W_K4_O, _W_K5 = 2, 3, 1, 3
+_W_K3, _W_K4, _W_K4_O, _W_K5, _W_K6 = 2, 3, 1, 3, 3
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +192,35 @@ def _k5(a: Analysis, i: int, tokens, analyses, freq, pos) -> int:
     return 0
 
 
-_RULES = (_k1, _k2, _k3, _k4, _k5)
+def _k6(a: Analysis, i: int, tokens, analyses, freq, pos) -> int:
+    """Bağlam-tabanlı acc-nesne homografı (SPEC §2, curated). topu → nesne konumunda top:acc."""
+    if _tr_lower(tokens[i]) not in _ACC_OBJECT_PRON or a.kind not in _NOMINAL_KINDS:
+        return 0
+    # Nesne bağlamı: cümlede finit fiil VAR + i'den ÖNCE bir nominal (özne adayı) VAR.
+    has_verb = False
+    has_prev_nom = False
+    for j in range(len(tokens)):
+        if j == i:
+            continue
+        top = _isolated_top(analyses[j], freq, pos)
+        if top is None:
+            continue
+        if top.kind in _VERB_KINDS:
+            has_verb = True
+        elif j < i:
+            has_prev_nom = True   # fiil-olmayan içerik token = özne/niteleyici adayı
+            # (izole mis-analiz'e dayanıklı: Çocuk=diminutive:çok da özne adayıdır)
+    if not (has_verb and has_prev_nom):
+        return 0
+    case = _case_of(a)
+    if case == "acc":
+        return _W_K6
+    if case == "nom":
+        return -_W_K6
+    return 0
+
+
+_RULES = (_k1, _k2, _k3, _k4, _k5, _k6)
 
 
 def context_evidence(a: Analysis, i: int, tokens: Sequence[str],

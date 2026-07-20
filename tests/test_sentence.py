@@ -11,13 +11,10 @@ from turkgram import lexicon
 from turkgram.sentence import analyze_sentence
 from tests.golden_sentence import GOLDEN_SENTENCES
 
-# Dokümante sınır: `Ali kitabı okudu` çıplak-tekil ad override ile ÇÖZÜLDÜ. Kalan tek vaka:
-# `Çocuk topu bahçede oynadı` — özne(Çocuk) kurtuldu ama `topu` gerçek bir bare lemma ('topu'
-# = hepsi/pron) olduğu için top+acc'e devrilemez (homograf düzeltmesi acc-dalı hakem HIGH ile
-# ÇIKARILDI: -CI sonlu gerçek adları yarı/arı bozuyordu). topu→belirtisiz (golden: belirtili).
-_OGE_KNOWN_LIMITS = frozenset({
-    "Çocuk topu bahçede oynadı",  # topu (gerçek pron lemma) → belirtisiz (golden: belirtili)
-})
+# Dokümante sınır KALMADI: `Ali kitabı okudu` çıplak-tekil ad override ile; `Çocuk topu bahçede
+# oynadı` bağlam-tabanlı acc-nesne homografı (K6: topu→top:acc nesne konumunda) ile ÇÖZÜLDÜ.
+# Küme boş → tüm golden öge etiketlemesi TAM sınanır.
+_OGE_KNOWN_LIMITS: frozenset = frozenset()
 
 _ROOTS = lexicon.load()
 

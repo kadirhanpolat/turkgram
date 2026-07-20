@@ -657,6 +657,20 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     (Çocuk topu golden skip kaldı). Korunan yüksek-değer: verdi/girdi/çıktı→net-fiil (segmentasyon + yüklem).
     imperatif/aorist/gen/poss zaten HARİÇ (yazar/yarın korunur). Test `test_homograph_correction.py`; base
     freq'siz+pos'suz → 44 cümle golden `elements` DEĞİŞMEZ. Tam paket 4476 yeşil.
+  - ✅ **Bağlam-tabanlı acc-nesne homografı (context K6)** (2026-07-20; SPEC
+    `docs/superpowers/specs/2026-07-20-context-acc-object-homograph-design.md`): izole homograf
+    düzeltmesinde acc-dalı çıkarılmıştı (yarı/arı bozuyordu); `topu`(top:acc nesne) izole ayırt
+    edilemez → **bağlam** gerekir. `context.py` K6: `_ACC_OBJECT_PRON` CURATED set (`{"topu"}`,
+    genişletilebilir; birileri/kimi/hepsi DIŞLANDI — bare-baskın/rakipsiz), `_k6` kuralı — token sette
+    VE nesne bağlamı (önünde fiil-olmayan içerik token + cümlede finit fiil) → acc'e +kanıt, nom'a −kanıt.
+    Recall-güvenli (BUDAMAZ). **sentence.py wiring:** `_best_per_token` YALNIZ curated-set tokenda
+    context re-rank (**freqless tiebreak** → K6 belirleyici, freq base'i her yerde acc yapmaz); diğer token
+    izole `prefer_inflected` (44 golden ETKİLENMEZ). **TUZAK — Çocuk=diminutive:çok** izole mis-analiz →
+    has_prev_nom "_NOMINAL_KINDS" yerine "fiil-olmayan içerik token" (dayanıklı). **TUZAK — freqless
+    sentence-LOCAL** (hakem MEDIUM): rank_in_context(freq=) tüketiciler (lemmatize) topu→top:acc'i izole
+    freq'le çözer (K6 değil, pre-existing). `Çocuk topu bahçede oynadı`→belirtili nesne (**son golden skip
+    kalktı**). Hakem SHIP (0 CRITICAL/HIGH; MEDIUM SPEC-notu, LOW drift-lock+perf). Test `test_context_k6.py`
+    (drift-lock: set={topu}). Tam paket 4533 yeşil.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.
