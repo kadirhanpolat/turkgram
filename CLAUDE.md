@@ -657,6 +657,16 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     override LOC/ORG'a genişledi (İstanbul→özne). Element'e TÜR alanı EKLENMEDİ. `tr.özel_adlar`. **Hakem
     SHIP** (HIGH+MEDIUM giderildi, LOW apostrof-edge belgeli). Golden 21 + FP sweep 3000 ortak ad **küçük-harf
     %0.00 / cümle-başı %0.03** (1 çöp girdi) 0 çökme. Kimlik uyumu: saf-Python, ML YOK. Tam paket 4525 yeşil.
+  - ✅ **Çok-token varlık span (proper-noun)** (2026-07-20; SPEC §10): `tag()` bitişik+katılabilir özel-ad
+    tokenlarını tek `ProperNoun` span'ine birleştirir (`Mustafa Kemal Atatürk`→tek PER; `.tokens` bileşen).
+    **TUZAK — hakem HIGH: koşulsuz PROPER-emme AŞIRI birleştirir** (`Ankara Abajur`→LOC, cümle-içi caps
+    ortak ad→PROPER emiliyordu; sweep 300/300 over-merge) → `_can_join` YÖN+TİP-farkındalıklı: PER span
+    ardıl PER/PROPER (soyad) alır; **LOC/ORG span yalnız head-noun PROPER** (`_HEAD_NOUNS`:Üniversitesi/
+    Belediyesi/…; Abajur ALMAZ); PROPER span PER/PROPER alır, typed LOC/ORG almaz (`Kadirhan Ankara`→ayrı).
+    İki gazetteer LOC/ORG (`Türkiye Avrupa`)/farklı-tipli (`Ali Ankara`)/araya-token (`Ayşe ile Fatma`)→AYRI.
+    Kapsam dışı: apostrofsuz-çekimli özel ad (`Ali Ankarada` imla-dışı→emilir; doğru `Ali Ankara'ya`→ayrı).
+    Hakem SHIP (HIGH giderildi). Golden +5. sentence.py gazetteer'i AYRI kullanır (tag() değil)→regresyonsuz.
+    Tam paket 4547 yeşil.
   - ✅ **Disambiguation homograf çekimli-üstünlük düzeltmesi** (2026-07-20; SPEC
     `docs/superpowers/specs/2026-07-20-homograph-inflected-correction-design.md`): freq'siz rank'te
     morfem-ekonomisi rare **bare-lemma**'yı (verdi/girdi=leksikon-çöpü ad) çok-sık **net-fiil** okumaya

@@ -87,10 +87,11 @@ _NEVER_PROPER: frozenset[str] = frozenset({
 
 @dataclass(frozen=True)
 class ProperNoun:
-    """Etiketlenmiş özel ad (kural-tabanlı)."""
-    surface: str
-    type: str        # 'PER' | 'LOC' | 'ORG' | 'PROPER'
-    index: int       # 1-tabanlı token id (yüzey sırası)
+    """Etiketlenmiş özel ad varlığı (kural-tabanlı; çok-token span dahil)."""
+    surface: str            # span yüzeyi (çok-token → boşlukla birleşik: "Mustafa Kemal")
+    type: str               # 'PER' | 'LOC' | 'ORG' | 'PROPER'
+    index: int              # 1-tabanlı BAŞLANGIÇ token id (yüzey sırası)
+    tokens: tuple[str, ...] = ()   # span'i oluşturan token'lar (tek-token → 1'li tuple)
 
 
 def _strip_apostrophe(surface: str) -> tuple[str, bool]:
@@ -138,14 +139,67 @@ def proper_type(surface: str, *, sentence_initial: bool = False,
     return None
 
 
+# Kurum/yer head-noun'ları (LOC/ORG span'inin ardıl PROPER'ı bunlardan biriyse EMİLİR:
+# `Ankara Üniversitesi`=LOC). Aksi ardıl PROPER (Abajur) EMİLMEZ → over-merge önlenir.
+_HEAD_NOUNS: frozenset[str] = frozenset({
+    "üniversitesi", "üniversite", "belediyesi", "belediye", "bakanlığı", "bakanlık",
+    "okulu", "okul", "lisesi", "lise", "hastanesi", "hastane", "müdürlüğü", "başkanlığı",
+    "ili", "ilçesi", "ilçe", "mahallesi", "mahalle", "caddesi", "cadde", "sokağı", "sokak",
+    "meydanı", "bulvarı", "köprüsü", "boğazı", "dağı", "nehri", "gölü", "ovası", "vadisi",
+    "kalesi", "camii", "sarayı", "müzesi", "havalimanı", "stadyumu", "spor", "kulübü",
+})
+
+
+def _can_join(span_type: str, t2: str, b2: str) -> bool:
+    """Ardıl token span'e KATILABİLİR mi (yön+tip-farkındalıklı; over-merge önler).
+
+    PER span: PER (Ali Veli) veya PROPER (soyad Yılmaz/Atatürk) alır. LOC/ORG span:
+    YALNIZ head-noun PROPER (Ankara Üniversitesi) alır — keyfi PROPER (Abajur) DEĞİL.
+    PROPER span: PER (→kişi adı) veya PROPER alır; typed LOC/ORG almaz (Kadirhan Ankara ayrı).
+    """
+    if span_type == "PER":
+        return t2 in ("PER", "PROPER")
+    if span_type in ("LOC", "ORG"):
+        return t2 == "PROPER" and _tr_lower(b2) in _HEAD_NOUNS
+    if span_type == "PROPER":
+        return t2 in ("PER", "PROPER")
+    return False
+
+
+def _merge_spans(per: "list[tuple[str, str, int]]") -> list[ProperNoun]:
+    """Bitişik + KATILABİLİR (yön+tip-farkındalıklı, `_can_join`) özel-ad tokenlarını tek
+    span'e birleştir (SPEC §10). per: (base, type, idx) artan idx."""
+    spans: list[ProperNoun] = []
+    i = 0
+    while i < len(per):
+        base, typ, idx = per[i]
+        toks = [base]
+        span_type = typ
+        j = i + 1
+        while j < len(per):
+            b2, t2, idx2 = per[j]
+            if idx2 != per[j - 1][2] + 1:            # bitişik değil (araya token girdi)
+                break
+            if not _can_join(span_type, t2, b2):
+                break
+            toks.append(b2)
+            if span_type == "PROPER" and t2 != "PROPER":
+                span_type = t2                        # PROPER → PER'e yükselir (kişi adı)
+            j += 1
+        spans.append(ProperNoun(" ".join(toks), span_type, idx, tuple(toks)))
+        i = j
+    return spans
+
+
 def tag(text: str, *, roots: "Collection[str] | None" = None) -> list[ProperNoun]:
-    """Metni tokenize et + özel-adları etiketle (SPEC §3). Apostrof-ekli ad birleştirilir.
+    """Metni tokenize et + özel-ad VARLIKLARINI etiketle (SPEC §3, §10). Apostrof-ek + çok-token
+    span birleştirilir (`Mustafa Kemal Atatürk` → tek PER; `Ali Ankara'ya` → ayrı PER+LOC).
 
     roots (lexicon.load()) verilirse cümle-başı ortak-ad danışması yapılır (Kitap=ortak→değil,
     Kadirhan=OOV→PROPER). roots=None → cümle-başı OOV varsayılan PROPER.
     """
     toks = _tokenize(text)
-    out: list[ProperNoun] = []
+    per: list[tuple[str, str, int]] = []   # (base, type, 1-tabanlı idx) — proper tokenlar
     for i, tok in enumerate(toks):
         # ASCII/kıvrık apostrof-ek tokenı (önceki ada ait) → özel ad değil, atla
         if tok[:1] in ("'", "’"):
@@ -160,11 +214,9 @@ def tag(text: str, *, roots: "Collection[str] | None" = None) -> list[ProperNoun
         is_common = False
         if (sentence_initial and not has_apos and base[:1].isupper()
                 and _tr_lower(base) not in _ALL_GAZETTEER):
-            # çekimli ortak sözcük (Onu=o+acc) lemma-kümesinde yok → analyze() danışması
-            # (gerçek çözümleme varsa ortak ad). _NEVER_PROPER guard'ı proper_type'ta.
             is_common = any(not a.hypothetical for a in _analyze(base, roots=roots))
         surf = base + "'" if has_apos else base
         t = proper_type(surf, sentence_initial=sentence_initial, is_common=is_common)
         if t is not None:
-            out.append(ProperNoun(base, t, i + 1))
-    return out
+            per.append((base, t, i + 1))
+    return _merge_spans(per)

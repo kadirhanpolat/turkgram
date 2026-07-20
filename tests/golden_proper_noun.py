@@ -49,4 +49,22 @@ GOLDEN_PROPER = [
 
     # ── Homograf gazetteer (bilinçli LOC): Ordu/Van il ─────────────────────
     {"text": "Ordu güzel bir şehir", "tags": [("Ordu", "LOC", 1)]},
+
+    # ── Çok-token varlık span (§10): bitişik + tip-uyumlu → tek span ────────
+    {"text": "Mustafa Kemal Atatürk geldi",
+     "tags": [("Mustafa Kemal Atatürk", "PER", 1)]},              # 3 PER/PROPER → tek PER
+    {"text": "Ahmet Yılmaz aradı", "tags": [("Ahmet Yılmaz", "PER", 1)]},  # PER + PROPER caps
+    {"text": "Ankara Üniversitesi büyük",
+     "tags": [("Ankara Üniversitesi", "LOC", 1)]},                # LOC + PROPER → LOC (tipli emer)
+    {"text": "Kadıköy Belediyesi açıldı",
+     "tags": [("Kadıköy Belediyesi", "PROPER", 1)]},              # PROPER + PROPER → PROPER
+    {"text": "Mustafa Kemalin evi", "tags": [("Mustafa Kemalin", "PER", 1)]},  # bitişik 2 PER
+    # HAKEM HIGH — over-merge önleme (yön+tip-farkındalıklı emme):
+    # LOC + keyfi PROPER (head-noun DEĞİL) → AYRI (Abajur emilmez)
+    {"text": "Ankara Abajur geldi", "tags": [("Ankara", "LOC", 1), ("Abajur", "PROPER", 2)]},
+    # PROPER (kişi OOV) + LOC → AYRI (Kadirhan Ankara farklı varlık)
+    {"text": "Kadirhan Ankara geldi",
+     "tags": [("Kadirhan", "PROPER", 1), ("Ankara", "LOC", 2)]},
+    # NOT: tip-uyumsuz (`Ali Ankara'ya`→PER+LOC ayrı) + araya-token (`Ayşe ile Fatma`→ayrı)
+    # vakaları yukarıda (bitişik-değil/farklı-tip birleşmez); merge onları DEĞİŞTİRMEZ.
 ]

@@ -98,6 +98,26 @@ Atıf: yer/kişi adları OLGU (telifsiz); gazetteer elle küratörlenir (kaynak 
   bilinçli; bağlam-tabanlı ayrım defer).
 - **Cümle-başı çok-cümlede** — V1 yalnız metnin ilk tokenı sentence_initial; nokta-sonrası defer.
 
+## 10. Çok-token varlık span (2026-07-20)
+
+`tag()` bitişik + **tip-uyumlu** özel-ad tokenlarını tek `ProperNoun` span'ine birleştirir
+(`ProperNoun.tokens` = bileşen tokenlar; `surface` = boşlukla birleşik; `index` = başlangıç).
+
+**Katılma kuralı (`_can_join`, YÖN + TİP-farkındalıklı — TUZAK, hakem HIGH):** koşulsuz
+PROPER-emme AŞIRI birleştirir (`Ankara Abajur`→LOC, cümle-içi büyük-harf ortak ad→PROPER).
+Emme yön+tip özeldir:
+- **PER span** → ardıl **PER** (Ali Veli) veya **PROPER** (soyad: Yılmaz/Atatürk) alır.
+- **LOC/ORG span** → ardıl **YALNIZ head-noun PROPER** (`_HEAD_NOUNS`: Üniversitesi/Belediyesi/
+  …) alır; keyfi PROPER (Abajur) ALMAZ → `Ankara Üniversitesi`→LOC ama `Ankara Abajur`→AYRI.
+- **PROPER span** → ardıl **PER** (→kişi adı, Kadirhan Ali) veya **PROPER** alır; typed LOC/ORG
+  ALMAZ → `Kadirhan Ankara`→AYRI (kişi + yer).
+- **İki gazetteer LOC/ORG** (`Türkiye Avrupa`) / **farklı tipli** (`Ali Ankara`) / **araya token**
+  (`Ayşe ile Fatma`) → AYRI.
+
+Apostrof span sonunda olabilir (`Mustafa Kemal'in`→PER "Mustafa Kemal"). **Kapsam DIŞI:**
+apostrofsuz-çekimli özel ad (`Ali Ankarada`, imla-dışı → Ankarada PROPER → PER'e emilir; doğru
+imla `Ali Ankara'ya`→ayrı); org tip-çıkarımı yaklaşık (Ankara Üniversitesi→LOC, idealde ORG).
+
 ## 7. Test planı (CLAUDE.md §2)
 
 - **Bağımsız golden** (Opus motor-körü): kişi/yer/kurum + apostrof + cümle-içi caps + cümle-başı
