@@ -32,6 +32,14 @@ _SENTENCES = [
     "Gelmedi ama aradı",
     "Eve gidip yattım",
     "Yağmur yağarsa gelmem",
+    # V4 ki/diye
+    "Biliyorum ki gelecek",
+    "Gelsin diye bekledim",
+    "Öyle yoruldum ki uyudum",
+    "Yağmur yağıyor diye gelmedim",
+    "Biliyorum ki gelince görecek",
+    "Söyledim ki duysun ve anlasın",
+    "Onu gördüm ki çok sevindim",
 ]
 
 

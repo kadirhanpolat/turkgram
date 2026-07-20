@@ -591,6 +591,19 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     edilemez → best-effort §6). Fiil-homografı under-segment (`…aldı…verdi`, verdi→noun-rank) V1
     `pred_i`'den miras pre-existing borç, V3-özgü değil. Golden 15 (Opus motor-körü; Yorulunca→Görünce
     swap: yorulmak edilgen-türev converb üretmiyor, pre-existing leksikon açığı). sweep 20 cümle 0 çökme.
+  - ✅ **CÜMLE KATMANI V4 — ki/diye yan cümle bölme + çok-düzey zincir** (2026-07-20; SPEC §5b;
+    kullanıcı kararı: ki+diye+zincir, gerçek gömme DEFER): V3 koordinat+fiilimsi/şart bölüyordu; leksik
+    subordinatörler yargı-içi "cümle dışı unsur" kalıyordu. `_segment_clauses` yeniden yazıldı (`records`/
+    `_rec_yan`/`_clause_pred`). **`ki` İLERİ** (temel ki yan): ki ÖNCESİ zorla sınır (nominal-yüklem homografı
+    `Öyle yorgunum ki` için) + ki SONRASI subordine; **ki-domain** propagasyonu (ki'den sonra HER yargı yan:
+    `Biliyorum ki gelince görecek`→temel+yan+yan). **`diye` GERİ** (yan diye temel): diye ÖNCESİ (d-1) zorla
+    sınır → önceki yargı yan. ki/diye connector'a gider (öge değil), yüzey kapalı-set (`diye`=demek opt ama
+    parser R6/R7 emsali yüzey tespiti). `_DEGREE_WORDS` += öyle/böyle/şöyle (tarz zarfı→zarf tümleci); `yapi`
+    ki/diye markörüyle birleşik. **TUZAK — hakem HIGH giderildi:** bare/trailing subordinatör (`Bekledim diye`/
+    `Biliyorum ki` sonrası boş) phantom `yüklem=diye` sızdırıyordu / ana yargıyı yan yapıyordu → (1) `ki` yalnız
+    segment BAŞINDA subordine eder (trailing değil); (2) marker pred pozisyonunda ise `_clause_pred` kept'ten
+    gerçek yüklem, kept boşsa yargı yok. Golden 7 (Opus motor-körü) + robustluk testi; V3 golden DEĞİŞMEZ.
+    sweep 27 cümle 0 çökme. Tam paket 4484 yeşil.
   - ✅ **Çıplak-tekil ad tanıma (Ali/Çocuk) — küratlü kapalı-set override** (2026-07-20; kullanıcı
     kararı: veri-rebuild/heuristik DEĞİL, küratlü set): SPEC §6 sınırı (leksikon Zemberek-collapse
     `çocuk`/`ali`'yi 'adj' etiketler → çekimsiz-çıplak token modifier zincirine yutulur, ÖZNE kaybolur).

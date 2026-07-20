@@ -170,6 +170,42 @@ clauses:
 
 `Ben eve gidiyorum` (basit): tek Clause(role='temel', elements=düz-öge, predicate_id=3, connector=None).
 
+## 5b. V4 — ki/diye yüzey subordinatörleri + çok-düzey zincir (2026-07-20)
+
+V3 koordinat + fiilimsi/şart bölüyordu; leksik subordinatörler (`ki`/`diye`) yargı-içi
+"cümle dışı unsur" kalıyordu (DEFER idi). V4 bunları yüzey-tabanlı (parser R6/R7 emsali)
+yan yargı bağlayıcısı olarak çözer. **Kullanıcı kararı:** ki+diye + çok-düzey zincir;
+gerçek gömme (aktarma `Gel dedi`, adlaşmış `geldiğini biliyorum`) DEFER.
+
+**`ki` — İLERİ subordinatör** (temel `ki` yan): `Biliyorum ki gelecek` → temel(Biliyorum)
++ yan(gelecek, connector='ki'). Mekanik: `ki` ÖNCESİ token zorla sınır (temel yargı kapanır;
+nominal-yüklem homografı `Öyle yorgunum ki` için — yorgunum copula-homograf decline ranklanıp
+sınır olmasa da ki-1 zorlar); `ki` sıyrılır (öge değil) → connector='ki'. **ki-domain:** `ki`
+sonrası HER yargı `yan` (forced_yan propagasyonu) → `Biliyorum ki gelince görecek` = temel +
+yan(gelince,ki) + yan(görecek). connector='ki' yalnız İLK ki-yargısında.
+
+**`diye` — GERİ subordinatör** (yan `diye` temel): `Gelsin diye bekledim` → yan(Gelsin,
+connector='diye') + temel(bekledim). Mekanik: `diye` ÖNCESİ token (d-1) zorla sınır → önceki
+yargı kapanır; `diye` sıyrılır + ÖNCEKİ yargıyı yan işaretler (connector='diye'). `diye`
+morfolojik olarak `demek` opt-3sg'dir ama yüzey kapalı-set tespiti kullanılır (parser
+`_CONVERB_VERB_TOKENS` emsali; `kind='converb'` ASLA üretilmez).
+
+**Rol:** `_rec_yan(r)` = `forced_yan` (ki/diye marker) VEYA `_pred_is_yan(pred)` (fiilimsi/şart).
+Böylece ki/diye leksik yan + morfolojik yan aynı role kuralına girer (yan/bağımsız/temel §3).
+
+**Kapsam DIŞI (V4):** gerçek gömme (aktarma tümcesi `"Gel" dedi`, adlaşmış yan cümle
+`geldiğini biliyorum` — -DIK/-mA argümanı) → token düzeyi mimarisi için çok büyük, DEFER.
+`ki`/`diye` içindeki derin yapı (ki-domain'de gelince+görecek iki ayrı yan yargı) en-iyi-çaba
+(sözdizimsel iç yapı düzleştirilir).
+
+**Malformed subordinatör konumu — best-effort (hakem HIGH giderildi):** bare/trailing/başlangıç
+subordinatör (`Bekledim diye`, `Biliyorum ki`, `ki gelecek` — eksiltili/kesik girdi) GARANTİLİ
+değildir. Guard'lar: (1) `ki` YALNIZ segment başındaysa (sonrası içerik) subordine eder →
+trailing `Biliyorum ki` ana yargıyı `yan` YAPMAZ; (2) marker (ki/diye) yüklem pozisyonuna
+düşerse (`diye`=demek opt pred_i olabilir) `_clause_pred` kept'ten gerçek yüklemi bulur, kept
+boşsa yargı üretilmez → phantom `yüklem=('diye',)` ÖNLENİR. Çökme yok; malformed girdide yapı
+en-iyi-çaba (regresyon kilidi `test_trailing_bare_subordinator_robust`).
+
 ## 6. Kapsam DIŞI (V1 — bilinçli sınırlar)
 
 - **ki'li / diye'li birleşik** (`biliyorum ki gelecek`, `gelsin diye bekledim`) — DEFER.

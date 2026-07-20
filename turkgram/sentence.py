@@ -95,6 +95,11 @@ _COORD_CONJ = frozenset({
     "ve", "ama", "fakat", "lakin", "ancak", "yoksa", "veya", "ya da", "yahut",
 })
 
+# Yüzey subordinatörler (V4 yargı bölme) — leksik yan cümle bağlayıcıları (parser R6/R7 emsali).
+# `ki` ileri (sonraki yargı yan: temel ki yan), `diye` geri (önceki yargı yan: yan diye temel).
+_KI = "ki"
+_DIYE = "diye"
+
 # Modifier POS (leksikon pos_map) — niteleyici/belirteç öbek-içi kalır
 _MOD_POS = frozenset({"adj", "num", "det"})
 
@@ -103,6 +108,8 @@ _MOD_POS = frozenset({"adj", "num", "det"})
 # ismi adj etiketlediği için (çocuk/ali=adj) baş-tespiti pos_map'e güvenemez.
 _DEGREE_WORDS: frozenset[str] = frozenset({
     "çok", "oldukça", "pek", "biraz", "en", "daha", "az", "fazla", "epey", "gayet",
+    # tarz/gösterme zarfları (öyle yoruldum, böyle yaptı) — isim başı yoksa zarf tümleci
+    "öyle", "böyle", "şöyle",
 })
 
 # Çıplak-tekil ad tanıma (SPEC §6 sınırı — kullanıcı kararı: küratlü kapalı-set override).
@@ -427,6 +434,21 @@ def _pred_is_yan(t: "_Tok") -> bool:
     return False
 
 
+def _clause_pred(kept: "list[_Tok]") -> "Optional[_Tok]":
+    """Bir yargı span'inde yüklem = en-sağdaki fiil-yeteneği; yoksa nominal yüklem; yoksa
+    en-sağ içerik. Marker (ki/diye) pred pozisyonundaysa gerçek yüklemi bulmak için."""
+    for t in reversed(kept):
+        if t.role in (_R_FIIL, _R_ULAC, _R_ORTAC):
+            return t
+    for t in reversed(kept):
+        if t.role == _R_NOMPRED:
+            return t
+    for t in reversed(kept):
+        if t.role not in (_R_SORU, _R_NEG, _R_ADP, _R_CONJ, _R_UNLEM):
+            return t
+    return None
+
+
 def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
                      trailing: "list[_Tok]") -> "tuple[Clause, ...]":
     """Cümleyi yargılara böl (SPEC §4). Yüklem-sınırı token akışını segmentler;
@@ -459,7 +481,18 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
             return False   # imperatif/optatif homografı → sınır değil (özne)
         return False
 
-    bidx = sorted({k for k in range(tail) if _is_boundary(k)} | {pred_i})
+    # Yüzey subordinatörler (V4): `ki` ileri (sonrası yan), `diye` geri (öncesi yan).
+    diye_pos = [k for k in range(tail) if _tr_lower(toks[k].surface) == _DIYE]
+    ki_pos = [k for k in range(tail)
+              if _tr_lower(toks[k].surface) == _KI and toks[k].role == _R_CONJ]
+    bset = {k for k in range(tail) if _is_boundary(k)} | {pred_i}
+    for d in diye_pos:                    # diye ÖNCESİ token yan yargıyı kapatır (zorla sınır)
+        if d - 1 >= 0:
+            bset.add(d - 1)
+    for kk in ki_pos:                     # ki ÖNCESİ temel yargıyı kapatır (nominal-yüklem homografı için)
+        if kk - 1 >= 0:
+            bset.add(kk - 1)
+    bidx = sorted(bset)
 
     # Segmentle: [prev .. b] (b dahil); kuyruk (devrik) son segmente iliştir
     segments: list[tuple[list["_Tok"], int]] = []
@@ -474,22 +507,58 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
         else:                             # yüklem yok → tek yargı, predicate yok
             segments.append((toks[0:tail], -1))
 
-    non_yan = sum(1 for _seg, b in segments if b >= 0 and not _pred_is_yan(toks[b]))
-    last_i = len(segments) - 1
+    # Marker sıyır + subordinator işaretle (ki-domain: ki sonrası HER yargı yan)
+    records: list[dict] = []
+    ki_domain = False
+    for seg, b in segments:
+        connector = None
+        forced_yan = ki_domain
+        kept: list["_Tok"] = []
+        for t in seg:
+            s = _tr_lower(t.surface)
+            if not kept and t.role == _R_CONJ and s in _COORD_CONJ:
+                connector = t.surface                      # baştaki koordinat bağlacı
+                continue
+            if s == _KI and t.role == _R_CONJ:             # ki → sonrası subordine
+                ki_domain = True
+                if not kept:          # ki segment BAŞINDA → bu yargı ki-yan; trailing ki
+                    forced_yan = True # (Biliyorum ki) ana yargıyı subordine ETMEZ
+                    if connector is None:
+                        connector = t.surface
+                continue
+            if s == _DIYE and not kept and records:        # diye → ÖNCEKİ yargı yan
+                records[-1]["forced_yan"] = True
+                if records[-1]["connector"] is None:
+                    records[-1]["connector"] = t.surface
+                continue
+            kept.append(t)
+        # marker pred pozisyonunda ise (diye=demek opt pred_i olabilir) → kept'ten gerçek
+        # yüklem; kept boşsa yargı yok (bare/trailing subordinatör → phantom yüklem önlenir)
+        pred = toks[b] if b >= 0 else None
+        if pred is not None and (all(pred is not t for t in kept)
+                                 or _tr_lower(pred.surface) in (_KI, _DIYE)):
+            pred = _clause_pred(kept)
+        if not kept and pred is None:
+            continue
+        records.append({"seg": kept, "b": b, "connector": connector,
+                        "forced_yan": forced_yan, "pred": pred})
+
+    def _rec_yan(r: dict) -> bool:
+        return bool(r["forced_yan"]) or (r["pred"] is not None
+                                         and _pred_is_yan(r["pred"]))
+
+    non_yan = sum(1 for r in records if r["pred"] is not None and not _rec_yan(r))
+    last_i = len(records) - 1
 
     clauses: list[Clause] = []
-    for si, (seg, b) in enumerate(segments):
-        connector = None
-        # baştaki koordinat bağlacı sıyır → connector (yargı ögesi değil)
-        while seg and seg[0].role == _R_CONJ and _tr_lower(seg[0].surface) in _COORD_CONJ:
-            connector = seg[0].surface
-            seg = seg[1:]
-        pred = toks[b] if b >= 0 else None
+    for si, r in enumerate(records):
+        seg, connector = r["seg"], r["connector"]
+        pred = r["pred"]
         pred_trailing = trailing if si == last_i else []
         body = [t for t in seg if t is not pred]
         els, _sub = _label_body(body)
-        # yargı yüklemi imperatif → yalın ad özne = hitap (V1 §7b emsali)
-        if pred is not None and pred.role == _R_FIIL:
+        # yargı yüklemi imperatif → yalın ad özne = hitap (V1 §7b emsali; yan-marker'lı DEĞİL)
+        if pred is not None and pred.role == _R_FIIL and not r["forced_yan"]:
             if (pred.best.kwargs.get("tense") if pred.best else None) == "imp":
                 els = [Element("cümle dışı unsur", e.tokens, e.head_id)
                        if e.label == "özne" else e for e in els]
@@ -498,8 +567,7 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
             pred_surf = (pred.surface,) + tuple(t.surface for t in pred_trailing)
             els.append(Element("yüklem", pred_surf, pred.idx))
         els.sort(key=lambda e: e.head_id)
-        yan = pred is not None and _pred_is_yan(pred)
-        if yan and non_yan >= 1:
+        if _rec_yan(r):
             role = "yan"
         elif non_yan >= 2:
             role = "bağımsız"
@@ -648,6 +716,12 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
     elements.sort(key=lambda e: e.head_id)
 
     # 9. Yapı: basit / birleşik / sıralı / bağlı
+    # V4: ki/diye leksik subordinatörü → birleşik (flat `subordinate` yalnız fiilimsi/şart
+    # görür; ki/diye yüzey markörü ayrıca sayılır → yapi clauses ile tutarlı).
+    if any(_tr_lower(t.surface) == _DIYE
+           or (_tr_lower(t.surface) == _KI and t.role == _R_CONJ)
+           for t in toks[:tail]):
+        subordinate = True
     main_verbs = [e for e in elements if e.label == "yüklem"]
     if subordinate:
         yapi = "birleşik"
