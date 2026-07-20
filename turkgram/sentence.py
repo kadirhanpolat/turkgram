@@ -100,6 +100,11 @@ _COORD_CONJ = frozenset({
 _KI = "ki"
 _DIYE = "diye"
 
+# Tırnak noktalaması (aktarma sıyırma) — YALNIZ ASCII çift-tırnak `"` (tokenizer bunu ayrı
+# token'a böler). Kıvrık (" ") / guillemet (« ») tokenizer'da sözcüğe BİTİŞİK kalır (dar
+# tokenizer kısıtı, mimari-kararlar) → V1 kapsam dışı; apostrof (Ali'nin eki) HARİÇ.
+_QUOTES: frozenset[str] = frozenset({'"'})
+
 # Aktarma (gerçek gömme) fiilleri — bildirme/biliş fiilleri (kapalı-set). Ana yüklem bunlardan
 # biriyse VE öncesinde FİNİT tümce varsa, o tümce gömülü yan cümle (aktarma): `Yağmur yağacak
 # sandı` → yan(Yağmur yağacak) + temel(sandı); `Gel dedi` → yan(Gel) + temel(dedi). Adlaşmış
@@ -505,14 +510,16 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
     for kk in ki_pos:                     # ki ÖNCESİ temel yargıyı kapatır (nominal-yüklem homografı için)
         if kk - 1 >= 0:
             bset.add(kk - 1)
-    # Aktarma (gerçek gömme): ana yüklem bildirme fiili + ÖNCESİNDE finit tümce → o tümce
-    # gömülü yan. Reporting fiilinden önce zorla sınır (Gel dedi → Gel|dedi).
+    # Aktarma (gerçek gömme): ana yüklem bildirme fiili + HEMEN ÖNCESİNDE fiil (gömülü
+    # tümcenin yüklemi) → o tümce gömülü yan. HEMEN-öncesi fiil koşulu koordinasyonu ayırır:
+    # `Ali koştu ve Veli geldi dedi` (geldi=fiil→gömme) vs `Ali geldi ve Veli dedi`
+    # (Veli=ad→dedi'nin öznesi, koordinasyon). Reporting'ten önce zorla sınır (Gel dedi→Gel|dedi).
     pmain = toks[pred_i] if 0 <= pred_i < tail else None
     aktarma = (pmain is not None and pmain.best is not None
                and pmain.best.lemma in _REPORTING_VERBS
-               and any(toks[k].role in (_R_FIIL, _R_ULAC, _R_ORTAC)
-                       for k in range(pred_i)))
-    if aktarma and pred_i - 1 >= 0:
+               and pred_i - 1 >= 0
+               and toks[pred_i - 1].role in (_R_FIIL, _R_ULAC, _R_ORTAC))
+    if aktarma:
         bset.add(pred_i - 1)
     bidx = sorted(bset)
 
@@ -565,10 +572,13 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
         records.append({"seg": kept, "b": b, "connector": connector,
                         "forced_yan": forced_yan, "pred": pred})
 
-    # Aktarma: reporting fiili son yargı → önceki (koordinat-BAĞLANMAMIŞ) yargı(lar) gömülü yan.
+    # Aktarma: reporting fiili son yargı → TÜM önceki yargı(lar) gömülü yan (koordine-içi
+    # gömme: `Ali koştu ve Veli geldi dedi` → yan+yan+temel). AMA reporting yargısı KOORDİNAT-
+    # bağlıysa (connector=ve) bu koordinasyondur, gömme DEĞİL (`Ali geldi ve Veli dedi`) → atla.
     if aktarma and len(records) >= 2:
-        for r in records[:-1]:
-            if not (r["connector"] and _tr_lower(r["connector"]) in _COORD_CONJ):
+        last = records[-1]
+        if not (last["connector"] and _tr_lower(last["connector"]) in _COORD_CONJ):
+            for r in records[:-1]:
                 r["forced_yan"] = True
 
     def _rec_yan(r: dict) -> bool:
@@ -628,6 +638,13 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
     pairs = _best_per_token(text, roots, freq=freq)
     bests = [b for b, _v in pairs]
     verbs = [v for _b, v in pairs]
+    # TIRNAK sıyırma (aktarma): "Gel" dedi → Gel dedi (aktarma zaten gömer). Çift tırnak +
+    # guillemet noktalaması öge değil; index sıyrılmış akışa göre yeniden numaralanır.
+    keep = [i for i, s in enumerate(surfaces) if s not in _QUOTES]
+    if len(keep) != len(surfaces):
+        surfaces = [surfaces[i] for i in keep]
+        bests = [bests[i] for i in keep]
+        verbs = [verbs[i] for i in keep]
     toks = [_classify(i + 1, s, b, pos_map) for i, (s, b) in enumerate(zip(surfaces, bests))]
 
     n = len(toks)
@@ -675,6 +692,21 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
     if pred_i is None:
         return SentenceAnalysis(text, (), SentenceType(
             "isim", "kurallı", "olumlu", soru, "haber", "basit", True))
+
+    # HOMOGRAF-FİNİT (aktarma): reporting fiilinden HEMEN önceki nom-non-acc token'ın finit
+    # verb_reading'i varsa (geleceğim=gelecek+iyelik AD ranklanır ama gel+ecek fiil okuması VAR)
+    # → gömülü yüklem olarak fiile yeniden sınıfla (Yarın geleceğim dedi → geleceğim=yüklem).
+    # acc token (yolu sordu → yolu=nesne) DIŞLANIR; verb_reading yoksa (bir şey söyledi) dokunma.
+    if (toks[pred_i].best is not None
+            and toks[pred_i].best.lemma in _REPORTING_VERBS and pred_i - 1 >= 0):
+        pv = toks[pred_i - 1]
+        vr = verbs[pred_i - 1]
+        # YALNIZ nom (case=None) + NET fiil zamanı (past/evid/pres/fut). dat/loc/abl (Sana=oblique
+        # arg) + acc (Yolu=nesne) + imperatif/aorist (Yaz/Sana=ad/homograf tuzağı) DIŞLANIR.
+        if (vr is not None and pv.role in (_R_AD, _R_MOD, _R_NOMPRED, _R_X)
+                and pv.case is None
+                and vr.kwargs.get("tense") in ("past", "evid", "pres", "fut")):
+            toks[pred_i - 1] = _Tok(pv.idx, pv.surface, vr, _R_FIIL, None, "verb")
 
     pred = toks[pred_i]
     pred_verb = verbs[pred_i]           # yüklemin fiil-okuması (varsa)

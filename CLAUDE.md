@@ -617,6 +617,21 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     (`Yarın geleceğim dedi`, geleceğim=isim rank), tırnak-tabanlı aktarma, koordine-içi gömme (§5c defer).
     **Hakem SHIP** (0 CRITICAL/HIGH/MEDIUM; 1 LOW koordine-içi-aktarma defer). Golden 8 (Opus motor-körü;
     Hasta olduğunu→özne uzlaştırıldı, ad-tümleç belirsiz edge). sweep 35 cümle 0 çökme. Tam paket 4492 yeşil.
+  - ✅ **Aktarma sağlamlaştırma V5.1 — 3 best-effort sınır kapatıldı** (2026-07-20; SPEC
+    `docs/superpowers/specs/2026-07-20-aktarma-robustlik-design.md`): **(1) koordine-içi gömme +
+    koordinasyon ayrımı:** aktarma koşulu "önce herhangi finit" yerine **HEMEN-önce-fiil** →
+    `Ali koştu ve Veli geldi dedi`=yan+yan+temel (koordine dahil TÜM önceki yan), `Ali geldi ve
+    Veli dedi`=bağımsız+bağımsız (Veli=ad→dedi öznesi, koordinasyon; reporting-koordinat guard).
+    **(2) homograf-finit:** `geleceğim`(gelecek+iyelik AD ranklanır ama gel+ecek fiil okuması var)
+    → reporting öncesi **nom (case=None) + net-zaman (past/evid/pres/fut) verb_reading** → FİİL
+    yeniden-sınıfla (`Yarın geleceğim dedi`→yan[Yarın,geleceğim]+temel[dedi]). TUZAK — guard'lar:
+    dat/loc/abl (`Sana söyledim`=oblique, sanmak-reading'i var ama dat) + acc (`Yolu sordu`=nesne)
+    + imperatif/aorist (`Yaz söyledi` net-zaman değil) DIŞLANIR (regresyon fix). **(3) tırnak:**
+    `_QUOTES={'"'}` ASCII çift-tırnak sıyır (pair'lere hizalı `keep`, index yeniden) → `"Eve gel"
+    dedi`→yan+temel. TUZAK — hakem MEDIUM: kıvrık/guillemet tokenizer'a bitişik (dar-kısıt) → V1
+    dışı, `_QUOTES` yalnız ASCII. Hakem SHIP (0 CRITICAL/HIGH; homograf-finit yanlış-pozitif
+    yapısal imkansız — bare yüzey yalnız imp/aorist verb-reading verir). Golden 6 (`golden_clause_v5b`).
+    V3/V4/V5+44 golden+K6 DEĞİŞMEZ. sweep 41 cümle 0 çökme. Tam paket 4540 yeşil.
   - ✅ **Çıplak-tekil ad tanıma (Ali/Çocuk) — küratlü kapalı-set override** (2026-07-20; kullanıcı
     kararı: veri-rebuild/heuristik DEĞİL, küratlü set): SPEC §6 sınırı (leksikon Zemberek-collapse
     `çocuk`/`ali`'yi 'adj' etiketler → çekimsiz-çıplak token modifier zincirine yutulur, ÖZNE kaybolur).

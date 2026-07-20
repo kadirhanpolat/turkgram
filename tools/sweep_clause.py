@@ -49,6 +49,13 @@ _SENTENCES = [
     "Ali bir şey söyledi",
     "Yarın geleceğim dedi",
     "Gideceğini düşündü ve üzüldü",
+    # V5.1 aktarma-robustlik
+    "Ali koştu ve Veli geldi dedi",
+    "Ali geldi ve Veli dedi",
+    '"Eve gel" dedi',
+    "Sana söyledim",
+    "Yolu sordu",
+    '"Yarın gelirim" diye düşündü',
 ]
 
 
