@@ -825,3 +825,13 @@ def cümle_çözümle(metin: str, *, kökler=None):
     """
     from .sentence import analyze_sentence
     return analyze_sentence(metin, roots=kökler)
+
+
+def özel_adlar(metin: str, *, kökler=None):
+    """Metindeki özel adları kural-tabanlı etiketle. proper_noun.tag() sarmalayıcı.
+
+    → list[ProperNoun] (surface, type∈{PER,LOC,ORG,PROPER}, index). ML DEĞİL; gazetteer +
+    Türkçe imla sinyali (büyük harf, apostrof). kökler=lexicon.load() cümle-başı ortak-ad ayrımı.
+    """
+    from .proper_noun import tag
+    return tag(metin, roots=kökler)

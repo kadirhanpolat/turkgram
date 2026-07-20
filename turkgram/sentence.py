@@ -128,20 +128,12 @@ _DEGREE_WORDS: frozenset[str] = frozenset({
 # etkilenmez (sette YOK). NOT: cümle-başı büyük-harf tek başına ayırt edemez (Kırmızı de
 # büyük) → leksikal set ŞART.
 
-# (a) Kişi-adı gazetteer — BÜYÜK-HARF gate'li özel ad (gerçek sıfat olamaz). Yaygın
-# Türkçe adlar; kapalı, genişletilebilir. lex_pos=adj homografı (ali=yüce) geçersiz kılar.
-_PERSON_NAMES: frozenset[str] = frozenset({
-    "ali", "veli", "ayşe", "fatma", "mehmet", "ahmet", "mustafa", "hasan", "hüseyin",
-    "ibrahim", "ismail", "osman", "ömer", "yusuf", "murat", "emre", "burak", "can",
-    "cem", "kaya", "kemal", "orhan", "oğuz", "serkan", "tolga", "ufuk", "volkan",
-    "zafer", "zeynep", "elif", "emine", "hatice", "meryem", "merve", "büşra", "esra",
-    "sema", "selin", "deniz", "ece", "eda", "gül", "hande", "irem", "melek", "nur",
-    "özge", "pınar", "sevgi", "sibel", "tuğba", "yasemin", "aylin", "aslı", "banu",
-    "ceren", "derya", "dilek", "ebru", "figen", "gizem", "hülya", "kübra", "leyla",
-    "nazlı", "seda", "şeyma", "tülay", "ümit", "yağmur", "yıldız",
-    "kaan", "arda", "efe", "berk", "onur", "taner", "tarık", "levent", "engin",
-    "erdem", "ferhat", "gökhan", "haluk", "işıl", "necati", "rıza", "sadık", "vedat",
-})
+# (a) Özel-ad gazetteer — BÜYÜK-HARF gate'li özel ad (gerçek sıfat olamaz). Kişi/yer/kurum
+# `proper_noun` modülünden (tek doğruluk kaynağı); lex_pos=adj homografı (ali=yüce, van=il)
+# geçersiz kılar. Yer/kurum adı da çıplak-tekil override'dan yararlanır (İstanbul→özne).
+from .proper_noun import PERSON_NAMES as _PERSON_NAMES
+from .proper_noun import PLACE_NAMES as _PLACE_NAMES, ORG_NAMES as _ORG_NAMES
+_PROPER_GAZETTEER: frozenset[str] = _PERSON_NAMES | _PLACE_NAMES | _ORG_NAMES
 
 # (b) Ad-baskın adj-etiketli somut adlar — KONSERVATİF (yalnız açık ad-baskın; çift-kullanım
 # genç/ihtiyar/düşman/yaşlı DIŞLANDI — onlar gerçekten sıfat+ad, `ihtiyar adam` bozulmamalı).
@@ -270,7 +262,7 @@ def _classify(idx: int, surface: str, best, pos_map: dict) -> _Tok:
     # Çıplak-tekil ad override (SPEC §6): adj-etiketli ama gerçekte AD (özel ad / somut
     # ad) → modifier zincirine yutulmasın, AD (özne adayı) olsun. Kişi-adı BÜYÜK-HARF gate'li.
     noun_override = (low in _NOUN_OVERRIDE
-                     or (surface[:1].isupper() and low in _PERSON_NAMES))
+                     or (surface[:1].isupper() and low in _PROPER_GAZETTEER))
     if case is None and not inflected and not noun_override:
         if lex_pos == "adv" or (_CA_ADVERB_RE.search(low) and lex_pos != "noun"):
             return _Tok(idx, surface, best, _R_ADV, None, "adv")

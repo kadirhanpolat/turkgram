@@ -627,6 +627,21 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     (gerçek sıfat, sette yok) + `Küçük çocuk` (çocuk=AD baş) bozulmaz. **`Ali kitabı okudu` skip'ten
     çıktı** (tam geçiyor); `Çocuk topu…` özne kurtuldu ama `topu`→'topu' nom lemması→belirtisiz (AYRI
     nom/acc disambiguation borcu, çocuk=adj değil; golden 1 skip kaldı). Regresyon-kilidi test_bare_noun_override.
+  - ✅ **Kural-tabanlı özel-ad etiketleme (proper-noun tagging)** (2026-07-20; SPEC
+    `docs/superpowers/specs/2026-07-20-proper-noun-tagging-design.md`; kullanıcı kararı — **NER DEĞİL**):
+    mimari-kararlar NER'i kalıcı kapsam-dışı ilan etmişti (ML/treebank); bu KURAL-TABANLI muadil (kapalı-set
+    gazetteer + Türkçe imla). YENİ `proper_noun.py`: `PERSON_NAMES`(~90)/`PLACE_NAMES`(81 il+ülke+coğrafya)/
+    `ORG_NAMES` gazetteer + `_NEVER_PROPER` (işlev/belgisiz sözcük); `proper_type(surface, sentence_initial,
+    is_common)→PER|LOC|ORG|PROPER|None`; `tag(text, roots)→list[ProperNoun]`. **Kural sırası:** _NEVER_PROPER→
+    None; **büyük-harf ZORUNLU** (küçük-harf hiçbir kural tetiklemez); gazetteer(büyük-harf); apostrof-ek→PROPER;
+    cümle-içi caps→PROPER; cümle-başı caps + analyze()-danışması (gerçek çözümleme→ortak ad, OOV→PROPER).
+    **TUZAK — hakem HIGH:** gazetteer büyük-harf gate'i ŞART (deniz/gül/kaya 63 küçük-harf ortak lemma yanlış
+    etiketleniyordu). **TUZAK — cümle-başı çekimli ortak** (Onu=o+acc lemma-kümesinde yok) → analyze() danışması
+    ("analyze entegrasyonu"); `_NEVER_PROPER` (bu/o/ne/kimi/herkes…) açık liste (analyze hypothetical kaçağı).
+    **sentence.py entegrasyon:** `_PERSON_NAMES` proper_noun'a TAŞINDI (tek kaynak); `_classify` çıplak-tekil
+    override LOC/ORG'a genişledi (İstanbul→özne). Element'e TÜR alanı EKLENMEDİ. `tr.özel_adlar`. **Hakem
+    SHIP** (HIGH+MEDIUM giderildi, LOW apostrof-edge belgeli). Golden 21 + FP sweep 3000 ortak ad **küçük-harf
+    %0.00 / cümle-başı %0.03** (1 çöp girdi) 0 çökme. Kimlik uyumu: saf-Python, ML YOK. Tam paket 4525 yeşil.
   - ✅ **Disambiguation homograf çekimli-üstünlük düzeltmesi** (2026-07-20; SPEC
     `docs/superpowers/specs/2026-07-20-homograph-inflected-correction-design.md`): freq'siz rank'te
     morfem-ekonomisi rare **bare-lemma**'yı (verdi/girdi=leksikon-çöpü ad) çok-sık **net-fiil** okumaya

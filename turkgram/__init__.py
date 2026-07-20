@@ -27,6 +27,7 @@ from . import (
     morphology, morphology_noun, derivation, nonfinite, voice, tr, analysis,
     lexicon, disambiguation, compound, context, adjective, syntax, postposition, conjunction,
     spellcheck, reduplication, parse, dependency, interjection, onomatopoeia, sentence,
+    proper_noun,
 )
 
 # ── Fiil çekimi ──────────────────────────────────────────────────────────
@@ -104,6 +105,9 @@ from .onomatopoeia import ONOMATOPOEIA
 # ── Cümle çözümleme (öge + tür) ──────────────────────────────────────────
 from .sentence import analyze_sentence, Element, SentenceType, Clause, SentenceAnalysis
 
+# ── Özel-ad etiketleme (kural-tabanlı) ───────────────────────────────────
+from .proper_noun import proper_type, tag as tag_proper, ProperNoun
+
 # ── Tokenizasyon (Faz 9) ─────────────────────────────────────────────────
 from .tokenize import tokenize
 
@@ -168,6 +172,7 @@ __all__ = [
     "conjunction", "conjoin", "coordinate", "CONJUNCTIONS",
     "interjection", "onomatopoeia", "INTERJECTIONS", "ONOMATOPOEIA",
     "sentence", "analyze_sentence", "Element", "SentenceType", "Clause", "SentenceAnalysis",
+    "proper_noun", "proper_type", "tag_proper", "ProperNoun",
     # normalleştirme + IPA
     "number_to_words", "float_to_words", "date_to_words",
     "time_to_words", "expand_abbreviation", "normalize",
