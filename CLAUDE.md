@@ -591,6 +591,16 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     edilemez → best-effort §6). Fiil-homografı under-segment (`…aldı…verdi`, verdi→noun-rank) V1
     `pred_i`'den miras pre-existing borç, V3-özgü değil. Golden 15 (Opus motor-körü; Yorulunca→Görünce
     swap: yorulmak edilgen-türev converb üretmiyor, pre-existing leksikon açığı). sweep 20 cümle 0 çökme.
+  - ✅ **Çıplak-tekil ad tanıma (Ali/Çocuk) — küratlü kapalı-set override** (2026-07-20; kullanıcı
+    kararı: veri-rebuild/heuristik DEĞİL, küratlü set): SPEC §6 sınırı (leksikon Zemberek-collapse
+    `çocuk`/`ali`'yi 'adj' etiketler → çekimsiz-çıplak token modifier zincirine yutulur, ÖZNE kaybolur).
+    `sentence.py` iki kapalı-set + `_classify` `_MOD_POS` guard: **(a) `_PERSON_NAMES`** (~90 kişi adı,
+    BÜYÜK-HARF gate'li özel ad — gerçek sıfat olamaz; `ali`=yüce homografı geçersiz) → `Ali kitabı
+    okudu`=özne(Ali)+belirtili nesne(kitabı) ✓; **(b) `_NOUN_OVERRIDE`** ad-baskın somut ad (çocuk/memur,
+    KONSERVATİF — çift-kullanım genç/ihtiyar/düşman DIŞLANDI: `İhtiyar adam` bozulmaz). `Kırmızı araba`
+    (gerçek sıfat, sette yok) + `Küçük çocuk` (çocuk=AD baş) bozulmaz. **`Ali kitabı okudu` skip'ten
+    çıktı** (tam geçiyor); `Çocuk topu…` özne kurtuldu ama `topu`→'topu' nom lemması→belirtisiz (AYRI
+    nom/acc disambiguation borcu, çocuk=adj değil; golden 1 skip kaldı). Regresyon-kilidi test_bare_noun_override.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.

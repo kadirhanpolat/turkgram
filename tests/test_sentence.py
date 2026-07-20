@@ -11,12 +11,13 @@ from turkgram import lexicon
 from turkgram.sentence import analyze_sentence
 from tests.golden_sentence import GOLDEN_SENTENCES
 
-# SPEC §6 dokümante sınır: proper-noun-adj homograf (pos_map: ali/çocuk=adj) + SOV
-# yalın-nom disambiguation. Öge etiketleme bu 2 cümlede ideali tutturamaz — TÜR yine tam.
-# Parser/disambiguation iyileşince bedava düzelir (motor DEĞİŞMEDEN).
+# SPEC §6 dokümante sınır: SOV yalın-nom disambiguation. `Ali kitabı okudu` ARTIK GEÇER
+# (çıplak-tekil ad override, _PERSON_NAMES/_NOUN_OVERRIDE — özne kurtarıldı). Kalan tek
+# vaka: `Çocuk topu…` — özne(Çocuk) kurtuldu ama `topu` ayrı 'topu' lemmasına (nom)
+# sıralanıyor → belirtisiz nesne (golden belirtili bekler). topu nom/acc disambiguation
+# kök nedeni (çocuk=adj DEĞİL); disambiguation iyileşince bedava düzelir (motor DEĞİŞMEDEN).
 _OGE_KNOWN_LIMITS = frozenset({
-    "Ali kitabı okudu",         # Ali(adj-homograf) + kitabı(acc) yanlış gruplanır
-    "Çocuk topu bahçede oynadı",  # Çocuk(adj) + topu(nom disambig) yanlış gruplanır
+    "Çocuk topu bahçede oynadı",  # topu → 'topu' nom lemması → belirtisiz (golden: belirtili)
 })
 
 _ROOTS = lexicon.load()
@@ -53,6 +54,25 @@ def test_known_limits_still_run():
         sa = analyze_sentence(text, roots=_ROOTS)
         assert sa.sentence_type.yuklem_turu == "fiil"
         assert len(sa.elements) >= 2
+
+
+def test_bare_noun_override():
+    """Çıplak-tekil ad override (_PERSON_NAMES/_NOUN_OVERRIDE): özne kurtarılır,
+    gerçek sıfat bozulmaz (konservatif). SPEC §6."""
+    def labels(text):
+        return [(e.label, e.tokens) for e in analyze_sentence(text, roots=_ROOTS).elements]
+
+    # (a) özel ad (büyük-harf gate) → özne, nesne yutulmaz
+    assert ("özne", ("Ali",)) in labels("Ali kitabı okudu")
+    assert ("özne", ("Ali",)) in labels("Kitabı Ali okudu")   # cümle-içi
+    # (b) adj-etiketli somut ad → özne
+    assert ("özne", ("Çocuk",)) in labels("Çocuk uyudu")
+    assert ("özne", ("Memur",)) in labels("Memur geldi")
+    # (c) gerçek sıfat BOZULMAZ (sette yok → modifier kalır)
+    assert labels("Kırmızı araba geldi") == [("özne", ("Kırmızı", "araba")), ("yüklem", ("geldi",))]
+    assert labels("İhtiyar adam yürüdü") == [("özne", ("İhtiyar", "adam")), ("yüklem", ("yürüdü",))]
+    # (d) override ad niteleyici alabilir (Küçük çocuk → tek özne)
+    assert labels("Küçük çocuk uyudu") == [("özne", ("Küçük", "çocuk")), ("yüklem", ("uyudu",))]
 
 
 def test_alias_dolayli_tumlec():

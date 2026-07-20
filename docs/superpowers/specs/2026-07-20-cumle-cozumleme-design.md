@@ -169,7 +169,17 @@ Dependency root'u YOKSA veya yüklem konumu boşsa (yüklemsiz cümle: "Herkes i
   adj etiketler (ali/çocuk=adj) → proper-noun-adj homograf; yalın-nom özne/nesne SOV belirsizliği
   (`topu`=acc/nom). **Etkisi yalnız yanlış etiket DEĞİL — özne TAMAMEN kaybolabilir:** `Çocuklar
   bahçede oynuyor`'da `Çocuklar`(adj-homograf) modifier zinciriyle `bahçede`'yi yutar → özne düşer.
-  Golden'da 2 vaka işaretli (skip); parser/leksikon-POS iyileşince motor DEĞİŞMEDEN düzelir.
+  Parser/leksikon-POS iyileşince motor DEĞİŞMEDEN düzelir.
+- **ÇÖZÜLDÜ (2026-07-20, çıplak-tekil ad override; kullanıcı kararı küratlü kapalı-set):**
+  `_classify` `_MOD_POS` dalını iki kapalı-setle geçersiz kılar → adj-etiketli AMA gerçekte AD
+  olan token AD (özne adayı) olur: **(a) `_PERSON_NAMES`** kişi-adı gazetteer (BÜYÜK-HARF gate'li
+  özel ad, gerçek sıfat olamaz; `ali`=yüce homografını geçersiz kılar) — `Ali kitabı okudu` →
+  özne(Ali)+belirtili nesne(kitabı) ✓; **(b) `_NOUN_OVERRIDE`** ad-baskın somut ad (çocuk/memur;
+  KONSERVATİF — çift-kullanım genç/ihtiyar/düşman DIŞLANDI, `İhtiyar adam` bozulmaz). `Kırmızı
+  araba`(gerçek sıfat, sette yok) bozulmaz; `Küçük çocuk`(çocuk=AD baş, Küçük niteler) ✓.
+  **KALAN sınır (golden 1 skip):** `Çocuk topu bahçede oynadı` — özne(Çocuk) KURTULDU ama `topu`
+  ayrı `topu` nom lemmasına sıralanıyor → belirtisiz nesne (golden: belirtili). Bu `topu` nom/acc
+  disambiguation kök nedeni (çocuk=adj DEĞİL, AYRI sorun); disambiguation iyileşince düzelir.
 - **V2 TUR-2 İYİLEŞTİRMELER (2026-07-20):**
   - **Zaman-adı zarf-değeri:** kapalı `_TIME_NOUNS` + durum∈{dat,loc,abl} → zarf tümleci
     (`akşama gittik`); nom BİLİNÇLİ hariç (Sabah güzeldi=özne belirsizliği), acc=nesne (sabahı bekledim).

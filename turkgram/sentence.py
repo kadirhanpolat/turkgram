@@ -105,6 +105,35 @@ _DEGREE_WORDS: frozenset[str] = frozenset({
     "çok", "oldukça", "pek", "biraz", "en", "daha", "az", "fazla", "epey", "gayet",
 })
 
+# Çıplak-tekil ad tanıma (SPEC §6 sınırı — kullanıcı kararı: küratlü kapalı-set override).
+# KÖK NEDEN: leksikon (Zemberek collapse) bazı ADLARI 'adj' etiketler (çocuk/ali=adj) →
+# çekimsiz-çıplak token modifier zincirine yutulur, ÖZNE kaybolur (Ali kitabı okudu →
+# 'Ali kitabı'=belirtili nesne, özne yok). Çözüm: aşağıdaki kapalı-setler `_classify`'de
+# _MOD_POS dalını geçersiz kılar → token AD (özne adayı) olur. `Kırmızı`(gerçek sıfat)
+# etkilenmez (sette YOK). NOT: cümle-başı büyük-harf tek başına ayırt edemez (Kırmızı de
+# büyük) → leksikal set ŞART.
+
+# (a) Kişi-adı gazetteer — BÜYÜK-HARF gate'li özel ad (gerçek sıfat olamaz). Yaygın
+# Türkçe adlar; kapalı, genişletilebilir. lex_pos=adj homografı (ali=yüce) geçersiz kılar.
+_PERSON_NAMES: frozenset[str] = frozenset({
+    "ali", "veli", "ayşe", "fatma", "mehmet", "ahmet", "mustafa", "hasan", "hüseyin",
+    "ibrahim", "ismail", "osman", "ömer", "yusuf", "murat", "emre", "burak", "can",
+    "cem", "kaya", "kemal", "orhan", "oğuz", "serkan", "tolga", "ufuk", "volkan",
+    "zafer", "zeynep", "elif", "emine", "hatice", "meryem", "merve", "büşra", "esra",
+    "sema", "selin", "deniz", "ece", "eda", "gül", "hande", "irem", "melek", "nur",
+    "özge", "pınar", "sevgi", "sibel", "tuğba", "yasemin", "aylin", "aslı", "banu",
+    "ceren", "derya", "dilek", "ebru", "figen", "gizem", "hülya", "kübra", "leyla",
+    "nazlı", "seda", "şeyma", "tülay", "ümit", "yağmur", "yıldız",
+    "kaan", "arda", "efe", "berk", "onur", "taner", "tarık", "levent", "engin",
+    "erdem", "ferhat", "gökhan", "haluk", "işıl", "necati", "rıza", "sadık", "vedat",
+})
+
+# (b) Ad-baskın adj-etiketli somut adlar — KONSERVATİF (yalnız açık ad-baskın; çift-kullanım
+# genç/ihtiyar/düşman/yaşlı DIŞLANDI — onlar gerçekten sıfat+ad, `ihtiyar adam` bozulmamalı).
+_NOUN_OVERRIDE: frozenset[str] = frozenset({
+    "çocuk", "memur",
+})
+
 
 @dataclass(frozen=True)
 class Element:
@@ -223,7 +252,11 @@ def _classify(idx: int, surface: str, best, pos_map: dict) -> _Tok:
     # Annem) → pos_map ali/çocuk=adj kuruntusunu çekimli biçimlerde geçersiz kılar (özne kaybı fix).
     inflected = bool(best.kwargs.get("number") or best.kwargs.get("possessive"))
     lex_pos = pos_map.get(best.lemma) or pos_map.get(low)
-    if case is None and not inflected:
+    # Çıplak-tekil ad override (SPEC §6): adj-etiketli ama gerçekte AD (özel ad / somut
+    # ad) → modifier zincirine yutulmasın, AD (özne adayı) olsun. Kişi-adı BÜYÜK-HARF gate'li.
+    noun_override = (low in _NOUN_OVERRIDE
+                     or (surface[:1].isupper() and low in _PERSON_NAMES))
+    if case is None and not inflected and not noun_override:
         if lex_pos == "adv" or (_CA_ADVERB_RE.search(low) and lex_pos != "noun"):
             return _Tok(idx, surface, best, _R_ADV, None, "adv")
         if lex_pos in _MOD_POS:
