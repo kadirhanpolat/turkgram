@@ -483,6 +483,75 @@ GOLDEN_SENTENCES = [
         },
     },
 
+    # ── Ek: zaman adı + durum → zarf tümleci (V2 zaman-adı) ────────────────
+    {
+        "text": "Akşama gittik",
+        "elements": [
+            ("zarf tümleci", ("Akşama",), 1, ()),
+            ("yüklem", ("gittik",), 2, ()),
+        ],
+        "type": {
+            "yuklem_turu": "fiil", "yuklem_yeri": "kurallı", "olumluluk": "olumlu",
+            "soru": False, "kip": "haber", "yapi": "basit", "eksiltili": False,
+        },
+    },
+
+    # ── Ek: kişi zamiri eğik biçim (bana/sana fiil-homografı fix) ──────────
+    {
+        "text": "Sana söyledim",
+        "elements": [
+            ("dolaylı tümleç", ("Sana",), 1, ("yer tamlayıcısı",)),
+            ("yüklem", ("söyledim",), 2, ()),
+        ],
+        "type": {
+            "yuklem_turu": "fiil", "yuklem_yeri": "kurallı", "olumluluk": "olumlu",
+            "soru": False, "kip": "haber", "yapi": "basit", "eksiltili": False,
+        },
+    },
+
+    # ── Ek: demonstratif özne + eğik zamir (hakem HIGH: özne yutulmamalı) ──
+    {
+        "text": "O bana güldü",
+        "elements": [
+            ("özne", ("O",), 1, ()),
+            ("dolaylı tümleç", ("bana",), 2, ("yer tamlayıcısı",)),
+            ("yüklem", ("güldü",), 3, ()),
+        ],
+        "type": {
+            "yuklem_turu": "fiil", "yuklem_yeri": "kurallı", "olumluluk": "olumlu",
+            "soru": False, "kip": "haber", "yapi": "basit", "eksiltili": False,
+        },
+    },
+
+    # ── Ek: cümle-başı pür ünlem → cümle dışı unsur (V2 sinerji) ───────────
+    {
+        "text": "Haydi gidelim",
+        "elements": [
+            ("cümle dışı unsur", ("Haydi",), 1, ()),
+            ("yüklem", ("gidelim",), 2, ()),
+        ],
+        "type": {
+            "yuklem_turu": "fiil", "yuklem_yeri": "kurallı", "olumluluk": "olumlu",
+            "soru": False, "kip": "istek", "yapi": "basit", "eksiltili": False,
+        },
+    },
+
+    # ── Ek: bağlı cümle iki öznesli (V2 çok-cümle gate: Veli=özne) ─────────
+    {
+        "text": "Ali geldi ve Veli gitti",
+        "elements": [
+            ("özne", ("Ali",), 1, ()),
+            ("yüklem", ("geldi",), 2, ()),
+            ("cümle dışı unsur", ("ve",), 3, ()),
+            ("özne", ("Veli",), 4, ()),
+            ("yüklem", ("gitti",), 5, ()),
+        ],
+        "type": {
+            "yuklem_turu": "fiil", "yuklem_yeri": "kurallı", "olumluluk": "olumlu",
+            "soru": False, "kip": "haber", "yapi": "bağlı", "eksiltili": False,
+        },
+    },
+
     # ── Ek: gelecek zaman haber ────────────────────────────────────────────
     {
         "text": "Yarın sinemaya gideceğiz",

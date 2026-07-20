@@ -170,6 +170,20 @@ Dependency root'u YOKSA veya yüklem konumu boşsa (yüklemsiz cümle: "Herkes i
   (`topu`=acc/nom). **Etkisi yalnız yanlış etiket DEĞİL — özne TAMAMEN kaybolabilir:** `Çocuklar
   bahçede oynuyor`'da `Çocuklar`(adj-homograf) modifier zinciriyle `bahçede`'yi yutar → özne düşer.
   Golden'da 2 vaka işaretli (skip); parser/leksikon-POS iyileşince motor DEĞİŞMEDEN düzelir.
+- **V2 TUR-2 İYİLEŞTİRMELER (2026-07-20):**
+  - **Zaman-adı zarf-değeri:** kapalı `_TIME_NOUNS` + durum∈{dat,loc,abl} → zarf tümleci
+    (`akşama gittik`); nom BİLİNÇLİ hariç (Sabah güzeldi=özne belirsizliği), acc=nesne (sabahı bekledim).
+  - **Kişi zamiri eğik biçim (`_PRONOUN_OBLIQUE`):** bana/sana FİİL rank ediliyordu (banmak/sanmak)
+    → yüzey kapalı-set zamir'e zorlar (durum eşlemeli). `Bana kitap verdi`/`Bana göre` düzeldi.
+  - **Cümle-başı pür ünlem** (`_PURE_INTERJECTIONS` = INTERJECTIONS − homograf): eyvah/haydi/aferin
+    cümle-başı → cümle dışı unsur. Homograf (of/ay/ey/işte) HARİÇ (best.pos==ünlem ranklanırsa zaten).
+  - **Edat birleştirme:** standalone ADP önceki nominal/zarf ögeyi yönetir → tek edat tümleci
+    (`Sabaha kadar`, `bana göre`).
+  - **Çok-cümle öge gate:** özne/belirtisiz-nesne heuristiği YALNIZ tek-cümlede (gövdede koordinat
+    yüklem yoksa); çok-cümlede her nom kendi cümlesinin öznesi (`Ali geldi ve Veli gitti`: Veli=özne).
+  - **Yüklem tespiti 2-adım:** (1) en sağdaki TOP-RANK gerçek fiil (devrik: Gittim okula);
+    (2) yoksa en sağdaki içerik token (verdi=noun-rank ama verb_reading fiil; yanlış=nominal) →
+    cümle-başı fiil-homografının (Bana) yüklem sanılmasını önler.
 - **V2 İYİLEŞTİRME (2026-07-20):** çoğul/iyelik özne kurtarma — niteleme sıfatı morfolojik
   olarak ÇIPLAKtır; çekim eki (çoğul `-lAr`/iyelik) alan adj-etiketli token aslında İSİMdir
   (`Çocuklar`=çoğul→isim başı) → `_classify` MOD/ADV yalnız ÇIPLAK adj-etiketli tokende üretir.

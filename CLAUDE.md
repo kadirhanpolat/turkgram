@@ -560,7 +560,16 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     Hakem WARNING→2 HIGH giderildi; sweep 6508 çağrı 0 çökme. `tr.cümle_çözümle`. **V2 (2026-07-20):**
     çoğul/iyelik özne kurtarma — niteleme sıfatı morfolojik ÇIPLAK, çekim eki (çoğul/iyelik) alan
     adj-etiketli token İSİMdir (`Çocuklar`→özne geri kazanıldı; `kırmızı araba` bozulmadı). Kalan
-    sınır yalnız ÇIPLAK tekil homograf (Ali/Çocuk). 4417→4421 test.
+    sınır yalnız ÇIPLAK tekil homograf (Ali/Çocuk). **V2 TUR-2:** (a) zaman-adı zarf-değeri
+    (`_TIME_NOUNS`+dat/loc/abl→zarf tümleci, akşama gittik; polysemik saat/sıra/son/ay DIŞLANDI);
+    (b) kişi zamiri eğik biçim (`_PRONOUN_OBLIQUE`: bana/sana banmak/sanmak FİİL rank ediliyordu→zamir
+    zorla); (c) cümle-başı pür ünlem (eyvah/haydi→cümle dışı; homograf of/ay/marş/yaşa HARİÇ); (d) edat
+    birleştirme (Sabaha kadar, adjacency guard'lı); (e) yüklem tespiti 2-adım (top-rank fiil→devrik;
+    yoksa en-sağ içerik token→Bana=banmak yüklem sanılmaz); (f) çok-cümle öge gate (özne/nesne
+    heuristiği yalnız tek-cümlede; Ali geldi ve Veli gitti→Veli=özne). **TUZAK (hakem HIGH):**
+    demonstratif (O/Bu MOD) eğik ZAMİRİ yutmamalı (O bana→özne+dolaylı, 'O bana' değil) → modifier
+    zinciri pos=="pron" atlar. ÖGE 42/44 + TÜR 44/44. Hakem WARNING→1 HIGH+2 MEDIUM+1 LOW giderildi.
+    4421→4431 test.
   - ✅ **D3: Sayı çözümlemesi** (`analysis.py` genişletme):
     - `analyze()` → yeni kind'lar: `ordinal` (birinci→bir), `distributive` (ikişer→iki).
     - `_NUMBER_SIMPLE_ROOTS` kapalı küme (24 kök) precision garantisi; oracle analysis-by-generation.

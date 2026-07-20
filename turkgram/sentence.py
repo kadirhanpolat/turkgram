@@ -19,8 +19,18 @@ from .tokenize import tokenize as _tokenize
 from .analysis import parse_text, _tr_lower
 from .disambiguation import rank as _rank
 from .postposition import _POSTPOSITIONS as _POSTPOSITION_TABLE
+from .interjection import INTERJECTIONS as _INTERJECTIONS
 
 __all__ = ["Element", "SentenceType", "SentenceAnalysis", "analyze_sentence"]
+
+# "Pür" ünlemler — yaygın isim/fiil homografı OLMAYAN alt küme. Cümle-başı bunlar
+# cümle dışı unsur (hitap/seslenme) sayılır; homograflar (of/ay/ey/işte) HARİÇ
+# (best.pos==ünlem ranklanırsa zaten _R_UNLEM olur, ayrıca zorlamaya gerek yok).
+_HOMOGRAPH_INTERJECTIONS: frozenset[str] = frozenset({
+    "of", "ay", "oh", "ey", "hay", "na", "be", "işte", "hah", "üf", "yazık",
+    "marş", "yaşa", "deh",   # içerik-sözcük homografı (marş=şarkı, yaşa=yaşamak imp)
+})
+_PURE_INTERJECTIONS: frozenset[str] = _INTERJECTIONS - _HOMOGRAPH_INTERJECTIONS
 
 # ── Yüzey kapalı-setler (motor bunları düzgün çözmez → yüzey tespiti) ──────────
 # Soru edatı mI: yalın + kişili ek-fiil biçimleri (miyim/misin/mısınız/mudur…).
@@ -44,6 +54,34 @@ _CA_ADVERB_RE = re.compile(r"[çc][ae]$")
 # Demonstratif/belirteç (best=None olsa da MOD): bu/şu/o + çoğul
 _DEMONSTRATIVES: frozenset[str] = frozenset({
     "bu", "şu", "o", "bunlar", "şunlar", "onlar",
+})
+
+# Kişi zamiri eğik/suppletif biçimleri → yüzey kapalı-set (durum). Motor bana/sana'yı
+# banmak/sanmak FİİL rank eder (çok yaygın: 'Bana verdi') → zamir olarak zorla (AD + durum).
+_PRONOUN_OBLIQUE: dict[str, str] = {
+    "bana": "dat", "sana": "dat", "ona": "dat", "bize": "dat", "size": "dat",
+    "onlara": "dat",
+    "beni": "acc", "seni": "acc", "onu": "acc", "bizi": "acc", "sizi": "acc",
+    "onları": "acc",
+    "bende": "loc", "sende": "loc", "onda": "loc", "bizde": "loc", "sizde": "loc",
+    "onlarda": "loc",
+    "benden": "abl", "senden": "abl", "ondan": "abl", "bizden": "abl",
+    "sizden": "abl", "onlardan": "abl",
+    "benim": "gen", "senin": "gen", "onun": "gen", "bizim": "gen", "sizin": "gen",
+    "onların": "gen",
+}
+
+# Zaman adları (kapalı küme) — DURUM-EKLİ (dat/loc/abl) biçim zarf tümleci sayılır
+# (akşama gittik → akşama = zarf tümleci, dolaylı tümleç DEĞİL). nom BİLİNÇLİ hariç
+# (Sabah güzeldi = özne belirsizliği); acc = belirtili nesne (sabahı bekledim). Lemma
+# eşleşmesi → çekimli biçim (akşam+a) tabana iner.
+# NOT: çok-anlamlı somut adlar (saat=nesne, sıra=yer, son/ilk/an/ay=uzay, devir/çağ)
+# DIŞLANDI — dat/loc/abl'de zarf sanmak yanlış (Saate baktık=nesne, Aya gittik=uzay).
+_TIME_NOUNS: frozenset[str] = frozenset({
+    "sabah", "öğle", "akşam", "gece", "gündüz", "akşamüstü", "öğleüstü",
+    "gün", "hafta", "yıl", "sene", "yaz", "kış", "ilkbahar",
+    "sonbahar", "bahar", "güz", "zaman", "vakit", "asır", "yüzyıl",
+    "geçmiş", "gelecek", "bugün", "dün", "yarın",
 })
 
 # Yüklem kipi (Analysis kwargs['tense']) → cümle-türü kip ekseni
@@ -135,6 +173,14 @@ def _classify(idx: int, surface: str, best, pos_map: dict) -> _Tok:
         return _Tok(idx, surface, best, _R_CONJ, None, "conj")
     if low in _DEMONSTRATIVES:
         return _Tok(idx, surface, best, _R_MOD, None, "det")
+    if low in _PRONOUN_OBLIQUE:
+        # kişi zamiri eğik biçimi (bana/sana/beni…) — fiil homografını geçersiz kıl
+        pc = _PRONOUN_OBLIQUE[low]
+        return _Tok(idx, surface, best, _R_AD, None if pc == "nom" else pc, "pron")
+    # Cümle-başı pür ünlem (eyvah/haydi/aferin) → cümle dışı unsur; homograf-rank ünlem
+    # (of/aman/vay) zaten aşağıda best.pos==ünlem ile yakalanır.
+    if idx == 1 and low in _PURE_INTERJECTIONS:
+        return _Tok(idx, surface, best, _R_UNLEM, None, "ünlem")
     if best is None:
         # OOV: -CA zarfı? yoksa Baş-harf büyük → özel ad (isim); değilse X
         if _CA_ADVERB_RE.search(low):
@@ -234,16 +280,20 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
 
     # 2. Yüklem = en sağdaki FİİL-yeteneği olan token; yoksa son NOMİNAL (edat/bağlaç atla)
     _NONPRED_ROLES = (_R_SORU, _R_NEG, _R_ADP, _R_CONJ, _R_UNLEM)
+    # Adım 1: en sağdaki TOP-RANK gerçek fiil (role FIIL/ULAC/ORTAC) → devrik yüklem
+    # yakalar (Gittim okula). göre=gör-e gibi ADP homografı NONPRED ile atlanır.
     pred_i = None
     for k in range(tail - 1, -1, -1):
-        # edat/bağlaç yüzey-seti fiil homografını (göre=gör-e) geçersiz kılar → yüklem olamaz
         if toks[k].role in _NONPRED_ROLES:
             continue
-        if verbs[k] is not None or toks[k].role in (_R_FIIL, _R_ULAC, _R_ORTAC):
+        if toks[k].role in (_R_FIIL, _R_ULAC, _R_ORTAC):
             pred_i = k
             break
+    # Adım 2: gerçek fiil yok → en sağdaki içerik token (yüklem SON'dadır). verb_reading'i
+    # varsa fiil yüklem (verdi=noun-rank ama fiil), yoksa nominal yüklem (yanlış). Bu,
+    # cümle-BAŞI fiil-homografının (Bana=banmak) yüklem sanılmasını ÖNLER.
     if pred_i is None:
-        for k in range(tail - 1, -1, -1):   # nominal yüklem: edat/bağlaç değil
+        for k in range(tail - 1, -1, -1):
             if toks[k].role not in _NONPRED_ROLES:
                 pred_i = k
                 break
@@ -337,7 +387,10 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
             # nominal öbek: modifier* zinciri; isimle biterse nominal öge, bitmezse zarf
             grp = [t]
             j = i + 1
-            while (t.role == _R_MOD and j < m and body[j].role in (_R_MOD, _R_AD, _R_X)):
+            # TUZAK: demonstratif (MOD) eğik ZAMİRİ yutmamalı (O bana → iki ayrı zamir,
+            # 'O bana' değil). Belirteç yalnız ortak adı niteler, zamiri değil (pos!=pron).
+            while (t.role == _R_MOD and j < m and body[j].role in (_R_MOD, _R_AD, _R_X)
+                   and body[j].pos != "pron"):
                 grp.append(body[j])
                 t = body[j]
                 j += 1
@@ -360,14 +413,31 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
                         "zarf tümleci", tuple(x.surface for x in grp), head.idx))
                     i = j
                     continue
+            # Zaman adı + yönelme/bulunma/çıkma → zarf tümleci (akşama gittik), dolaylı DEĞİL
+            head_lemma = head.best.lemma if head.best is not None else None
+            if head.case in ("dat", "loc", "abl") and head_lemma in _TIME_NOUNS:
+                elements.append(Element(
+                    "zarf tümleci", tuple(x.surface for x in grp), head.idx))
+                i = j
+                continue
             label, aliases = _label_nominal(head.case)
             elements.append(Element(
                 label, tuple(x.surface for x in grp), head.idx, aliases))
             i = j
             continue
         if t.role == _R_ADP:
-            # öncesi nominal öge yoksa tek başına edat → cümle dışı
-            elements.append(Element("edat tümleci", (t.surface,), t.idx))
+            # edat önceki nominal/zarf ögeyi yönetir → tek edat tümleci'ne birleştir
+            # (Sabaha kadar, bana göre). Önceki öge yoksa tek başına edat.
+            _GOVERNABLE = ("dolaylı tümleç", "zarf tümleci", "özne",
+                           "belirtili nesne", "belirtisiz nesne")
+            # adjacency guard: önceki öge edat'a bitişik olmalı (i>0 ve öge başı i-1 token)
+            if (elements and i > 0 and elements[-1].label in _GOVERNABLE
+                    and elements[-1].head_id == body[i - 1].idx):
+                prev = elements.pop()
+                elements.append(Element(
+                    "edat tümleci", prev.tokens + (t.surface,), t.idx))
+            else:
+                elements.append(Element("edat tümleci", (t.surface,), t.idx))
             i += 1
             continue
         elements.append(Element("cümle dışı unsur", (t.surface,), t.idx))
@@ -381,9 +451,12 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
             for e in elements
         ]
 
-    # 7c. özne / belirtisiz nesne heuristiği (nom öbekler)
+    # 7c. özne / belirtisiz nesne heuristiği (nom öbekler) — YALNIZ tek-cümlede.
+    # Çok-cümlede (sıralı/bağlı: gövdede koordinat yüklem VAR) her nom kendi cümlesinin
+    # öznesi olabilir → heuristiği uygulama (Ali geldi ve Veli gitti: Veli=özne, nesne DEĞİL).
+    body_has_verb = any(e.label == "yüklem" for e in elements)
     nom_subj = [e for e in elements if e.label == "özne"]
-    if len(nom_subj) >= 2:
+    if not body_has_verb and len(nom_subj) >= 2:
         last = max(nom_subj, key=lambda e: e.head_id)
         elements = [
             Element("belirtisiz nesne", e.tokens, e.head_id, e.aliases)
