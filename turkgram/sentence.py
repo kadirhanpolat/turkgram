@@ -100,6 +100,14 @@ _COORD_CONJ = frozenset({
 _KI = "ki"
 _DIYE = "diye"
 
+# Aktarma (gerçek gömme) fiilleri — bildirme/biliş fiilleri (kapalı-set). Ana yüklem bunlardan
+# biriyse VE öncesinde FİNİT tümce varsa, o tümce gömülü yan cümle (aktarma): `Yağmur yağacak
+# sandı` → yan(Yağmur yağacak) + temel(sandı); `Gel dedi` → yan(Gel) + temel(dedi). Adlaşmış
+# gömme (-DIK/-mA argümanı `geldiğini biliyorum`) ZATEN participle→ORTAC yolundan yan çözülür.
+_REPORTING_VERBS: frozenset[str] = frozenset({
+    "demek", "sanmak", "zannetmek", "söylemek", "düşünmek", "ummak", "sormak",
+})
+
 # Modifier POS (leksikon pos_map) — niteleyici/belirteç öbek-içi kalır
 _MOD_POS = frozenset({"adj", "num", "det"})
 
@@ -492,6 +500,15 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
     for kk in ki_pos:                     # ki ÖNCESİ temel yargıyı kapatır (nominal-yüklem homografı için)
         if kk - 1 >= 0:
             bset.add(kk - 1)
+    # Aktarma (gerçek gömme): ana yüklem bildirme fiili + ÖNCESİNDE finit tümce → o tümce
+    # gömülü yan. Reporting fiilinden önce zorla sınır (Gel dedi → Gel|dedi).
+    pmain = toks[pred_i] if 0 <= pred_i < tail else None
+    aktarma = (pmain is not None and pmain.best is not None
+               and pmain.best.lemma in _REPORTING_VERBS
+               and any(toks[k].role in (_R_FIIL, _R_ULAC, _R_ORTAC)
+                       for k in range(pred_i)))
+    if aktarma and pred_i - 1 >= 0:
+        bset.add(pred_i - 1)
     bidx = sorted(bset)
 
     # Segmentle: [prev .. b] (b dahil); kuyruk (devrik) son segmente iliştir
@@ -543,6 +560,12 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
         records.append({"seg": kept, "b": b, "connector": connector,
                         "forced_yan": forced_yan, "pred": pred})
 
+    # Aktarma: reporting fiili son yargı → önceki (koordinat-BAĞLANMAMIŞ) yargı(lar) gömülü yan.
+    if aktarma and len(records) >= 2:
+        for r in records[:-1]:
+            if not (r["connector"] and _tr_lower(r["connector"]) in _COORD_CONJ):
+                r["forced_yan"] = True
+
     def _rec_yan(r: dict) -> bool:
         return bool(r["forced_yan"]) or (r["pred"] is not None
                                          and _pred_is_yan(r["pred"]))
@@ -567,7 +590,8 @@ def _segment_clauses(toks: "list[_Tok]", tail: int, pred_i: int,
             pred_surf = (pred.surface,) + tuple(t.surface for t in pred_trailing)
             els.append(Element("yüklem", pred_surf, pred.idx))
         els.sort(key=lambda e: e.head_id)
-        if _rec_yan(r):
+        # yan yalnız yan-OLMAYAN kardeş varsa (tek şart 'Gelsen' → temel, §3); aksi bağımsız/temel
+        if _rec_yan(r) and non_yan >= 1:
             role = "yan"
         elif non_yan >= 2:
             role = "bağımsız"
@@ -715,12 +739,11 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
     elements.append(Element("yüklem", pred_surf, pred.idx))
     elements.sort(key=lambda e: e.head_id)
 
-    # 9. Yapı: basit / birleşik / sıralı / bağlı
-    # V4: ki/diye leksik subordinatörü → birleşik (flat `subordinate` yalnız fiilimsi/şart
-    # görür; ki/diye yüzey markörü ayrıca sayılır → yapi clauses ile tutarlı).
-    if any(_tr_lower(t.surface) == _DIYE
-           or (_tr_lower(t.surface) == _KI and t.role == _R_CONJ)
-           for t in toks[:tail]):
+    # 9. Yapı: basit / birleşik / sıralı / bağlı — clauses ile TUTARLI (yan yargı VARSA
+    # birleşik). Yan yargı = fiilimsi/şart/ki/diye/aktarma/adlaşmış hepsini kapsar → flat
+    # `subordinate`'in göremediği ki/diye/aktarma da doğru birleşik olur.
+    clauses = _segment_clauses(toks, tail, pred_i, trailing)
+    if any(c.role == "yan" for c in clauses):
         subordinate = True
     main_verbs = [e for e in elements if e.label == "yüklem"]
     if subordinate:
@@ -736,5 +759,4 @@ def analyze_sentence(text: str, *, roots: "Collection[str] | None" = None) -> Se
         yuklem_turu=yuklem_turu, yuklem_yeri=yuklem_yeri, olumluluk=olumluluk,
         soru=soru, kip=kip, yapi=yapi, eksiltili=eksiltili,
     )
-    clauses = _segment_clauses(toks, tail, pred_i, trailing)
     return SentenceAnalysis(text, tuple(elements), stype, clauses)

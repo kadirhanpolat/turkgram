@@ -604,6 +604,19 @@ Test durumu: son ölçüm **4116 test yeşil** (slow hariç) + slow round-trip a
     segment BAŞINDA subordine eder (trailing değil); (2) marker pred pozisyonunda ise `_clause_pred` kept'ten
     gerçek yüklem, kept boşsa yargı yok. Golden 7 (Opus motor-körü) + robustluk testi; V3 golden DEĞİŞMEZ.
     sweep 27 cümle 0 çökme. Tam paket 4484 yeşil.
+  - ✅ **CÜMLE KATMANI V5 — gerçek gömme (aktarma + adlaşmış)** (2026-07-20; SPEC §5c; kullanıcı kararı):
+    gömülü tümce = ana yargının argümanı. **Adlaşmış ZATEN çalışıyordu** (-DIK/-mA participle→ORTAC→V3
+    fiilimsi yan: `Ali geldiğini biliyorum`→yan+temel) → golden kilidi eklendi, YENİ KOD YOK. **Aktarma
+    YENİ:** gömülü FİNİT tümce + bildirme fiili. `_REPORTING_VERBS` kapalı-set (demek/sanmak/zannetmek/
+    söylemek/düşünmek/ummak/sormak); ana yüklem reporting fiili VE öncesinde FİNİT tümce (FIIL/ULAC/ORTAC)
+    → reporting'ten önce zorla sınır + önceki (koordinat-bağlanmamış) yargı forced_yan gömülü.
+    `Yağmur yağacak sandı`→yan+temel, `Gel dedi`→yan+temel. **TUZAK — guard:** `Ali bir şey söyledi`
+    (NESNE NP, finit tümce YOK) gömme DEĞİL → "öncesinde finit" guard'ı şart (yoksa nesne NP gömülü sanılır).
+    Ayrıca **yapi artık clauses'ten türer** (any yan→birleşik; ki/diye/aktarma tutarlı) + **rol guard**
+    `_rec_yan and non_yan>=1` (tek şart `Gelsen`→temel §3). **Kapsam DIŞI:** homograf-finit gömülü yüklem
+    (`Yarın geleceğim dedi`, geleceğim=isim rank), tırnak-tabanlı aktarma, koordine-içi gömme (§5c defer).
+    **Hakem SHIP** (0 CRITICAL/HIGH/MEDIUM; 1 LOW koordine-içi-aktarma defer). Golden 8 (Opus motor-körü;
+    Hasta olduğunu→özne uzlaştırıldı, ad-tümleç belirsiz edge). sweep 35 cümle 0 çökme. Tam paket 4492 yeşil.
   - ✅ **Çıplak-tekil ad tanıma (Ali/Çocuk) — küratlü kapalı-set override** (2026-07-20; kullanıcı
     kararı: veri-rebuild/heuristik DEĞİL, küratlü set): SPEC §6 sınırı (leksikon Zemberek-collapse
     `çocuk`/`ali`'yi 'adj' etiketler → çekimsiz-çıplak token modifier zincirine yutulur, ÖZNE kaybolur).

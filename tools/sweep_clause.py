@@ -40,6 +40,15 @@ _SENTENCES = [
     "Biliyorum ki gelince görecek",
     "Söyledim ki duysun ve anlasın",
     "Onu gördüm ki çok sevindim",
+    # V5 gerçek gömme (aktarma + adlaşmış)
+    "Yağmur yağacak sandı",
+    "Gel dedi",
+    "Hasta olduğunu söyledi",
+    "Gelmesini istedi",
+    "Ali geldiğini biliyorum",
+    "Ali bir şey söyledi",
+    "Yarın geleceğim dedi",
+    "Gideceğini düşündü ve üzüldü",
 ]
 
 

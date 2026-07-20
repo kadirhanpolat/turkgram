@@ -206,6 +206,33 @@ düşerse (`diye`=demek opt pred_i olabilir) `_clause_pred` kept'ten gerçek yü
 boşsa yargı üretilmez → phantom `yüklem=('diye',)` ÖNLENİR. Çökme yok; malformed girdide yapı
 en-iyi-çaba (regresyon kilidi `test_trailing_bare_subordinator_robust`).
 
+## 5c. V5 — gerçek gömme: aktarma + adlaşmış (2026-07-20)
+
+V4 leksik subordinatör (ki/diye) yaptı. V5 **gerçek gömme** (gömülü tümce = ana yargının
+argümanı): iki tür.
+
+**Adlaşmış (nominalized) — ZATEN ÇÖZÜLÜR (participle yolu):** -DIK/-mA + iyelik + durum
+(`geldiğini`/`gelmesini`/`olduğunu`) `kind=participle` → `_R_ORTAC` → V3'te fiilimsi yan
+sınırı. `Ali geldiğini biliyorum` → yan(Ali geldiğini) + temel(biliyorum); `Gelmesini istedi`
+→ yan + temel. **Yeni kod YOK**; golden regresyon kilidi eklenir (deseni doğrular).
+
+**Aktarma (reported/quote) — YENİ:** gömülü FİNİT tümce (adlaşmamış) bir bildirme/biliş
+fiilinin argümanı. `Yağmur yağacak sandı` → yan(Yağmur yağacak) + temel(sandı); `Gel dedi`
+→ yan(Gel) + temel(dedi). **Mekanik:** `_REPORTING_VERBS` kapalı-set (demek/sanmak/zannetmek/
+söylemek/düşünmek/ummak/sormak). Ana yüklem (`toks[pred_i]`) reporting fiili VE **öncesinde
+FİNİT tümce** (herhangi FIIL/ULAC/ORTAC) varsa: reporting'ten ÖNCE zorla sınır + önceki
+(koordinat-BAĞLANMAMIŞ) yargı(lar) `forced_yan` (gömülü). connector=None (gömme leksik değil,
+yapısal).
+
+**TUZAK — nesne-NP vs gömülü-tümce ayrımı:** `Ali bir şey söyledi` (söyledi + NESNE NP) gömme
+DEĞİL → "öncesinde finit tümce" guard'ı (FIIL/ULAC/ORTAC yok → aktarma tetiklenmez). Bu guard
+şart; olmadan nesne NP'si yanlışlıkla gömülü yargı sanılır.
+
+**Kapsam DIŞI (V5):** homograf-finit gömülü yüklem (`Yarın geleceğim dedi` — geleceğim=gelecek+
+iyelik ad ranklanır, FİNİT fiil değil → gömme tetiklenmez, tek temel). Bu isim/fiil homograf
+disambiguation kök nedeni; iyileşince bedava. Tırnak/işaret-tabanlı doğrudan aktarma (noktalama)
+kapsam dışı (tokenizer tırnak bölmez). İç-içe çok-düzey gömme en-iyi-çaba.
+
 ## 6. Kapsam DIŞI (V1 — bilinçli sınırlar)
 
 - **ki'li / diye'li birleşik** (`biliyorum ki gelecek`, `gelsin diye bekledim`) — DEFER.
